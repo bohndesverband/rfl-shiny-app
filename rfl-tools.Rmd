@@ -1503,3 +1503,162 @@ DT::renderDataTable({
   formattable::as.datatable(escape = FALSE, rownames = F, options = list(pageLength = 12, order = list(8, 'asc')))
 })
 ```
+
+# Draft Trades {data-navmenu="Draft"}
+
+## Row
+### Alle Trades während des aktuellsten Drafts
+
+```{r draft-trades, echo=FALSE, fig.height=30, message=FALSE, warning=FALSE}
+source("R/drafts/rfl-draft-trades.R")
+
+DT::renderDataTable({
+  DT::datatable(
+    draft_trades_combined,
+    rownames = FALSE, options = list(dom = "Bfrtip", pageLength = 12)
+  )
+})
+
+```
+
+# Hit Rates {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("draftHitRatesSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season - 2), sep = "")
+
+sliderInput("draftHitRatesSelectRounds", "Draftrunde", min = 1, max = 7, value = c(1, 7), sep = "")
+
+selectizeInput(
+  "draftHitRatesSelectTeam",
+  "RFL Franchise hervorheben",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple= FALSE,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue("RFL"); }')
+  )
+)
+
+source("R/drafts/rfl-draft-hit-rates.R", local = TRUE)
+```
+> Hit = mind. 3 Top 8 oder 1 Top 12 Finish für QB, TE und PK und mind. 1 Top 36 Finish (oder 1 Top 24 Finish für junge Spieler) für alle anderen Positionen<br><br>
+Home Run = mind. 2 (1 für junge Spieler) Top 5 Finishes, mind. 3 Top 3 Finishes für QB, TE und PK oder mind. 3 Top 12 Finishes für alle anderen Positionen<br><br>
+Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
+
+## Row
+### Draft Hit Rates je Runde
+
+```{r draft-hit-rates-plot, echo=FALSE, fig.height=9}
+renderPlot({
+  draft_hit_rates() %>%
+    ggplot2::ggplot(aes(x = round, y = pct, fill = category, color = category)) +
+    plotDefaults +
+    ggplot2::geom_col(position = "dodge", alpha = 0.4, color = NA, show.legend = FALSE) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit"), position = position_nudge(x = -0.3)) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run")) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss"), position = position_nudge(x = 0.3)) +
+    ggplot2::scale_color_manual(values = c("#10ac84", var.colorYellow, "#ee5253")) +
+    ggplot2::scale_fill_manual(values = c("#10ac84", var.colorYellow, "#ee5253"), guide = "none") +
+  
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = -0.3), color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = -0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), group = 1, color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = 0.3), color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = 0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::scale_x_continuous(limits = c(min(draft_hit_rates()$round) - 0.5, max(draft_hit_rates()$round) + 0.5), breaks = seq(1, max(draft_hit_rates()$round), 1)) +
+    ggplot2::scale_y_continuous(limits = c(0,1), labels = scales::percent_format()) +
+
+    ggplot2::labs(
+      title = paste(franchises %>% filter(franchise_id == input$draftHitRatesSelectTeam) %>% pull(franchise_name), "Hit and Miss Rates im Draft", input$draftHitRatesSelectSeason[1], "-", input$draftHitRatesSelectSeason[2]),
+      subtitle = "Balken = Ligadurchschnitt, Punkte = Franchises (Text im Kreis = Anzahal an Picks in Runde)",
+      x = "Draft Round",
+      y = "",
+      color = ""
+    ) +
+    ggplot2::theme(
+      legend.position = "top"
+    )
+}, height = 800)
+```
+
+## Row
+### Draft Hit Rates je Team
+
+```{r draft-hit-rates-table, echo=FALSE, fig.height=18, message=TRUE, warning=TRUE}
+gt::render_gt({
+  team_hit_rates_table()
+})
+```
+
+# Reaches/Steals {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft-reaches-steals, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+source("R/drafts/rfl-draft-steals-reaches.R")
+```
+
+Die Berechnung von Steals und Reaches ist die Differenz des eigenen Picks zum ersten oder letzten Pick geteilt durch den Logarithmus des eigenen Picks + 1, um den Picks in den Späteren Runden weniger Gewicht zu geben.
+
+## Row
+### Die Größten Steals
+
+```{r echo=FALSE, fig.height=6}
+
+renderPlot({
+  ggplot(biggest_draft_steals, aes(y = reorder(label, desc(score)), x = score)) +
+    geom_bar(stat = "identity", fill = var.colorAccent) +
+    coord_flip() +
+    labs(
+      title = "Größte Draft Steals",
+      x = "",
+      y = "",
+    ) +
+    theme(
+      axis.text.x = element_text(angle = 30, vjust = 1, hjust=1)
+    ) +
+    plotDefaults
+})
+
+```
+
+### Die Größten Reaches
+
+```{r echo=FALSE, fig.height=6}
+
+renderPlot({
+  ggplot(biggest_draft_reaches, aes(y = reorder(label, score), x = score)) +
+    geom_bar(stat = "identity", fill = var.colorAccent) +
+    coord_flip() +
+    labs(
+      title = "Größte Draft Reaches",
+      x = "",
+      y = "",
+    ) +
+    theme(
+      axis.text.x = element_text(angle = 30, vjust = 1, hjust=1)
+    ) +
+    plotDefaults
+})
+
+```
+
+
+## Row
+### Pick Differenzen
+
+```{r draft-reaches-steals, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+
+plotly::renderPlotly({
+   ggplotly(biggest_draft_diff_plot, tooltip = c("text", "min_pick", "max_pick", "pick_diff"))
+})
+```
+
