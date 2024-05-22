@@ -1,0 +1,1505 @@
+---
+title: "RFL Tools"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme:
+      version: 4
+      bg: "#00183C"
+      fg: "#ffffff" 
+      primary: "#D03324"
+      navbar-bg: "#ffffff"
+      base_font: 
+        google: Open Sans
+      heading_font:
+        google: Sen
+      code_font:
+        google: 
+          # arguments to sass::font_google() 
+          family: JetBrains Mono
+          local: false
+runtime: shiny
+---
+
+```{css}
+.datatables.html-widget.html-widget-static-bound { 
+  height: auto !important;
+}
+.dataTables_scrollBody {
+  height: unset !important;
+}
+.dataTable tbody td {white-space: pre-wrap;}
+.dataTable tbody td::first-line { font-weight: bold; }
+```
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(ffscrapr)
+library(dplyr)
+library(tidyr)
+library(RCurl)
+library(DT)
+library(ggplot2)
+library(scales)
+library(ggbump)
+library(gt)
+library(formattable)
+library(jsonlite)
+library(gtExtras)
+library(svglite)
+library(webshot2)
+library(emoji)
+library(ggridges)
+library(ggrepel)
+library(plotly)
+```
+
+```{r global, message=TRUE, warning=TRUE, include=FALSE}
+var.mflLeagueID <- 63018
+var.season <- nflreadr::get_current_season()
+var.seasonNewYear <- nflreadr::get_current_season(TRUE)
+var.week <- nflreadr::get_current_week()
+var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
+var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
+
+var.colorBlue <- "#00183C"
+var.colorRed <- "#D03324"
+var.colorYellow <- "#eb9b03"
+var.colorAccent <- "#ffffff"
+var.fontText <- "Open Sans"
+var.fontTextBold <- "Open Sans Semibold"
+var.fontHeadline <- "Open Sans Semibold"
+
+mflConnection <- ffscrapr::mfl_connect(season = var.season, league_id = var.mflLeagueID)
+
+## player data ----
+players <- jsonlite::read_json(paste0(var.mflApiBase, "/export?TYPE=players&L=63018&APIKEY=&DETAILS=&SINCE=&PLAYERS=&JSON=1")) %>% 
+  purrr::pluck("players", "player") %>% 
+  dplyr::tibble() %>% 
+  tidyr::unnest_wider(1) %>% 
+  dplyr::rename(
+    player_name = name,
+    pos = position,
+    player_id = id
+  ) %>% 
+  dplyr::filter(!grepl("TM", pos), !pos %in% c("Def", "ST", "Off", "Coach", "PN")) %>% 
+  dplyr::mutate(
+    grouped_pos = dplyr::case_when(
+      pos %in% c("DT", "DE") ~ "DL",
+      pos %in% c("CB", "S") ~ "DB",
+      TRUE ~ pos
+    )
+  )
+
+source("R/base-data.R")
+
+source("R/chunks/plotDefaults.R")
+
+gtDefaults <- function(df) {
+  df %>% 
+    gt::tab_options(
+      table.font.size = gt::px(14),
+      table.font.color = "#222f3e",
+      table.border.top.color = "white",
+      heading.border.bottom.color = "white",
+      heading.title.font.size = gt::px(40),
+      heading.title.font.weight = "light",
+      heading.subtitle.font.size = gt::px(16),
+      
+      column_labels.font.weight = "bold",
+      column_labels.padding = gt::px(10),
+      column_labels.padding.horizontal = gt::px(15),
+      table_body.border.bottom.color = "#c8d6e5",
+      column_labels.border.top.color = "white",
+      stub.border.color = "#c8d6e5",
+      column_labels.border.bottom.color = "#222f3e",
+      
+      #footnotes.padding = gt::px(100),
+      footnotes.padding.horizontal = gt::px(35),
+      footnotes.border.bottom.color = "#222f3e"
+    )
+}
+```
+
+# Überblick
+
+# Standing {data-navmenu="Teams"}
+
+## Row
+### Aktuelles Standing
+```{r current-standing, echo=FALSE, fig.height=20, message=FALSE, warning=FALSE}
+source("R/true-standing/true-standing.R")
+
+gt::render_gt({
+  current_standing_table
+})
+```
+
+
+# Power Ranking {data-navmenu="Teams"}
+## Sidebar {.sidebar}
+```{r inputs-power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
+source("R/true-standing/true-standing.R")
+
+selectizeInput(
+  "powerRankSelectDivision",
+  "Filter nach Division",
+  choices = franchises$division_name,
+  multiple= F,
+  options = list(
+    placeholder = "Division wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+selectizeInput(
+  "powerRankSelectTeam",
+  "Filter nach Teams",
+  choices = franchises$franchise_name,
+  multiple= T,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+```
+
+> Das Power Ranking setzt sich aus den Kategorien Points For, Potential Points, Effizienz und All Play Record zusammen.
+
+## Row
+### Power Ranking
+```{r power-ranking, echo=FALSE, fig.height=10, message=FALSE, warning=FALSE}
+renderPlot({
+  power_ranking %>%
+    ggplot2::ggplot(aes(x = week, y = true_rank, group = franchise_id, color = franchise_id)) +
+    plotDefaults +
+    ggplot2::geom_point(size = 3, color = var.colorAccent, alpha = 0.5) +
+    ggbump::geom_bump(color = var.colorAccent, size = 1) +
+    ggplot2::geom_text(data = subset(power_ranking, week == 1), aes(label = franchise_name), x = 0.97, hjust = 1, vjust = 0.35, color = var.colorAccent) +
+    ggplot2::geom_text(data = subset(power_ranking, week == max(week)), aes(label = franchise_name, x = max(week) + 0.03), hjust = 0, vjust = 0.35, color = var.colorAccent) +
+
+    geom_bump(data = subset(power_ranking, division_name == input$powerRankSelectDivision | franchise_name %in% input$powerRankSelectTeam), size = 1.8) +
+    geom_point(data = subset(power_ranking, division_name == input$powerRankSelectDivision | franchise_name %in% input$powerRankSelectTeam), size = 5) +
+
+    ggplot2::scale_y_reverse() +
+    paletteer::scale_color_paletteer_d("awtools::ppalette") +
+
+    labs(
+      title = paste("RFL Power Ranking", var.season),
+      x = "Woche",
+      y = "Power Rank",
+      color = ""
+    ) +
+    theme(
+      legend.position = "none"
+    ) +
+    scale_x_discrete(limits = c(-1, 15))
+}, height = 900)
+```
+
+# ELO Rating {data-navmenu="Teams"}
+
+## Sidebar {.sidebar}
+```{r inputs-elo, echo=FALSE, message=FALSE, warning=FALSE}
+selectizeInput(
+  "eloSelectDivision",
+  "Filter nach Division",
+  choices = franchises$division_name,
+  multiple= F,
+  options = list(
+    placeholder = "Division wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+selectizeInput(
+  "eloSelectTeam",
+  "Filter nach Teams",
+  choices = franchises$franchise_name,
+  multiple= T,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+```
+
+> Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
+
+## Row
+### Running ELO Rating {data-width=900}
+```{r elo, echo=FALSE, fig.height=7, message=FALSE, warning=FALSE}
+source("R/elo/rfl-elo.R")
+
+renderPlot({
+  running_elo %>% 
+    ggplot(aes(x = game, y = franchise_elo_postgame, color = franchise_name)) +
+      plotDefaults +
+      geom_hline(yintercept = 1500, color = var.colorRed, size = 0.5, alpha = 0.75) + # default elo
+      
+      geom_vline(xintercept = 13, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2017
+      geom_vline(xintercept = 25, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2018
+      geom_vline(xintercept = 37, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2019
+      geom_vline(xintercept = 49, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2020
+      geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
+      geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
+      geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
+      
+      geom_point(color = var.colorAccent, alpha = 0.3) +
+      geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
+  
+      paletteer::scale_color_paletteer_d("awtools::ppalette") +
+      labs(
+        title = paste("RFL ELO Rating"),
+        #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
+        y = "ELO",
+        x = "Game",
+        color = ""
+      ) +
+      theme(
+        legend.position = "top",
+        legend.text = element_text(size = 12)
+      ) +
+      scale_x_discrete(limits = c(1, 76))
+})
+```
+
+### ELO Ranking Veränderung zum letzten Spieltag {data-width=300}
+```{r elo-ranking, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  table_data <- running_elo %>%
+    dplyr::group_by(franchise_name) %>% 
+    dplyr::filter(
+      game == max(game),
+      #division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::left_join(
+      running_elo %>% 
+        dplyr::group_by(franchise_name) %>% 
+        dplyr::filter(game == max(game) - 1) %>%
+        dplyr::group_by(franchise_id) %>% 
+        dplyr::summarise(elo_prev_week = mean(franchise_elo_postgame), .groups = "drop") %>% 
+        dplyr::ungroup(),
+      by = "franchise_id"
+    ) %>% 
+    dplyr::mutate(elo_diff = franchise_elo_postgame - elo_prev_week) %>% 
+    dplyr::select(franchise_name, franchise_elo_postgame, elo_diff) %>%
+    dplyr::rename(Franchise = franchise_name, ELO= franchise_elo_postgame, "+/-" = elo_diff)
+  
+  formattable::formattable(
+    table_data,
+    list(
+      ELO = formattable::color_tile("#EA2027", "#009432"),
+      "+/-" = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = F, options = list(pageLength = 12, order = list(1, 'asc')))
+})
+```
+
+## Row
+### ELO Ranking Veränderung zum Saisonstart {data-width=500}
+```{r elo-ranking-season, echo=FALSE, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  table_data <- elo %>%
+    dplyr::filter(season == var.season) %>% 
+    dplyr::filter(
+      week == 1 | week == max(week)
+    ) %>% 
+    dplyr::select(week, franchise_id, franchise_elo_pregame, franchise_elo_postgame:franchise_name) %>% 
+    dplyr::distinct() %>% 
+    dplyr::group_by(franchise_name) %>% 
+    dplyr::arrange(week) %>% 
+    dplyr::mutate(
+      franchise_elo_pregame = dplyr::lag(franchise_elo_pregame),
+      elo_diff = franchise_elo_postgame - franchise_elo_pregame
+    ) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::filter(week == max(week)) %>% 
+    dplyr::select(franchise_name, franchise_elo_pregame, franchise_elo_postgame, elo_diff) %>%
+    dplyr::rename(Franchise = franchise_name, "ELO Start" = franchise_elo_pregame, ELO = franchise_elo_postgame, "+/-" = elo_diff) 
+  
+  formattable::formattable(
+    table_data,
+    list(
+      "ELO Start" = formattable::color_tile("#EA2027", "#009432"),
+      ELO = formattable::color_tile("#EA2027", "#009432"),
+      "+/-" = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = F, options = list(pageLength = 12, order = list(3, 'asc')))
+})
+```
+
+### Aktuelle Matchups {data-width=500}
+> ELO Vorteil aus Sicht des Home Teams, berechent anhand der derzeitigen ELO
+
+```{r elo-matchups-next, echo=FALSE, fig.height=10, message=FALSE, warning=FALSE}
+DT::renderDataTable(
+  if (nflreadr::get_current_week() <= 13) {
+    DT::datatable(
+      elo_matchups_next,
+      rownames = F, options = list(dom = "Ppft", pageLength = 12, order = list(2, "desc"))
+    )
+  }
+)
+```
+
+## Row
+### Alle Spiele
+> ELO shift = ELO Veränderung nach dem Spiel aus Home Team Sicht
+
+```{r elo-matchups-prev, echo=FALSE, message=FALSE, warning=FALSE}
+DT::renderDataTable(
+  DT::datatable(
+    elo_matchups_prev %>% 
+      dplyr::select(-upset),
+    rownames = F, options = list(dom = "Ppft", pageLength = 12, order = list(list(0, "desc"), list(1, "desc")))
+  )
+)
+```
+
+## Row
+### Upsets {data-width=750}
+> Die größten Überraschungen anhand der ELO
+
+```{r upsets, echo=FALSE, fig.height=6, message=FALSE, warning=FALSE}
+DT::renderDataTable(
+  DT::datatable(
+    elo_matchups_prev %>% 
+      dplyr::filter(upset == 1) %>% 
+      dplyr::select(-upset),
+    rownames = F, filter = "top", options = list(dom = "Ppft", pageLength = 6, order = list(5, 'asc'))
+  )
+)
+```
+
+# WAR nach Position {data-navmenu="Teams"}
+
+## Sidebar {.sidebar}
+
+```{r inputs-war-teams, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = 7, sep = "")
+```
+
+> Übersicht über die kummulierten WAR für die einzelnen Teams. Es fließen derzeit nur Spieler ein, die in dieser Saison mindestens einmal in der Liga gestartet wurden.
+
+## Row
+
+```{r war-teams, echo=FALSE, message=FALSE, warning=FALSE}
+war_teams_data <- roster %>% 
+    dplyr::mutate(
+      pos = dplyr::case_when(
+        pos %in% c("DT", "DE") ~ "DL",
+        pos %in% c("CB", "S") ~ "DB",
+        TRUE ~ pos
+      )
+    ) %>% 
+    dplyr::left_join(
+      war %>%
+        dplyr::filter(season == var.season) %>% 
+        dplyr::select(player_id, war) %>% 
+        dplyr::mutate(player_id = as.character(player_id)),
+      by = "player_id",
+      multiple = "all"
+    ) %>% 
+    dplyr::left_join(
+      starter %>% 
+        dplyr::filter(starter_status == "starter", season == var.season) %>% 
+        dplyr::mutate(player_id = as.character(player_id)) %>% 
+        dplyr::group_by(player_id) %>% 
+        dplyr::summarise(starts = round(n() / 2 / 3), .groups = "drop"),
+      by = c("player_id")
+    ) %>%
+  dplyr::mutate(starts = ifelse(!is.na(starts), starts, 0))
+
+war_teams_data_filtered <- reactive({
+  req(input$warMinStarts[1])
+  
+  war_teams_data %>% 
+    dplyr::filter(
+      starts >= input$warMinStarts[1]
+    ) %>% 
+    dplyr::group_by(franchise_id, pos) %>% 
+    dplyr::summarise(
+      war = round(sum(war, na.rm = T), 2),
+      .groups = "drop") %>% 
+    dplyr::group_by(franchise_id) %>% 
+    dplyr::mutate(total = round(sum(war, na.rm = T), 2)) %>% 
+    dplyr::ungroup() %>% 
+    tidyr::spread(pos, war) %>% 
+    dplyr::left_join(
+      franchises %>% 
+        dplyr::select(franchise_id, franchise_name),
+      by = "franchise_id"
+    ) %>%
+    dplyr::select(franchise_name, total, QB, RB, WR, TE, DL, LB, DB, PK)
+})
+
+DT::renderDataTable({
+  war_teams_data_filtered()
+}, rownames = FALSE, filter = "top", options = list(pageLength = 12, order = list(1, 'desc')))
+
+# ToDo: WAR wird nur für spieler berechnet, die diese saison gestartet wurden
+# ToDo: Scaling und sortierung der color bars haut nicht hin
+```
+
+# Lineup Hit Rates {data-navmenu="Teams"}
+
+## Sidebar {.sidebar}
+
+```{r inputs-lineup-hit-rates, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+sliderInput("lineupHitRatesSelectSeason", "Saison:", min = 2016, max = var.season, value = c(var.season, var.season), sep = "")
+
+selectizeInput(
+  "lineupHitRatesSelectPlayer",
+  "Filter nach Spieler",
+  choices = players$player_name,
+  multiple = FALSE,
+  selected = "McCaffrey, Christian",
+  options = list(
+    placeholder = "Spieler wählen"
+  )
+)
+
+selectizeInput(
+  "lineupHitRatesSelectTeam",
+  "Filter nach Teams",
+  choices = franchises$franchise_name,
+  multiple = FALSE,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+```
+
+## Row
+
+### Lineup Hit Rates
+
+```{r eval=FALSE, include=FALSE}
+renderText(input$lineupHitRatesSelectTeam)
+renderText(input$lineupHitRatesSelectPlayer)
+```
+
+
+```{r eval=FALSE, include=FALSE}
+DT::renderDataTable({
+  lineup_hit_rates %>%
+    dplyr::filter(
+      season >= input$selectSeason[1] & season <= input$selectSeason[2]
+    )
+})
+```
+
+
+```{r lineup-hit-rates, eval=FALSE, message=TRUE, warning=TRUE, include=FALSE}
+source("R/lineup-hit-rates/rfl-lineup-hit-rates.R")
+
+gt::render_gt({
+  lineup_hit_rates %>%
+    dplyr::filter(
+      season >= input$selectSeason[1] & season <= input$selectSeason[2],
+      player_name == input$lineupHitRatesSelectPlayer,
+      franchise_name == input$lineupHitRatesSelectTeam
+    ) %>%
+    gt::gt() %>%
+    gt::cols_hide(columns = c(player_id)) %>%
+    gt::tab_header(
+      title = paste("Lineup Hit Rates")
+    ) %>%
+    gtExtras::gt_merge_stack(
+      player_name,
+      subline,
+      small_cap = F,
+      palette = c("#222f3e", "#8395a7"),
+      font_size = c("14px", "10px"),
+      font_weight = c("normal", "normal")
+    ) %>%
+    gt::tab_spanner(
+      label = "Starts",
+      columns = c(starts, started)
+    ) %>%
+    gt::tab_spanner(
+      label = "Hit Rate",
+      columns = c(hit, hit_rate)
+    ) %>%
+    gtExtras::gt_plt_winloss(
+      started,
+      max_wins = 10,
+      palette = c("#10ac84", "#ee5253", "gray"),
+      type = "pill"
+    ) %>%
+    gtExtras::gt_plt_winloss(
+      hit,
+      max_wins = 10,
+      palette = c("#10ac84", "#ee5253", "gray"),
+      type = "pill"
+    ) %>%
+    gtExtras::gt_plt_bar_pct(
+      hit_rate,
+      scaled = FALSE,
+      fill = "#222f3e",
+      background = "#c8d6e5"
+    ) %>%
+    gt::cols_label(
+      player_name = "Player",
+      starts = "Started",
+      started = "Last 10 G",
+      hit = "Last 10 G",
+      hit_rate = "Hit Rate"
+    ) %>%
+    gt::cols_align(
+      align = "center",
+      columns = c(starts)
+    ) %>%
+  
+    gtDefaults()
+})
+```
+
+
+# Strength of Schedule {data-navmenu="Teams"}
+
+```{r global-sos, message=TRUE, warning=TRUE, include=FALSE}
+sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main/data/rfl-sos.csv",
+                colClasses = c("franchise_id" = "character",
+                               "Total" = "numeric",
+                               "Division" = "numeric",
+                               "Conference" = "numeric",
+                               "Other" = "numeric",
+                               "rank_div" = "character",
+                               "conf_name" = "character",
+                               "div_name" = "character",
+                               "div_rank_in_conf" = "character",
+                               "season" = "integer")) %>% 
+  mutate(
+    above_avg = round(Total - mean(Total), 3),
+    SOS = round(SOS, 3),
+  ) %>% 
+  rename(Random = Other) %>% 
+  left_join(franchises %>% select(franchise_id, franchise_name), by = "franchise_id")
+```
+
+## Inputs {.sidebar}
+
+```{r inputs-sos, echo=FALSE, message=FALSE, warning=FALSE}
+selectizeInput(
+  "selectDivision",
+  "Filter nach Division",
+  choices = sos$div_name,
+  multiple= F,
+  options = list(
+    placeholder = "Division wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+selectizeInput(
+  "selectTeam",
+  "Filter nach Teams",
+  choices = sos$franchise_name,
+  multiple= T,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+```
+
+
+## Row
+
+### Strength of Schedule above Average
+
+```{r plot-sos-above-avg, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+renderPlot({
+  sos %>% 
+    ggplot(aes(x = above_avg, y = reorder(franchise_name, above_avg))) +
+      plotDefaults +
+      geom_col(fill = var.colorAccent) +
+      geom_col(data = subset(sos, div_name == input$selectDivision | franchise_name %in% input$selectTeam), aes(fill = franchise_name)) +
+      paletteer::scale_fill_paletteer_d("awtools::ppalette") +
+      geom_text(data = subset(sos, above_avg >= 0), aes(label = above_avg), hjust = -0.1, vjust = 0.3, color = var.colorAccent) +
+      geom_text(data = subset(sos, above_avg < 0), aes(label = above_avg), hjust = 1.1, vjust = 0.3, color = var.colorAccent) +
+      labs(
+        title = paste("RFL Strength of Schedule", var.season, "above Average"),
+        subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
+        y = "",
+        x = "SOS above average"
+      ) +
+    theme(
+      legend.position = "top"
+    )
+})
+
+```
+
+### Strength of Schedule by Division and Matchup Type
+
+```{r chart-sos-by-matchup, echo=FALSE, message=FALSE, warning=FALSE}
+data_facet_annotation <- sos %>% 
+  select(div_name, div_rank_in_conf, conf_name) %>% 
+  distinct()
+
+chartSosByMatchupData <- sos %>% 
+  gather(matchup, sos, c(Total, Division, Conference, Random))
+
+renderPlot({
+  chartSosByMatchupData %>%
+    ggplot(aes(x = matchup, y = sos, group = franchise_name, color = franchise_name)) +
+      plotDefaults +
+
+      #annotate("text", data = data_facet_annotation, aes(label = div_name), x = "Conference", y = 0.6, size = 6) +
+      geom_point(size = 3, color = var.colorAccent, alpha = 0.5) +
+      geom_bump(data = subset(chartSosByMatchupData, div_name == input$selectDivision | franchise_name %in% input$selectTeam), size = 1) +
+      geom_point(data = subset(chartSosByMatchupData, div_name == input$selectDivision | franchise_name %in% input$selectTeam), size = 5) +
+      #ggrepel::geom_label_repel(data = subset(chartSosByMatchupData, matchup == "Random"), aes(label = franchise_name), size = 3) +
+      paletteer::scale_color_paletteer_d("awtools::ppalette") +
+      labs(
+        title = paste("Avgerage Opponent Win Percentage", var.season - 1),
+        subtitle = paste("Durchschnittliche Head to Head Win Percentage aller Gegner in", var.season, "aus der Vorsaison nach Matchup Typ.\nJe niedriger der Wert, desto weniger Siege hatten die Gegner in der Vorsaison."),
+        x = "Matchup",
+        y = "Avg Opponent Win Percentages",
+        color = ""
+      ) +
+      theme(
+        legend.position = "top",
+        strip.text.y = element_blank()
+      ) +
+      scale_y_continuous(c(0,1), labels = scales::percent)
+})
+```
+  
+Row
+-----------------------------------------------------------------------
+
+### Data
+
+```{r dt-sos, echo=FALSE, fig.height=10, message=FALSE, warning=FALSE}
+
+DT::renderDataTable({
+  sosDT <- sos %>% 
+    mutate(
+      Total = scales::percent(Total, accuracy = 0.01),
+      Conference = scales::percent(Conference, accuracy = 0.01),
+      Division = scales::percent(Division, accuracy = 0.01),
+      Random = scales::percent(Random, accuracy = 0.01),
+    ) %>% 
+    select(franchise_name, SOS, Total, Conference, Division, Random, conf_name, div_name) %>% 
+    rename(
+      Franchise = franchise_name,
+      Random = Random,
+      CONF = conf_name,
+      DIV = div_name
+    )
+  
+  DT::datatable(
+    sosDT,
+    rownames = F, options = list(pageLength = 36, order = list(2, 'desc'), dom = 'ft')
+  )
+})
+
+```
+
+# Wins above Replacement {data-navmenu="Spieler"}
+
+## Inputs {.sidebar}
+
+```{r inputs-war, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("selectSeason", "Saison:", min = 2016, max = var.season, value = c(var.season, var.season), sep = "")
+
+source("R/war/rfl-war.R", local = T)
+```
+
+> WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet. [Mehr dazu gibts hier zu lesen](https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory) 
+
+## Main
+### Wins Above Replacement (WAR)
+
+```{r dt-war, echo=FALSE, fig.height=9.5, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  DT::datatable(
+    player_war() %>% 
+      dplyr::rename(
+        Spieler = player_name,
+        Pos = pos,
+        FPts = points,
+        WAR = war
+      ),
+    rownames = F, filter = "top", options = list(pageLength = 12, order = list(3, 'desc'))
+  )
+})
+```
+
+# Elo Rating {data-navmenu="Spieler"}
+
+## Sidebar {.sidebar}
+```{r inputs-player-elo, echo=FALSE, message=FALSE, warning=FALSE}
+
+selection <- players %>% 
+  dplyr::mutate(
+    player_name = paste0(player_name, " (", pos, ", ", team, ")")
+  ) %>% 
+  dplyr::select(player_id, player_name)
+
+selectizeInput(
+  "eloPlayerSelectPlayer",
+  "Filter nach Spielern",
+  choices = setNames(selection$player_id, selection$player_name),
+  multiple = TRUE,
+  options = list(
+    placeholder = "Spieler wählen",
+    onInitialize = I('function() { this.setValue("13116"); }')
+  )
+)
+
+selectizeInput(
+  "eloPlayerSelectPosition",
+  "Filter nach Position",
+  choices = players$grouped_pos,
+  multiple = TRUE,
+  options = list(
+    placeholder = "Position wählen",
+    onInitialize = I('function() { this.setValue("QB"); }')
+  )
+)
+
+sliderInput(
+  "eloPlayerStudThreshold",
+  "ELO Stud Threshold",
+  min = 1500,
+  max = 1750,
+  value = 1650,
+  step = 10
+)
+
+```
+
+> Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
+
+## Row
+### Running ELO Rating {data-width=800}
+```{r player-elo, echo=FALSE, fig.height=7, message=FALSE, warning=FALSE}
+source("R/elo/rfl-elo-players.R")
+
+renderPlot({
+    ggplot(subset(running_player_elo, position %in% input$eloPlayerSelectPosition), aes(x = game, y = player_elo_post, color = display_name)) +
+      plotDefaults +
+      geom_hline(yintercept = 1500, color = var.colorRed, size = 0.5, alpha = 0.75) + # default elo
+      geom_hline(yintercept = input$eloPlayerStudThreshold, color = var.colorAccent, size = 0.5, alpha = 0.75) + # stud elo
+      
+      geom_point(color = var.colorAccent, alpha = 0.3) +
+      geom_line(data = subset(running_player_elo, mfl_id %in% input$eloPlayerSelectPlayer), size = 1) +
+  
+      paletteer::scale_color_paletteer_d("awtools::ppalette") +
+      labs(
+        title = paste("RFL ELO Rating"),
+        y = "ELO",
+        x = "Game",
+        color = ""
+      ) +
+      theme(
+        legend.position = "top",
+        legend.text = element_text(size = 12)
+      ) +
+      scale_x_discrete(limits = c(1, 76), breaks = pretty_breaks())
+})
+```
+
+### Derzeitiges ELO-Rating {data-width=500}
+```{r player-elo-ranking, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  table_data <- player_elo %>%
+    dplyr::filter(season == max(season)) %>% 
+    dplyr::group_by(mfl_id) %>% 
+    dplyr::filter(week == max(week)) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::select(display_name, position, team, player_elo_post) %>% 
+    dplyr::rename(Spieler = display_name, Pos = position, Team = team, ELO = player_elo_post)
+
+  formattable::formattable(
+    table_data,
+    list(
+      ELO = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = FALSE, filter = "top", options = list(pageLength = 10, order = list(3, 'asc')))
+})
+```
+
+## Row
+### Elo Peak seit 2016 (Top 36) {data-width=500}
+
+```{r player-elo-peak, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  table_data <- player_elo %>%
+    dplyr::group_by(mfl_id) %>% 
+    dplyr::filter(player_elo_post == max(player_elo_post)) %>%
+    dplyr::ungroup() %>% 
+    dplyr::filter(position == input$eloPlayerSelectPosition) %>% 
+    dplyr::select(season, week, display_name, position, team, player_elo_post) %>%
+    dplyr::arrange(dplyr::desc(player_elo_post)) %>%
+    head(36) %>% 
+    dplyr::rename(Saison = season, Woche = week, Spieler = display_name, Pos = position, Team = team, ELO = player_elo_post)
+  
+  formattable::formattable(
+    table_data,
+    list(
+      "ELO" = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = FALSE, options = list(pageLength = 12, order = list(5, 'asc')))
+})
+```
+
+### Wochen als Stud (über Threshold) {data-width=300}
+
+```{r player-elo-above-1600, echo=FALSE, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+    table_data <- player_elo %>%
+      dplyr::filter(position == input$eloPlayerSelectPosition) %>% 
+      dplyr::mutate(above_threshold = ifelse(player_elo_post >= input$eloPlayerStudThreshold, 1, 0)) %>% 
+      dplyr::group_by(mfl_id, display_name) %>% 
+      dplyr::summarise(weeks = sum(above_threshold), .groups = "drop") %>% 
+      dplyr::filter(weeks > 0) %>% 
+      dplyr::select(display_name, weeks) %>%
+      dplyr::rename(Spieler = display_name, Wochen = weeks)
+      
+      formattable::formattable(
+        table_data,
+        list(
+          "Wochen" = formattable::color_tile("#EA2027", "#009432")
+        )
+      ) %>% 
+      formattable::as.datatable(escape = FALSE, rownames = FALSE, options = list(pageLength = 12, order = list(1, 'asc')))
+})
+```
+
+### Derzeitige NFL ELO {data-width=300}
+
+> Gegen diese Elo Werte spielen die Spieler am kommenden Spieltag
+
+```{r current-nfl-elo, echo=FALSE, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+    table_data <- player_elo %>%
+      dplyr::filter(season == max(season), !grepl("NA_", opponent_id)) %>% 
+      dplyr::group_by(opponent_id) %>% 
+      dplyr::filter(week == max(week)) %>% 
+      dplyr::ungroup() %>% 
+      dplyr::rowwise() %>% 
+      dplyr::mutate(
+        team = stringr::str_split(opponent_id, "_")[[1]][1],
+        position = stringr::str_split(opponent_id, "_")[[1]][2]
+      ) %>% 
+      dplyr::select(position, team, opponent_elo_post) %>% 
+      dplyr::distinct() %>% 
+      dplyr::filter(position == input$eloPlayerSelectPosition) %>% 
+      dplyr::arrange(dplyr::desc(position), dplyr::desc(opponent_elo_post)) %>% 
+      dplyr::rename(Pos = position, Team = team, ELO = opponent_elo_post)
+      
+      formattable::formattable(
+        table_data,
+        list(
+          "ELO" = formattable::color_tile("#EA2027", "#009432")
+        )
+      ) %>% 
+      formattable::as.datatable(escape = FALSE, rownames = FALSE, options = list(pageLength = 12, order = list(2, 'asc')))
+})
+```
+
+# Advance Rate {data-navmenu="Spieler"}
+
+## Inputs {.sidebar}
+
+```{r inputs-advance-rates, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+source("R/advance-rates/advance-rates.R", local = T)
+```
+
+## Main
+### Advance Rates
+
+```{r advance-rates, eval=FALSE, fig.height=9, message=FALSE, warning=FALSE, include=FALSE}
+DT::renderDataTable({
+  DT::datatable(
+    advanced_rosters %>% 
+      dplyr::rename(
+        "Spieler" = player_name,
+        "FPts/G" = score,
+        "Pos" = pos,
+        "Pos Rank" = rank,
+        "Advance Rate" = advance_rate
+      ),
+    rownames = FALSE, options = list(pageLength = 12, order = list(1, 'desc'))
+  )
+})
+```
+
+
+# Projections {data-navmenu="Matchups"}
+## Inputs {.sidebar}
+
+```{r inputs-matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+source("R/matchups/projections.R")
+
+weeks <- c(1:var.week)
+
+selectizeInput(
+  "matchupProjectionsSelectWeek",
+  "Filter nach Woche",
+  choices = weeks,
+  selected = max(weeks),
+  multiple= FALSE,
+  options = list(
+    placeholder = "Woche wählen"
+  )
+)
+
+selectizeInput(
+  "matchupProjectionsSelectMatchup",
+  "Filter nach Matchup",
+  choices = matchups$matchup,
+  selected = matchups$matchup[1],
+  multiple= FALSE,
+  options = list(
+    placeholder = "Matchup wählen"
+  )
+)
+```
+
+## Main
+### Home Team
+
+```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
+home_team <- reactive({
+  matchups %>% 
+    dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
+    dplyr::pull(home_name)
+})
+
+gt::render_gt({
+  matchup_projection_table_data %>% 
+  dplyr::filter(franchise_name == home_team()) %>% 
+  gtMatchupProjections() %>% 
+  gt::tab_header(
+    title = home_team(),
+    subtitle = paste("Week", nflreadr::get_current_week(), nflreadr::get_current_season())
+  )
+})
+```
+
+### Away Team
+
+```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
+away_team <- reactive({
+  matchups %>% 
+    dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
+    dplyr::pull(away_name)
+})
+
+gt::render_gt({
+  matchup_projection_table_data %>% 
+  dplyr::filter(franchise_name == away_team()) %>% 
+  gtMatchupProjections() %>% 
+  gt::tab_header(
+    title = away_team(),
+    subtitle = paste("Week", nflreadr::get_current_week(), nflreadr::get_current_season())
+  )
+})
+```
+
+# Trade History {data-navmenu="Trades"}
+
+## Inputs {.sidebar}
+
+```{r inputs-trade-history, echo=FALSE, message=FALSE, warning=FALSE}
+source("R/trades/trades.R")
+
+selection <- trades %>% 
+  dplyr::select(asset_id, asset_name) %>% 
+  dplyr::mutate(
+    asset_name = ifelse(grepl("DP_", asset_id), gsub("\\s*\\([^\\)]+\\)","", asset_name), asset_name),
+    asset_name = ifelse(grepl("DP_", asset_id), gsub("\\d+$","", asset_name), asset_name)
+  ) %>% 
+  dplyr::distinct() %>% 
+  dplyr::arrange(asset_name)
+
+selectInput(
+  "tradeHistoryType",
+  "Trades nach Typ filtern",
+  list("Alle", "Spieler", "Picks"),
+  selected = "Alle",
+  multiple = FALSE,
+  selectize = TRUE
+)
+
+selectizeInput(
+  "tradeHistoryPositions",
+  "Filter nach Position",
+  choices = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+  multiple= TRUE,
+  options = list(
+    placeholder = "Position wählen"
+  )
+)
+
+dateRangeInput(
+  "tradeHistoryDate",
+  "Zeitraum beschränken",
+  start = "2016-06-18",
+  end = max(unique(trades$date)),
+  min = "2016-06-18",
+  max = max(unique(trades$date)),
+  format = "dd.mm.yyyy",
+  startview = "decade",
+  separator = " bis ",
+  weekstart = 1,
+  language = "de",
+  autoclose = TRUE
+)
+
+selectizeInput(
+  "tradeHistoryAssets",
+  "Filter nach Asset",
+  choices = setNames(selection$asset_id, selection$asset_name),
+  multiple= TRUE,
+  options = list(
+    placeholder = "Assets wählen"
+  )
+)
+
+selectizeInput(
+  "tradeHistoryTeams",
+  "Filter nach RFL Franchise",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple= TRUE,
+  options = list(
+    placeholder = "Teams wählen"
+  )
+)
+```
+
+## Row
+### Alle Trades seit 2016 {data-width=800}
+
+```{r trade-history, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
+trade_history <- reactive({
+  trades %>% 
+    dplyr::left_join(
+      franchises %>% 
+        dplyr::select(franchise_id, franchise_name),
+      by = "franchise_id"
+    ) %>% 
+    dplyr::mutate(
+      asset_type = ifelse(grepl("DP_", asset_id), "pick", "player"),
+    ) %>% 
+    dplyr::group_by(trade_id) %>%
+    dplyr::mutate(
+      asset_types = paste(asset_type, collapse = ","),
+      asset_ids = paste(asset_id, collapse = ","),
+      franchise_ids = paste(franchise_id, collapse = ",")
+    ) %>% 
+    dplyr::group_by(trade_id, trade_side, asset_types) %>%
+    dplyr::summarise(
+      date = dplyr::first(date),
+      asset_ids = dplyr::first(asset_ids),
+      asset_types = dplyr::first(asset_types),
+      franchise_ids = dplyr::first(franchise_ids),
+      asset_names = paste(asset_name, collapse = "\n"),
+      franchise_name = dplyr::first(franchise_name),
+      .groups = "drop"
+    ) %>% 
+    dplyr::mutate(
+      asset_names = paste0(franchise_name, " sends\n", asset_names)
+    ) %>%
+    
+    dplyr::filter(
+      if(isTruthy(input$tradeHistoryAssets))
+        grepl(input$tradeHistoryAssets, as.character(asset_ids))
+      else
+        TRUE
+    ) %>%
+      dplyr::filter(
+        if(isTruthy(input$tradeHistoryTeams))
+          grepl(input$tradeHistoryTeams, as.character(franchise_ids))
+        else
+          TRUE
+      ) %>%
+      dplyr::filter(
+        date >= input$tradeHistoryDate[1] & date <= input$tradeHistoryDate[2]
+      ) %>%
+      dplyr::filter(
+        if(input$tradeHistoryType == "Picks")
+          !grepl("player", as.character(asset_types))
+        else
+          TRUE
+      ) %>%
+      dplyr::filter(
+        if(input$tradeHistoryType == "Spieler")
+          !grepl("pick", as.character(asset_types))
+        else
+          TRUE
+      ) %>%
+
+    dplyr::select(trade_id, date, trade_side, asset_names) %>% 
+    tidyr::spread(trade_side, asset_names) %>%
+    
+    dplyr::filter(
+      if(isTruthy(input$tradeHistoryPositions))
+        grepl(paste0(input$tradeHistoryPositions, ","), franchise_1) | grepl(paste0(input$tradeHistoryPositions, ","), franchise_2)
+      else
+        TRUE
+    ) %>%
+    
+    dplyr::arrange(dplyr::desc(trade_id)) %>%
+    dplyr::select(-trade_id) %>%
+    dplyr::mutate(
+      date = format(date, "%d.%m.%Y")
+    ) %>%
+    dplyr::rename(Datum = date, "Franchise 1" = franchise_1, "Franchise 2" = franchise_2)
+})
+
+DT::renderDataTable({
+  DT::datatable(
+    trade_history(),
+    rownames = FALSE, options = list(dom = "Bfrtip", pageLength = 8)
+  )
+})
+
+```
+
+## Row
+### Die am häufigsten getradeten Spieler
+
+```{r most-traded-players, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  formattable::formattable(
+    most_tradet_players,
+    list(
+      Trades = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = FALSE, filter = "top", options = list(pageLength = 10, order = list(1, 'asc')))
+})
+```
+
+### Trades zwischen Teams
+
+```{r trades-between-teams, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  formattable::formattable(
+    most_trades_between_teams,
+    list(
+      Trades = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = FALSE, filter = "top", options = list(pageLength = 10, order = list(1, 'asc')))
+})
+```
+
+## Row
+### Trades pro Franchise
+
+```{r trades-by-franchise, echo=FALSE, fig.height=12, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  formattable::formattable(
+    most_trades_by_franchise,
+    list(
+      Summe = formattable::color_tile("#EA2027", "#009432"),
+      "2016" = formattable::color_tile("#EA2027", "#009432"),
+      "2017" = formattable::color_tile("#EA2027", "#009432"),
+      "2018" = formattable::color_tile("#EA2027", "#009432"),
+      "2019" = formattable::color_tile("#EA2027", "#009432"),
+      "2020" = formattable::color_tile("#EA2027", "#009432"),
+      "2021" = formattable::color_tile("#EA2027", "#009432"),
+      "2022" = formattable::color_tile("#EA2027", "#009432"),
+      "2023" = formattable::color_tile("#EA2027", "#009432"),
+      "2024" = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = FALSE, filter = "top", options = list(pageLength = 12, order = list(1, 'asc')))
+})
+```
+
+# Trade Calculator (Beta) {data-navmenu="Trades"}
+
+## Inputs {.sidebar}
+
+```{r inputs-trade-calculator, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+source("R/drafts/rfl-drafts.R")
+source("R/trades/trade-calculator.R")
+
+weeks <- c(1:18)
+
+sliderInput("tradeCalculatorInputGames", "Games/Season:", min = 1, max = 18, value = 13, sep = "")
+
+#selectizeInput(
+#  "tradeCalculatorInputGames",
+#  "Games/Season",
+#  choices = weeks,
+#  selected = 13,
+#  multiple= FALSE,
+#  options = list(
+#    placeholder = "Woche wählen"
+#  )
+#)
+
+```
+
+## Main
+### Team 1
+
+```{r eval=FALSE, include=FALSE}
+selectizeInput(
+  "tradeCalculatorTeam1",
+  "Wähle Assets",
+  choices = trade_values$asset,
+  multiple= TRUE,
+  options = list(
+    placeholder = "Assets wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+gt::render_gt({
+  trade_values %>% 
+    dplyr::filter(
+      asset %in% c(input$tradeCalculatorTeam1)
+    ) %>% 
+    gt::gt() %>% 
+    gt::grand_summary_rows(
+      columns = value,
+      fns = list(
+        sum ~ sum(.)
+      ),
+      fmt = ~ fmt_number(., use_seps = FALSE)
+    )
+})
+```
+
+
+### Team 2
+
+```{r eval=FALSE, include=FALSE}
+selectizeInput(
+  "tradeCalculatorTeam2",
+  "Wähle Assets",
+  choices = trade_values$asset,
+  multiple= TRUE,
+  options = list(
+    placeholder = "Assets wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+gt::render_gt({
+  trade_values %>% 
+    dplyr::filter(
+      asset %in% c(input$tradeCalculatorTeam2)
+    ) %>% 
+    gt::gt() %>% 
+    gt::grand_summary_rows(
+      columns = value,
+      fns = list(
+        sum ~ sum(.)
+      ),
+      fmt = ~ fmt_number(., use_seps = FALSE)
+    )
+})
+```
+
+
+
+# Trade Bait {data-navmenu="Trades"}
+### Trade Bait
+```{r trade-bait, message=FALSE, warning=FALSE, include=FALSE}
+source("R/trade-bait/trade-bait.R", local = T)
+```
+
+Column {.tabset}
+-------------------------------------
+### Nach Team
+
+```{css}
+.chart-shim {
+  overflow: auto;
+}
+```
+
+```{r echo=FALSE, fig.height=40, message=FALSE, warning=FALSE}
+gt::render_gt({
+  trade_baits %>%
+    dplyr::group_by(franchise_name, inExchangeFor) %>%
+    create_gt() %>% 
+    gt::cols_move(columns = pos, after = player_name)
+})
+
+```
+
+### Nach Position
+
+```{r echo=FALSE, fig.height=40, message=FALSE, warning=FALSE}
+gt::render_gt({
+  trade_baits %>%
+    dplyr::group_by(pos) %>%
+    create_gt() %>% 
+    gt::cols_label(franchise_name = "Team") %>% 
+    gtExtras::gt_merge_stack(
+      col1 = franchise_name,
+      col2 = inExchangeFor,
+      palette = c("black", "black"),
+      small_cap = FALSE,
+      font_weight = c("normal", "normal")
+    )
+})
+
+```
+
+# Draft {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("selectPicks", "Picks:", min = 1, max = 252, value = c(1, 72), sep = "")
+
+source("R/drafts/rfl-drafts.R", local = T)
+```
+
+Column {.tabset}
+-------------------------------------
+### Spieler nach Runde
+
+```{r fig.height=14}
+renderPlot({
+  rfl_drafts() %>% 
+    ggplot2::ggplot(ggplot2::aes(y = pos_rank, color = as.character(season))) +
+      ggplot2::facet_grid(season~position) +
+      ggplot2::geom_segment(ggplot2::aes(x = first_pick, xend = third_pick, yend = pos_rank)) +
+      ggplot2::geom_point(ggplot2::aes(x = first_pick)) +
+      ggplot2::geom_point(ggplot2::aes(x = second_pick)) +
+      ggplot2::geom_point(ggplot2::aes(x = third_pick)) +
+      ggplot2::scale_y_reverse() +
+      ggplot2::labs(
+        x = "OVerall Pick",
+        y = "Position Rank"
+      ) +
+      plotDefaults +
+      ggplot2::theme(
+        legend.position = "none"
+      )
+}, height = 1200)
+```
+
+### Positionen nach Runde
+
+```{r fig.height=12}
+renderPlot({
+  rfl_drafts() %>% 
+  dplyr::group_by(season, round, position) %>% 
+  dplyr::summarise(count = n(), .groups = "drop") %>% 
+  ggplot2::ggplot(ggplot2::aes(x = round, y = season, alpha = count)) +
+    ggplot2::facet_wrap(~position, ncol = 4) +
+    ggplot2::geom_tile(fill = var.colorYellow) +
+    ggplot2::labs(
+      x = "Runde",
+      y = ""
+    ) +
+    plotDefaults +
+    ggplot2::theme(
+        legend.position = "none"
+      )
+}, height = 1000)
+```
+
+### Positionen nach Pick
+
+```{r fig.height=12}
+renderPlot({
+  rfl_drafts() %>% 
+    ggplot2::ggplot(ggplot2::aes(x = overall, y = position)) +
+    ggplot2::geom_vline(xintercept = 37, color = var.colorAccent) +
+    ggplot2::geom_vline(xintercept = 73, color = var.colorAccent) +
+    ggplot2::geom_vline(xintercept = 109, color = var.colorAccent) +
+    ggplot2::geom_vline(xintercept = 145, color = var.colorAccent) +
+    ggplot2::geom_vline(xintercept = 181, color = var.colorAccent) +
+    ggplot2::geom_vline(xintercept = 216, color = var.colorAccent) +
+    ggridges::geom_density_ridges(fill = var.colorYellow) +
+    ggplot2::scale_x_continuous(limits = c(0, 252)) +
+    ggplot2::labs(
+      x = "Overall Pick",
+      y = ""
+    ) +
+    plotDefaults
+}, height = 1000)
+```
+
+### Nach NFL Draft Round
+
+```{r fig.height=12}
+renderPlot({
+  nfl_draft_rounds() %>% 
+    ggplot2::ggplot(ggplot2::aes(x = round_nfl, y = round, fill = count)) +
+    ggplot2::facet_wrap(~ position) +
+    ggplot2::geom_tile() +
+    ggplot2::geom_text(ggplot2::aes(label = count), color = "white", size = 3) +
+    ggplot2::labs(
+      x = "NFL Draft Round",
+      y = "RFL Draft Round"
+    ) +
+    plotDefaults
+}, height = 1000)
+```
+
+> oben links: früh im NFL Draft, spät im RFL Draft (Steal?) - oben rechts: spät im NFL Draft, spät im RFL Draft - unten rechts: spät im NFL Draft, früh im RFL Draft (Reach?) - unten links: früh im NFL Draft, früh im RFL Draft
+
+# Draft-ELO {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft-elo, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("draftEloSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season), sep = "")
+
+sliderInput("draftEloSelectRounds", "Draftrunde", min = 1, max = 7, value = c(1, 7), sep = "")
+
+selectizeInput(
+  "draftEloSelectPosition",
+  "Positionen",
+  choices = players$pos,
+  multiple = TRUE,
+  options = list(
+    placeholder = "Position wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+selectizeInput(
+  "draftEloSelectTeams",
+  "RFL Teams",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple= TRUE,
+  options = list(
+    placeholder = "Teams wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+source("R/drafts/rfl-draft-elo.R", local = TRUE)
+```
+
+## Row
+### RFL Draftpicks nach ELO
+```{r draft-elo, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+DT::renderDataTable({
+  formattable::formattable(
+    rfl_draft_elo(),
+    list(
+      ELO = formattable::color_tile("#EA2027", "#009432")
+    )
+  ) %>% 
+  formattable::as.datatable(escape = FALSE, rownames = F, options = list(pageLength = 12, order = list(8, 'asc')))
+})
+```
