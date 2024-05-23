@@ -1,5 +1,5 @@
 most_tradet_players <- trades %>%
-  dplyr::filter(!grepl("Pick", asset_name) & !is.na(asset_name)) %>%
+  dplyr::filter(!grepl("DP_", asset_id) & !is.na(asset_name)) %>%
   dplyr::group_by(asset_id) %>%
   dplyr::summarise(Trades = n(), .groups = "drop") %>%
   dplyr::left_join(trades %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
