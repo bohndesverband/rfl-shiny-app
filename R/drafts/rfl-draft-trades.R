@@ -1,8 +1,8 @@
 draft_start <- as.numeric(as.POSIXct("2024-05-10 20:00:00 MEZ"))
-#draft_end
+draft_end <- as.numeric(as.POSIXct("2024-05-28 16:15:16 ET"))
 
 rfl_draft_trades <- trades %>%
-  dplyr::filter(timestamp >= draft_start) %>%
+  dplyr::filter(timestamp >= draft_start & timestamp <= draft_end) %>%
   dplyr::left_join(
     franchises %>%
       dplyr::select(franchise_id, franchise_name),
