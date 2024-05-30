@@ -100,7 +100,12 @@ player_ranks_avg <- jsonlite::read_json(paste0(var.mflApiBase, "/export?TYPE=pla
 
 trades <- readr::read_csv("https://raw.githubusercontent.com/jak3sch/rfl/main/data/trades/rfl-trades.csv", col_types = "ddTdcccc")
 
-rfl_drafts_data <- readr::read_csv("https://raw.githubusercontent.com/jak3sch/rfl/main/data/drafts/rfl-draft.csv", col_types = "ddddccccccd")
+rfl_drafts_data <- purrr::map_df(2017:nflreadr::get_current_season(TRUE), function(x) {
+  readr::read_csv(
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/rfl_draft_{x}.csv"),
+    col_types = "ddddccccccd"
+  )
+})
 
 true_standing <- readr::read_csv(paste0("https://raw.githubusercontent.com/jak3sch/rfl/main/data/true-standing/rfl-true-standing-", var.season, ".csv"), col_types = "ncinnnnnnnnn") %>%
   dplyr::left_join(

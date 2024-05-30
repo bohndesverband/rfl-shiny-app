@@ -1543,7 +1543,8 @@ selectizeInput(
 
 source("R/drafts/rfl-draft-hit-rates.R", local = TRUE)
 ```
-> Hit = mind. 3 Top 8 oder 1 Top 12 Finish für QB, TE und PK und mind. 1 Top 36 Finish (oder 1 Top 24 Finish für junge Spieler) für alle anderen Positionen<br><br>
+
+Hit = mind. 3 Top 8 oder 1 Top 12 Finish für QB, TE und PK und mind. 1 Top 36 Finish (oder 1 Top 24 Finish für junge Spieler) für alle anderen Positionen<br><br>
 Home Run = mind. 2 (1 für junge Spieler) Top 5 Finishes, mind. 3 Top 3 Finishes für QB, TE und PK oder mind. 3 Top 12 Finishes für alle anderen Positionen<br><br>
 Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
 
