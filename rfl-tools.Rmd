@@ -566,12 +566,12 @@ gt::render_gt({
 # Strength of Schedule {data-navmenu="Teams"}
 
 ```{r global-sos, message=TRUE, warning=TRUE, include=FALSE}
-sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main/data/rfl-sos.csv",
+sos <- read.csv(paste0("https://raw.githubusercontent.com/bohndesverband/rfl-data/main/data/schedule/rfl-sos-", var.seasonNewYear, ".csv"),
                 colClasses = c("franchise_id" = "character",
                                "Total" = "numeric",
                                "Division" = "numeric",
                                "Conference" = "numeric",
-                               "Other" = "numeric",
+                               "Random" = "numeric",
                                "rank_div" = "character",
                                "conf_name" = "character",
                                "div_name" = "character",
@@ -581,7 +581,7 @@ sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main
     above_avg = round(Total - mean(Total), 3),
     SOS = round(SOS, 3),
   ) %>% 
-  rename(Random = Other) %>% 
+  #rename(Random = Other) %>% 
   left_join(franchises %>% select(franchise_id, franchise_name), by = "franchise_id")
 ```
 
@@ -642,9 +642,9 @@ renderPlot({
 ### Strength of Schedule by Division and Matchup Type
 
 ```{r chart-sos-by-matchup, echo=FALSE, message=FALSE, warning=FALSE}
-data_facet_annotation <- sos %>% 
-  select(div_name, div_rank_in_conf, conf_name) %>% 
-  distinct()
+#data_facet_annotation <- sos %>% 
+#  select(div_name, div_rank_in_conf, conf_name) %>% 
+#  distinct()
 
 chartSosByMatchupData <- sos %>% 
   gather(matchup, sos, c(Total, Division, Conference, Random))
