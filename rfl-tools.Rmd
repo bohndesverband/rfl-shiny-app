@@ -61,6 +61,13 @@ var.mflLeagueID <- 63018
 var.season <- nflreadr::get_current_season()
 var.seasonNewYear <- nflreadr::get_current_season(TRUE)
 var.week <- nflreadr::get_current_week()
+
+var.maxSeason <- var.season
+
+if (var.week == 1) {
+  var.maxSeason <- nflreadr::get_current_season() - 1
+}
+
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
 var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
 
