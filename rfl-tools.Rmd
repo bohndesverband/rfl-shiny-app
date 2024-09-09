@@ -950,7 +950,7 @@ DT::renderDataTable({
 # Projections {data-navmenu="Matchups"}
 ## Inputs {.sidebar}
 
-```{r inputs-matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r inputs-matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
 source("R/matchups/projections.R")
 
 weeks <- c(1:var.week)
@@ -966,16 +966,18 @@ selectizeInput(
   )
 )
 
-selectizeInput(
-  "matchupProjectionsSelectMatchup",
-  "Filter nach Matchup",
-  choices = matchups$matchup,
-  selected = matchups$matchup[1],
-  multiple= FALSE,
-  options = list(
-    placeholder = "Matchup wählen"
+renderUI({
+  selectizeInput(
+    "matchupProjectionsSelectMatchup",
+    "Filter nach Matchup",
+    choices = matchups()$matchup,
+    selected = matchups()$matchup[1],
+    multiple= FALSE,
+    options = list(
+      placeholder = "Matchup wählen"
+    )
   )
-)
+})
 ```
 
 ## Main
@@ -983,13 +985,13 @@ selectizeInput(
 
 ```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 home_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(home_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == home_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(
@@ -1003,13 +1005,13 @@ gt::render_gt({
 
 ```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 away_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(away_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == away_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(

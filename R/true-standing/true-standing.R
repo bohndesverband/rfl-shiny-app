@@ -1,4 +1,4 @@
-true_standing <- readr::read_csv(paste0("https://raw.githubusercontent.com/jak3sch/rfl/main/data/true-standing/rfl-true-standing-", var.season, ".csv"), col_types = "ncinnnnnnnnn") %>%
+true_standing <- readr::read_csv(paste0("https://raw.githubusercontent.com/jak3sch/rfl/main/data/true-standing/rfl-true-standing-", var.maxSeason, ".csv"), col_types = "ncinnnnnnnnn") %>%
   dplyr::left_join(
     franchises %>%
       dplyr::select(franchise_id, franchise_name, division_name),
