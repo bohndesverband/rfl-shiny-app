@@ -35,9 +35,9 @@ franchises <- league %>%
   )
 
 ## starter data ----
-starter <- purrr::map_df(2016:var.maxSeason, function(x) {
+starter <- purrr::map_df(2016:var.seasonBeforeWeek1, function(x) {
   readr::read_csv(
-    glue::glue("https://raw.githubusercontent.com/jak3sch/rfl/main/data/starter/rfl-starter-{x}.csv"),
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/starter_data/rfl_starter_{x}.csv"),
     col_types = "iiccdcccni"
   )
 })
@@ -58,26 +58,26 @@ roster <- jsonlite::read_json(paste0(var.mflApiBaseEarlyNewYear, "/export?TYPE=r
   )
 
 # war data ----
-war <- purrr::map_df(2016:var.maxSeason, function(x) {
+war <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
   readr::read_csv(
-    glue::glue("https://raw.githubusercontent.com/jak3sch/rfl/main/data/war/rfl-war-{x}.csv"),
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/war_data/rfl_war_{x}.csv"),
     col_types = "idccdd"
   ) %>%
     dplyr::mutate(season = x)
 })
 
-elo <- purrr::map_df(2016:var.maxSeason, function(x) {
+elo <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
   readr::read_csv(
-    glue::glue("https://raw.githubusercontent.com/jak3sch/rfl/main/data/elo/rfl-elo-{x}.csv"),
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_team-elo_{x}.csv"),
     col_types = "ciiccnnnnnnn"
   )
 }) %>%
   dplyr::left_join(franchises %>% select(franchise_id, franchise_name, division_name), by = "franchise_id") %>%
   dplyr::left_join(franchises %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
 
-player_elo <- purrr::map_df(2016:var.maxSeason, function(x) {
+player_elo <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
   readr::read_csv(
-    glue::glue("https://raw.githubusercontent.com/jak3sch/rfl/main/data/elo/rfl-player-elo-{x}.csv"),
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_player-elo_{x}.csv"),
     col_types = "iicccccnniiiii"
   )
 }) %>%
@@ -112,7 +112,7 @@ rfl_drafts_data <- purrr::map_df(2017:nflreadr::get_current_season(TRUE), functi
   )
 })
 
-true_standing <- readr::read_csv(paste0("https://raw.githubusercontent.com/jak3sch/rfl/main/data/true-standing/rfl-true-standing-", var.maxSeason, ".csv"), col_types = "ncinnnnnnnnn") %>%
+true_standing <- readr::read_csv(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_true-standing_", var.seasonBeforeWeek2, ".csv"), col_types = "ncinnnnnnnnn") %>%
   dplyr::left_join(
     franchises %>%
       dplyr::select(franchise_id, franchise_name, division_name),

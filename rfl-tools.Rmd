@@ -62,10 +62,15 @@ var.season <- nflreadr::get_current_season()
 var.seasonNewYear <- nflreadr::get_current_season(TRUE)
 var.week <- nflreadr::get_current_week()
 
-var.maxSeason <- var.season
+var.seasonBeforeWeek1 <- var.season
+var.seasonBeforeWeek2 <- var.season
 
 if (var.week == 1) {
-  var.maxSeason <- nflreadr::get_current_season() - 1
+  var.seasonBeforeWeek1 <- nflreadr::get_current_season() - 1
+}
+
+if (nflreadr::get_current_week(TRUE) < 2) {
+  var.seasonBeforeWeek2 <- nflreadr::get_current_season() - 1
 }
 
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
@@ -1124,7 +1129,7 @@ trade_history <- reactive({
     ) %>% 
     dplyr::mutate(
       asset_names = paste0(franchise_name, " sends\n", asset_names)
-    ) %>%
+    ) %>% 
     
     dplyr::filter(
       if(isTruthy(input$tradeHistoryAssets))
