@@ -10,8 +10,8 @@ plotDefaults <- theme(
   axis.title.x = element_text(vjust = -1),
   axis.title.y = element_text(vjust = 2.5),
   axis.text = element_text(size = 9, color = var.colorAccent, family = var.fontTextBold),
-  axis.line = element_line(color = var.colorAccent, size = 0.5),
-  axis.ticks = element_line(color = var.colorAccent, size = 0.5),
+  axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
+  axis.ticks = element_line(color = var.colorAccent, linewidth = 0.5),
 
   strip.background = element_rect(fill = var.colorAccent),
   strip.text = element_text(size = 10, color = var.colorBlue, family = var.fontTextBold),
@@ -23,6 +23,6 @@ plotDefaults <- theme(
   legend.text = element_text(size = 10, color = var.colorAccent),
 
   panel.background = element_rect(fill = "#002459"),
-  panel.grid.major = element_line(color = var.colorBlue, size = 0.35),
-  panel.grid.minor = element_line(color = var.colorBlue, size = 0.25)
+  panel.grid.major = element_line(color = var.colorBlue, linewidth = 0.35),
+  panel.grid.minor = element_line(color = var.colorBlue, linewidth = 0.25)
 )
