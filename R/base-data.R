@@ -69,7 +69,7 @@ war <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
 elo <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
   readr::read_csv(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_team-elo_{x}.csv"),
-    col_types = "ciiccnnnnnnn"
+    col_types = "iiccnnnnnnn"
   )
 }) %>%
   dplyr::left_join(franchises %>% select(franchise_id, franchise_name, division_name), by = "franchise_id") %>%

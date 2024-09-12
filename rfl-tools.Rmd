@@ -143,6 +143,7 @@ gtDefaults <- function(df) {
 ### Aktuelles Standing
 ```{r current-standing, echo=FALSE, fig.height=20, message=FALSE, warning=FALSE}
 source("R/true-standing/true-standing.R")
+source("R/true-standing/rfl-true-standing.R")
 
 gt::render_gt({
   current_standing_table
@@ -258,6 +259,7 @@ renderPlot({
       geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
       geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
       geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
+      geom_vline(xintercept = 100, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2024
       
       geom_point(color = var.colorAccent, alpha = 0.3) +
       geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
@@ -326,7 +328,7 @@ DT::renderDataTable({
     dplyr::group_by(franchise_name) %>% 
     dplyr::arrange(week) %>% 
     dplyr::mutate(
-      franchise_elo_pregame = dplyr::lag(franchise_elo_pregame),
+      # franchise_elo_pregame = ifelse(week == 1, franchise_elo_pregame, dplyr::lag(franchise_elo_pregame)), TODO: zeile checken. versteh ich nicht mehr
       elo_diff = franchise_elo_postgame - franchise_elo_pregame
     ) %>% 
     dplyr::ungroup() %>% 
@@ -394,7 +396,7 @@ DT::renderDataTable(
 ## Sidebar {.sidebar}
 
 ```{r inputs-war-teams, echo=FALSE, message=FALSE, warning=FALSE}
-sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = 7, sep = "")
+sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = ceiling(var.week / 2), sep = "")
 ```
 
 > Übersicht über die kummulierten WAR für die einzelnen Teams. Es fließen derzeit nur Spieler ein, die in dieser Saison mindestens einmal in der Liga gestartet wurden.
@@ -448,7 +450,7 @@ war_teams_data_filtered <- reactive({
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%
-    dplyr::select(franchise_name, total, QB, RB, WR, TE, DL, LB, DB, PK)
+    dplyr::select(franchise_name, total, "QB", "RB", "WR", "TE", "DL", "LB", "DB", "PK")
 })
 
 DT::renderDataTable({
