@@ -75,6 +75,7 @@ if (nflreadr::get_current_week(TRUE) < 2) {
 
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
 var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
+var.posOrder <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP")
 
 var.colorBlue <- "#00183C"
 var.colorRed <- "#D03324"
