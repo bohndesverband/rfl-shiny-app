@@ -3,7 +3,7 @@ running_elo <- elo %>%
     week = stringr::str_pad(week, 2, pad = "0")
   ) %>%
   dplyr::group_by(franchise_id) %>%
-  dplyr::mutate(game = paste0(season, week)) %>%
+  dplyr::mutate(game = as.numeric(paste0(season, week))) %>%
   dplyr::arrange(game) %>%
   dplyr::select(game, franchise_id, franchise_elo_postgame) %>%
   dplyr::distinct() %>%

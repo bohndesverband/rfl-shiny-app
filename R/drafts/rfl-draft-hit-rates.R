@@ -1,6 +1,6 @@
-fantasy_finishes_raw <- purrr::map_df(2016:var.season, function(x) {
-  readr::read_rds(
-    glue::glue("https://github.com/jak3sch/rfl/raw/main/data/playerscores/rfl-playerscores-{x}.rds"),
+fantasy_finishes_raw <- purrr::map_df(2016:var.seasonBeforeWeek2, function(x) {
+  readr::read_csv(
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/playerscores_data/rfl_playerscores_{x}.csv"), col_types = "iiccccn"
   )
 })
 

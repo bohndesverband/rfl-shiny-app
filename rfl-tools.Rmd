@@ -61,6 +61,18 @@ var.mflLeagueID <- 63018
 var.season <- nflreadr::get_current_season()
 var.seasonNewYear <- nflreadr::get_current_season(TRUE)
 var.week <- nflreadr::get_current_week()
+
+var.seasonBeforeWeek1 <- var.season
+var.seasonBeforeWeek2 <- var.season
+
+if (var.week == 1) {
+  var.seasonBeforeWeek1 <- nflreadr::get_current_season() - 1
+}
+
+if (nflreadr::get_current_week(TRUE) < 2) {
+  var.seasonBeforeWeek2 <- nflreadr::get_current_season() - 1
+}
+
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
 var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
 
@@ -131,6 +143,7 @@ gtDefaults <- function(df) {
 ### Aktuelles Standing
 ```{r current-standing, echo=FALSE, fig.height=20, message=FALSE, warning=FALSE}
 source("R/true-standing/true-standing.R")
+source("R/true-standing/rfl-true-standing.R")
 
 gt::render_gt({
   current_standing_table
@@ -246,6 +259,7 @@ renderPlot({
       geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
       geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
       geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
+      geom_vline(xintercept = 100, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2024
       
       geom_point(color = var.colorAccent, alpha = 0.3) +
       geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
@@ -314,7 +328,7 @@ DT::renderDataTable({
     dplyr::group_by(franchise_name) %>% 
     dplyr::arrange(week) %>% 
     dplyr::mutate(
-      franchise_elo_pregame = dplyr::lag(franchise_elo_pregame),
+      # franchise_elo_pregame = ifelse(week == 1, franchise_elo_pregame, dplyr::lag(franchise_elo_pregame)), TODO: zeile checken. versteh ich nicht mehr
       elo_diff = franchise_elo_postgame - franchise_elo_pregame
     ) %>% 
     dplyr::ungroup() %>% 
@@ -382,7 +396,7 @@ DT::renderDataTable(
 ## Sidebar {.sidebar}
 
 ```{r inputs-war-teams, echo=FALSE, message=FALSE, warning=FALSE}
-sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = 7, sep = "")
+sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = ceiling(var.week / 2), sep = "")
 ```
 
 > Übersicht über die kummulierten WAR für die einzelnen Teams. Es fließen derzeit nur Spieler ein, die in dieser Saison mindestens einmal in der Liga gestartet wurden.
@@ -436,7 +450,7 @@ war_teams_data_filtered <- reactive({
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%
-    dplyr::select(franchise_name, total, QB, RB, WR, TE, DL, LB, DB, PK)
+    dplyr::select(franchise_name, total, "QB", "RB", "WR", "TE", "DL", "LB", "DB", "PK")
 })
 
 DT::renderDataTable({
@@ -566,12 +580,12 @@ gt::render_gt({
 # Strength of Schedule {data-navmenu="Teams"}
 
 ```{r global-sos, message=TRUE, warning=TRUE, include=FALSE}
-sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main/data/rfl-sos.csv",
+sos <- read.csv(paste0("https://raw.githubusercontent.com/bohndesverband/rfl-data/main/data/schedule/rfl-sos-", var.seasonNewYear, ".csv"),
                 colClasses = c("franchise_id" = "character",
                                "Total" = "numeric",
                                "Division" = "numeric",
                                "Conference" = "numeric",
-                               "Other" = "numeric",
+                               "Random" = "numeric",
                                "rank_div" = "character",
                                "conf_name" = "character",
                                "div_name" = "character",
@@ -581,7 +595,7 @@ sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main
     above_avg = round(Total - mean(Total), 3),
     SOS = round(SOS, 3),
   ) %>% 
-  rename(Random = Other) %>% 
+  #rename(Random = Other) %>% 
   left_join(franchises %>% select(franchise_id, franchise_name), by = "franchise_id")
 ```
 
@@ -642,9 +656,9 @@ renderPlot({
 ### Strength of Schedule by Division and Matchup Type
 
 ```{r chart-sos-by-matchup, echo=FALSE, message=FALSE, warning=FALSE}
-data_facet_annotation <- sos %>% 
-  select(div_name, div_rank_in_conf, conf_name) %>% 
-  distinct()
+#data_facet_annotation <- sos %>% 
+#  select(div_name, div_rank_in_conf, conf_name) %>% 
+#  distinct()
 
 chartSosByMatchupData <- sos %>% 
   gather(matchup, sos, c(Total, Division, Conference, Random))
@@ -943,7 +957,7 @@ DT::renderDataTable({
 # Projections {data-navmenu="Matchups"}
 ## Inputs {.sidebar}
 
-```{r inputs-matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r inputs-matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
 source("R/matchups/projections.R")
 
 weeks <- c(1:var.week)
@@ -959,16 +973,18 @@ selectizeInput(
   )
 )
 
-selectizeInput(
-  "matchupProjectionsSelectMatchup",
-  "Filter nach Matchup",
-  choices = matchups$matchup,
-  selected = matchups$matchup[1],
-  multiple= FALSE,
-  options = list(
-    placeholder = "Matchup wählen"
+renderUI({
+  selectizeInput(
+    "matchupProjectionsSelectMatchup",
+    "Filter nach Matchup",
+    choices = matchups()$matchup,
+    selected = matchups()$matchup[1],
+    multiple= FALSE,
+    options = list(
+      placeholder = "Matchup wählen"
+    )
   )
-)
+})
 ```
 
 ## Main
@@ -976,13 +992,13 @@ selectizeInput(
 
 ```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 home_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(home_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == home_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(
@@ -996,13 +1012,13 @@ gt::render_gt({
 
 ```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 away_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(away_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == away_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(
@@ -1115,7 +1131,7 @@ trade_history <- reactive({
     ) %>% 
     dplyr::mutate(
       asset_names = paste0(franchise_name, " sends\n", asset_names)
-    ) %>%
+    ) %>% 
     
     dplyr::filter(
       if(isTruthy(input$tradeHistoryAssets))
@@ -1503,3 +1519,163 @@ DT::renderDataTable({
   formattable::as.datatable(escape = FALSE, rownames = F, options = list(pageLength = 12, order = list(8, 'asc')))
 })
 ```
+
+# Draft Trades {data-navmenu="Draft"}
+
+## Row
+### Alle Trades während des aktuellsten Drafts
+
+```{r draft-trades, echo=FALSE, fig.height=30, message=FALSE, warning=FALSE}
+source("R/drafts/rfl-draft-trades.R")
+
+DT::renderDataTable({
+  DT::datatable(
+    draft_trades_combined,
+    rownames = FALSE, options = list(dom = "Bfrtip", pageLength = 12)
+  )
+})
+
+```
+
+# Hit Rates {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
+sliderInput("draftHitRatesSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season - 2), sep = "")
+
+sliderInput("draftHitRatesSelectRounds", "Draftrunde", min = 1, max = 7, value = c(1, 7), sep = "")
+
+selectizeInput(
+  "draftHitRatesSelectTeam",
+  "RFL Franchise hervorheben",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple= FALSE,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue("RFL"); }')
+  )
+)
+
+source("R/drafts/rfl-draft-hit-rates.R", local = TRUE)
+```
+
+Hit = mind. 3 Top 8 oder 1 Top 12 Finish für QB, TE und PK und mind. 1 Top 36 Finish (oder 1 Top 24 Finish für junge Spieler) für alle anderen Positionen<br><br>
+Home Run = mind. 2 (1 für junge Spieler) Top 5 Finishes, mind. 3 Top 3 Finishes für QB, TE und PK oder mind. 3 Top 12 Finishes für alle anderen Positionen<br><br>
+Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
+
+## Row
+### Draft Hit Rates je Runde
+
+```{r draft-hit-rates-plot, echo=FALSE, fig.height=9}
+renderPlot({
+  draft_hit_rates() %>%
+    ggplot2::ggplot(aes(x = round, y = pct, fill = category, color = category)) +
+    plotDefaults +
+    ggplot2::geom_col(position = "dodge", alpha = 0.4, color = NA, show.legend = FALSE) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit"), position = position_nudge(x = -0.3)) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run")) +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss"), position = position_nudge(x = 0.3)) +
+    ggplot2::scale_color_manual(values = c("#10ac84", var.colorYellow, "#ee5253")) +
+    ggplot2::scale_fill_manual(values = c("#10ac84", var.colorYellow, "#ee5253"), guide = "none") +
+  
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = -0.3), color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = -0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), group = 1, color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = 0.3), color = var.colorAccent, size = 9) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = 0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    
+    ggplot2::scale_x_continuous(limits = c(min(draft_hit_rates()$round) - 0.5, max(draft_hit_rates()$round) + 0.5), breaks = seq(1, max(draft_hit_rates()$round), 1)) +
+    ggplot2::scale_y_continuous(limits = c(0,1), labels = scales::percent_format()) +
+
+    ggplot2::labs(
+      title = paste(franchises %>% filter(franchise_id == input$draftHitRatesSelectTeam) %>% pull(franchise_name), "Hit and Miss Rates im Draft", input$draftHitRatesSelectSeason[1], "-", input$draftHitRatesSelectSeason[2]),
+      subtitle = "Balken = Ligadurchschnitt, Punkte = Franchises (Text im Kreis = Anzahal an Picks in Runde)",
+      x = "Draft Round",
+      y = "",
+      color = ""
+    ) +
+    ggplot2::theme(
+      legend.position = "top"
+    )
+}, height = 800)
+```
+
+## Row
+### Draft Hit Rates je Team
+
+```{r draft-hit-rates-table, echo=FALSE, fig.height=18, message=TRUE, warning=TRUE}
+gt::render_gt({
+  team_hit_rates_table()
+})
+```
+
+# Reaches/Steals {data-navmenu="Draft"}
+
+## Inputs {.sidebar}
+
+```{r inputs-draft-reaches-steals, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+source("R/drafts/rfl-draft-steals-reaches.R")
+```
+
+Die Berechnung von Steals und Reaches ist die Differenz des eigenen Picks zum ersten oder letzten Pick geteilt durch den Logarithmus des eigenen Picks + 1, um den Picks in den Späteren Runden weniger Gewicht zu geben.
+
+## Row
+### Die Größten Steals
+
+```{r echo=FALSE, fig.height=6}
+
+renderPlot({
+  ggplot(biggest_draft_steals, aes(y = reorder(label, desc(score)), x = score)) +
+    geom_bar(stat = "identity", fill = var.colorAccent) +
+    coord_flip() +
+    labs(
+      title = "Größte Draft Steals",
+      x = "",
+      y = "",
+    ) +
+    theme(
+      axis.text.x = element_text(angle = 30, vjust = 1, hjust=1)
+    ) +
+    plotDefaults
+})
+
+```
+
+### Die Größten Reaches
+
+```{r echo=FALSE, fig.height=6}
+
+renderPlot({
+  ggplot(biggest_draft_reaches, aes(y = reorder(label, score), x = score)) +
+    geom_bar(stat = "identity", fill = var.colorAccent) +
+    coord_flip() +
+    labs(
+      title = "Größte Draft Reaches",
+      x = "",
+      y = "",
+    ) +
+    theme(
+      axis.text.x = element_text(angle = 30, vjust = 1, hjust=1)
+    ) +
+    plotDefaults
+})
+
+```
+
+
+## Row
+### Pick Differenzen
+
+```{r draft-reaches-steals, echo=FALSE, fig.height=8, message=FALSE, warning=FALSE}
+
+plotly::renderPlotly({
+   ggplotly(biggest_draft_diff_plot, tooltip = c("text", "min_pick", "max_pick", "pick_diff"))
+})
+```
+
