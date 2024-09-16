@@ -4,7 +4,10 @@ most_tradet_players <- trades %>%
   dplyr::summarise(Trades = n(), .groups = "drop") %>%
   dplyr::left_join(trades %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
   dplyr::select(asset_name, Trades) %>%
-  dplyr::rename(Spieler = asset_name)
+  dplyr::rename(Spieler = asset_name) %>%
+  dplyr::mutate(
+    Spieler = ifelse(grepl("Pick", Spieler), substr(Spieler, 1, nchar(Spieler) - 5), Spieler) # remove last 5 characters (year) if its a pick
+  )
 
 most_trades_by_franchise <- trades %>%
   dplyr::mutate(season = lubridate::year(date)) %>%

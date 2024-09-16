@@ -61,6 +61,18 @@ var.mflLeagueID <- 63018
 var.season <- nflreadr::get_current_season()
 var.seasonNewYear <- nflreadr::get_current_season(TRUE)
 var.week <- nflreadr::get_current_week()
+
+var.seasonBeforeWeek1 <- var.season
+var.seasonBeforeWeek2 <- var.season
+
+if (var.week == 1) {
+  var.seasonBeforeWeek1 <- nflreadr::get_current_season() - 1
+}
+
+if (nflreadr::get_current_week(TRUE) < 2) {
+  var.seasonBeforeWeek2 <- nflreadr::get_current_season() - 1
+}
+
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
 var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
 
@@ -131,6 +143,7 @@ gtDefaults <- function(df) {
 ### Aktuelles Standing
 ```{r current-standing, echo=FALSE, fig.height=20, message=FALSE, warning=FALSE}
 source("R/true-standing/true-standing.R")
+source("R/true-standing/rfl-true-standing.R")
 
 gt::render_gt({
   current_standing_table
@@ -246,6 +259,7 @@ renderPlot({
       geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
       geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
       geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
+      geom_vline(xintercept = 100, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2024
       
       geom_point(color = var.colorAccent, alpha = 0.3) +
       geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
@@ -314,7 +328,7 @@ DT::renderDataTable({
     dplyr::group_by(franchise_name) %>% 
     dplyr::arrange(week) %>% 
     dplyr::mutate(
-      franchise_elo_pregame = dplyr::lag(franchise_elo_pregame),
+      # franchise_elo_pregame = ifelse(week == 1, franchise_elo_pregame, dplyr::lag(franchise_elo_pregame)), TODO: zeile checken. versteh ich nicht mehr
       elo_diff = franchise_elo_postgame - franchise_elo_pregame
     ) %>% 
     dplyr::ungroup() %>% 
@@ -382,7 +396,7 @@ DT::renderDataTable(
 ## Sidebar {.sidebar}
 
 ```{r inputs-war-teams, echo=FALSE, message=FALSE, warning=FALSE}
-sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = 7, sep = "")
+sliderInput("warMinStarts", "Minimum Starts eines Spielers", min = 0, max = 13, value = ceiling(var.week / 2), sep = "")
 ```
 
 > Übersicht über die kummulierten WAR für die einzelnen Teams. Es fließen derzeit nur Spieler ein, die in dieser Saison mindestens einmal in der Liga gestartet wurden.
@@ -436,7 +450,7 @@ war_teams_data_filtered <- reactive({
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%
-    dplyr::select(franchise_name, total, QB, RB, WR, TE, DL, LB, DB, PK)
+    dplyr::select(franchise_name, total, "QB", "RB", "WR", "TE", "DL", "LB", "DB", "PK")
 })
 
 DT::renderDataTable({
@@ -566,12 +580,12 @@ gt::render_gt({
 # Strength of Schedule {data-navmenu="Teams"}
 
 ```{r global-sos, message=TRUE, warning=TRUE, include=FALSE}
-sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main/data/rfl-sos.csv",
+sos <- read.csv(paste0("https://raw.githubusercontent.com/bohndesverband/rfl-data/main/data/schedule/rfl-sos-", var.seasonNewYear, ".csv"),
                 colClasses = c("franchise_id" = "character",
                                "Total" = "numeric",
                                "Division" = "numeric",
                                "Conference" = "numeric",
-                               "Other" = "numeric",
+                               "Random" = "numeric",
                                "rank_div" = "character",
                                "conf_name" = "character",
                                "div_name" = "character",
@@ -581,7 +595,7 @@ sos <- read.csv("https://raw.githubusercontent.com/jak3sch/rfl-data-science/main
     above_avg = round(Total - mean(Total), 3),
     SOS = round(SOS, 3),
   ) %>% 
-  rename(Random = Other) %>% 
+  #rename(Random = Other) %>% 
   left_join(franchises %>% select(franchise_id, franchise_name), by = "franchise_id")
 ```
 
@@ -642,9 +656,9 @@ renderPlot({
 ### Strength of Schedule by Division and Matchup Type
 
 ```{r chart-sos-by-matchup, echo=FALSE, message=FALSE, warning=FALSE}
-data_facet_annotation <- sos %>% 
-  select(div_name, div_rank_in_conf, conf_name) %>% 
-  distinct()
+#data_facet_annotation <- sos %>% 
+#  select(div_name, div_rank_in_conf, conf_name) %>% 
+#  distinct()
 
 chartSosByMatchupData <- sos %>% 
   gather(matchup, sos, c(Total, Division, Conference, Random))
@@ -943,7 +957,7 @@ DT::renderDataTable({
 # Projections {data-navmenu="Matchups"}
 ## Inputs {.sidebar}
 
-```{r inputs-matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r inputs-matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
 source("R/matchups/projections.R")
 
 weeks <- c(1:var.week)
@@ -959,16 +973,18 @@ selectizeInput(
   )
 )
 
-selectizeInput(
-  "matchupProjectionsSelectMatchup",
-  "Filter nach Matchup",
-  choices = matchups$matchup,
-  selected = matchups$matchup[1],
-  multiple= FALSE,
-  options = list(
-    placeholder = "Matchup wählen"
+renderUI({
+  selectizeInput(
+    "matchupProjectionsSelectMatchup",
+    "Filter nach Matchup",
+    choices = matchups()$matchup,
+    selected = matchups()$matchup[1],
+    multiple= FALSE,
+    options = list(
+      placeholder = "Matchup wählen"
+    )
   )
-)
+})
 ```
 
 ## Main
@@ -976,13 +992,13 @@ selectizeInput(
 
 ```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 home_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(home_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == home_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(
@@ -996,13 +1012,13 @@ gt::render_gt({
 
 ```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 away_team <- reactive({
-  matchups %>% 
+  matchups() %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(away_name)
 })
 
 gt::render_gt({
-  matchup_projection_table_data %>% 
+  matchup_projection_table_data() %>% 
   dplyr::filter(franchise_name == away_team()) %>% 
   gtMatchupProjections() %>% 
   gt::tab_header(
@@ -1115,7 +1131,7 @@ trade_history <- reactive({
     ) %>% 
     dplyr::mutate(
       asset_names = paste0(franchise_name, " sends\n", asset_names)
-    ) %>%
+    ) %>% 
     
     dplyr::filter(
       if(isTruthy(input$tradeHistoryAssets))
