@@ -15,8 +15,7 @@ roster_data <- roster %>%
           player_id = as.character(player_id)
         ) %>%
         dplyr::filter(season == max(season)) %>%
-        dplyr::select(player_id, points, war, war_last_three_seasons) %>%
-        dplyr::select(-status, -player_id, -week),
+        dplyr::select(player_id, points, war, war_last_three_seasons),
       by = "player_id",
       multiple ="all"
     )
