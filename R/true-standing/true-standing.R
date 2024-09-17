@@ -39,6 +39,7 @@ current_standing <- elo %>%
   ) %>%
   dplyr::arrange(desc(win), desc(pf)) %>%
   dplyr::mutate(
+    week = nflreadr::get_current_week() - 1,
     place = row_number(),
     loss = (2 * week) - win,
     pf = pf,
