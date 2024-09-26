@@ -57,8 +57,8 @@ most_trades_between_teams <- trades %>%
   dplyr::left_join(
     franchises %>%
       dplyr::select(franchise_id, franchise_name) %>%
-      dplyr::rename("Tradepartner 2" = franchise_name),
+      dplyr::rename(Accepted = franchise_name),
     by = c("partner" = "franchise_id")
   ) %>%
-  dplyr::rename("Tradepartner 1" = franchise_name) %>%
-  dplyr::select("Tradepartner 1", Trades, "Tradepartner 2")
+  dplyr::rename(Offered = franchise_name) %>%
+  dplyr::select(Offered, Trades, Accepted)

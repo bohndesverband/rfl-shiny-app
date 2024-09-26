@@ -954,6 +954,49 @@ DT::renderDataTable({
 })
 ```
 
+# Transaction History {data-navmenu="Spieler"}
+
+## Sidebar {.sidebar}
+```{r inputs-player-transaction-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+source("R/transactions/player-transaction-history.R", local = T)
+
+selectizeInput(
+  "playerTransactionSelectTeam",
+  "Filter nach Team",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple = false,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+playerList <- reactive({
+  player_transaction_history %>% 
+    dplyr::filter(franchise_id == input$playerTransactionSelectTeam)
+})
+
+#selectizeInput(
+#  "playerTransactionSelectPlayer",
+#  "Filter nach Spielern",
+#  choices = setNames(playerList()$player_identifier, playerList()$player_identifier),
+#  multiple = false,
+#  options = list(
+#    placeholder = "Spieler wählen",
+#    onInitialize = I('function() { this.setValue(""); }')
+#  )
+#)
+```
+
+```{r player-transaction-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+plot_data <- flow %>% 
+  dplyr::filter(player_identifier == player_id)
+  
+plot_data %>% 
+  dplyr::group_by(mfl_id) %>% 
+  gt::gt()
+
+```
 
 # Projections {data-navmenu="Matchups"}
 ## Inputs {.sidebar}
@@ -1147,7 +1190,7 @@ trade_history <- reactive({
           TRUE
       ) %>%
       dplyr::filter(
-        date >= input$tradeHistoryDate[1] & date <= input$tradeHistoryDate[2]
+        date >= input$tradeHistoryDate[1] & date <= (input$tradeHistoryDate[2] + 1)
       ) %>%
       dplyr::filter(
         if(input$tradeHistoryType == "Picks")
@@ -1619,8 +1662,6 @@ gt::render_gt({
 ## Inputs {.sidebar}
 
 ```{r inputs-draft-reaches-steals, echo=FALSE, message=FALSE, warning=FALSE}
-
-
 source("R/drafts/rfl-draft-steals-reaches.R")
 ```
 
@@ -1630,7 +1671,6 @@ Die Berechnung von Steals und Reaches ist die Differenz des eigenen Picks zum er
 ### Die Größten Steals
 
 ```{r echo=FALSE, fig.height=6}
-
 renderPlot({
   ggplot(biggest_draft_steals, aes(y = reorder(label, desc(score)), x = score)) +
     geom_bar(stat = "identity", fill = var.colorAccent) +

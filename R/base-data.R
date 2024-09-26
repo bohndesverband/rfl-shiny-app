@@ -108,7 +108,7 @@ trades <- rfl_drafts_data <- purrr::map_df(2016:nflreadr::get_current_season(TRU
 rfl_drafts_data <- purrr::map_df(2017:nflreadr::get_current_season(TRUE), function(x) {
   readr::read_csv(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/rfl_draft_{x}.csv"),
-    col_types = "ddddccccccd"
+    col_types = "dTdddcccccccd"
   )
 })
 
