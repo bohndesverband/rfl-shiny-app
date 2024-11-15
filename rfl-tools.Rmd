@@ -1002,33 +1002,32 @@ plot_data %>%
 ## Inputs {.sidebar}
 
 ```{r inputs-matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
-weeks <- c(1:var.week)
+#weeks <- c(1:var.week)
+
+#selectizeInput(
+#  "matchupProjectionsSelectWeek",
+#  "Filter nach Woche",
+#  choices = weeks,
+#  selected = max(weeks),
+#  multiple= FALSE,
+#  options = list(
+#    placeholder = "Woche wählen"
+#  )
+#)
+
+source("R/matchups/projections.R")
 
 selectizeInput(
-  "matchupProjectionsSelectWeek",
-  "Filter nach Woche",
-  choices = weeks,
-  selected = max(weeks),
+  "matchupProjectionsSelectMatchup",
+  "Filter nach Matchup",
+  choices = matchups$matchup,
+  selected = matchups$matchup[1],
   multiple= FALSE,
   options = list(
-    placeholder = "Woche wählen"
+    placeholder = "Matchup wählen"
   )
 )
 
-renderUI({
-  selectizeInput(
-    "matchupProjectionsSelectMatchup",
-    "Filter nach Matchup",
-    choices = matchups()$matchup,
-    selected = matchups()$matchup[1],
-    multiple= FALSE,
-    options = list(
-      placeholder = "Matchup wählen"
-    )
-  )
-})
-
-source("R/matchups/projections.R")
 ```
 
 ## Main
@@ -1036,7 +1035,7 @@ source("R/matchups/projections.R")
 
 ```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 home_team <- reactive({
-  matchups() %>% 
+  matchups %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(home_name)
 })
@@ -1056,7 +1055,7 @@ gt::render_gt({
 
 ```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 away_team <- reactive({
-  matchups() %>% 
+  matchups %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(away_name)
 })

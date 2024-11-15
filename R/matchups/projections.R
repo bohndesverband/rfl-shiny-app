@@ -1,5 +1,4 @@
-matchups <- reactive({
-  jsonlite::read_json(paste0(var.mflApiBase, "/export?TYPE=schedule&L=", var.mflLeagueID, "&W=", input$matchupProjectionsSelectWeek, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
+matchups <- jsonlite::read_json(paste0(var.mflApiBase, "/export?TYPE=schedule&L=", var.mflLeagueID, "&W=", var.week, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
     dplyr::tibble() %>%
     tidyr::unnest(1) %>%
     tidyr::unnest_wider(1, names_sep = "_") %>%
@@ -21,7 +20,6 @@ matchups <- reactive({
       by = c("away" = "franchise_id")
     ) %>%
     dplyr::mutate(matchup = paste(home_name, "vs", away_name))
-})
 
 starter_data <- jsonlite::read_json(paste0(var.mflApiBase, "/export?TYPE=weeklyResults&L=", var.mflLeagueID, "&W=", nflreadr::get_current_week(), "&JSON=1"))$weeklyResults$matchup %>%
   dplyr::tibble() %>%
@@ -77,9 +75,9 @@ starter <- data.frame(
 
 matchup_projection_table_data <-reactive({
   data.frame(
-    franchise_id = c(matchups()$home, matchups()$away),
-    franchise_name = c(matchups()$home_name, matchups()$away_name),
-    matchup = matchups()$matchup
+    franchise_id = c(matchups$home, matchups$away),
+    franchise_name = c(matchups$home_name, matchups$away_name),
+    matchup = matchups$matchup
   ) %>%
     dplyr::left_join(
       starter,
