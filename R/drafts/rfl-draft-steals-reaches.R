@@ -25,11 +25,6 @@ draft_steals_reaches <- rfl_drafts_data %>%
     score = score_raw / (1 + log(overall))
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::left_join(
-    franchises %>%
-      dplyr::select(franchise_id, franchise_name),
-    by = c("franchise" = "franchise_id")
-  ) %>%
   dplyr::mutate(
     label = paste0(player_name, "\n(", franchise_name, ")")
   )

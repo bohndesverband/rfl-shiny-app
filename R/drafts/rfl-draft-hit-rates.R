@@ -50,6 +50,13 @@ draft_with_elo <- rfl_drafts_data %>%
       dplyr::select(mfl_id, player_elo_post) %>%
       dplyr::mutate(elo_shift = player_elo_post - 1500),
     by = "mfl_id"
+  ) %>%
+  dplyr::mutate(
+    pos = dplyr::case_when(
+      pos %in% c("DT", "DE") ~ "DL",
+      pos %in% c("CB", "S") ~ "DB",
+      TRUE ~ pos
+    )
   )
 
 # https://www.rotoballer.com/dynasty-primer-1-how-to-value-dynasty-draft-picks/1343067
@@ -63,29 +70,35 @@ draft_with_elo_and_hit_rates <- reactive({
     ) %>%
     dplyr::mutate(
       hr = dplyr::case_when(
-        is_rookie == 1 & top5 > 2 ~ 1, # top 5 finish
-        is_rookie == 1 & season > (max(season) - 3) & season < max(season) & top5 > 1 ~ 1, # Top5 für junge spieler
-        is_rookie == 1 & position %in% c("QB", "TE", "PK") & top3 > 3 ~ 1, # top 3 finish
-        is_rookie == 1 & position %in% c("RB", "WR", "DL", "LB", "DB") & top12 > 3 ~ 1, # top 12 finish
+        is_rookie == 1 & top3 >= 2 ~ 1, # mind. 2 Top3
+        is_rookie == 1 & season > (max(season) - 2) & season < max(season) & top8 >= 1 ~ 1, # 1 Top8 für junge spieler
+        is_rookie == 1 & pos %in% c("QB", "TE", "PK") & top5 >= 3 ~ 1, # mind. 3 Top5 für single starter
+        is_rookie == 1 & pos %in% c("QB", "TE", "PK") & top12 >= 6 ~ 1, # mind. 6 Top12 für single starter
+        is_rookie == 1 & pos %in% c("RB", "WR", "DL", "LB", "DB") & top12 >= 3 ~ 1, # mind. 3 Top12 für multi starter
+        is_rookie == 1 & pos %in% c("RB", "WR", "DL", "LB", "DB") & top24 >= 6 ~ 1, # mind. 6 Top24 für multi starter
         TRUE ~ 0
       ),
       hit = dplyr::case_when(
-        is_rookie == 1 & position %in% c("QB", "TE", "PK") & top8 > 3 ~ 1, # top 8 finish
-        is_rookie == 1 & season > (max(season) - 3) & position %in% c("QB", "TE", "PK") & top12 > 1 ~ 1, # top 12 für junge spieler
-        is_rookie == 1 & position %in% c("RB", "WR", "DL", "LB", "DB") & top36 > 3 ~ 1, # top 36 finish
-        is_rookie == 1 & season > (max(season) - 3) & position %in% c("RB", "WR", "DL", "LB", "DB") & top24 > 1 ~ 1, # top 24 für junge spieler
+        is_rookie == 1 & pos %in% c("QB", "TE", "PK") & top8 >= 2 ~ 1, # mind 2 Top8 für single starter
+        is_rookie == 1 & pos %in% c("QB", "TE", "PK") & top12 >= 4 ~ 1, # mind 4 Top12 für single starter
+        is_rookie == 1 & season > (max(season) - 2) & pos %in% c("QB", "TE", "PK") & top12 >= 1 ~ 1, # Top12 für junge spieler
+        is_rookie == 1 & pos %in% c("RB", "WR", "DL", "LB", "DB") & top24 >= 2 ~ 1, # mind 2 Top24 für multi starter
+        is_rookie == 1 & pos %in% c("RB", "WR", "DL", "LB", "DB") & top36 >= 4 ~ 1, # mind 3 Top36 für multi starter
+        is_rookie == 1 & season > (max(season) - 2) & pos %in% c("RB", "WR", "DL", "LB", "DB") & top24 >= 1 ~ 1, # 1 Top24 für junge spieler
         TRUE ~ 0
       ),
       miss = dplyr::case_when(
-        is_rookie == 1 & season < (max(season) - 2) & position %in% c("QB", "TE", "PK") & top24 == 0 ~ 1, # kein top 24 finish
-        is_rookie == 1 & season < (max(season) - 2) & position %in% c("RB", "DL", "DB") & top48 == 0 ~ 1, # kein top 48 finish
-        is_rookie == 1 & season < (max(season) - 2) & position %in% c("WR", "LB") & top60 == 0 ~ 1, # kein top 48 finish
+        is_rookie == 1 & season < (max(season) - 2) & pos %in% c("QB", "TE", "PK") & top24 == 0 ~ 1, # kein top 24 finish
+        is_rookie == 1 & season < (max(season) - 2) & pos %in% c("RB", "DL", "DB") & top48 == 0 ~ 1, # kein top 48 finish
+        is_rookie == 1 & season < (max(season) - 2) & pos %in% c("WR", "LB") & top60 == 0 ~ 1, # kein top 48 finish
         TRUE ~ 0
       )
     ) %>%
     #dplyr::filter(
-    #  season >= 2017 & season <= 2021 &
-    #    round >= 1 & round <= 7
+    #  franchise_id == "0007"
+    #) %>%
+    #dplyr::filter(
+    #  season >= 2017 & season <= 2022
     #)
     dplyr::filter(
       season >= input$draftHitRatesSelectSeason[1] & season <= input$draftHitRatesSelectSeason[2] &
@@ -111,8 +124,8 @@ draft_hit_rates <- reactive({
 })
 
 team_hit_rates <- reactive({
-draft_with_elo_and_hit_rates() %>%
-    dplyr::group_by(franchise, round) %>%
+  draft_with_elo_and_hit_rates() %>%
+    dplyr::group_by(franchise_id, round) %>%
     dplyr::summarise(
       total_picks_in_round = n(),
       dplyr::across(c("hr", "hit", "miss"), ~ sum(.x, na.rm = TRUE)),
@@ -141,7 +154,7 @@ team_hit_rates_table <- reactive({
     dplyr::mutate(
       category = ifelse(category == "Home Run", "hr", tolower(category))
     ) %>%
-    dplyr::group_by(franchise, category) %>%
+    dplyr::group_by(franchise_id, category) %>%
     dplyr::summarise(
       total_picks = sum(total_picks_in_round, na.rm = TRUE),
       picks = sum(picks, na.rm = TRUE),
@@ -152,7 +165,7 @@ team_hit_rates_table <- reactive({
     dplyr::left_join(
       franchises %>%
         dplyr::select(franchise_id, franchise_name),
-      by = c("franchise" = "franchise_id")
+      by = "franchise_id"
     ) %>%
     dplyr::select(franchise_name, total_picks_hit, dplyr::starts_with("pct_"),  dplyr::starts_with("picks_")) %>%
     dplyr::arrange(dplyr::desc(pct_hit)) %>%
@@ -160,7 +173,7 @@ team_hit_rates_table <- reactive({
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Draft Hit Rates"),
-      #subtitle = paste(current_standing$week[1], current_standing$season[1])
+      subtitle = paste0(input$draftHitRatesSelectSeason[1], "-", input$draftHitRatesSelectSeason[2], " Rounds ", input$draftHitRatesSelectRounds[1], "-", input$draftHitRatesSelectRounds[2])
     ) %>%
 
     gt::fmt_percent(
