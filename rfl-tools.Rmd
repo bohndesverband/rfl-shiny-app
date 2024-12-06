@@ -251,16 +251,31 @@ renderPlot({
   running_elo %>% 
     ggplot(aes(x = game, y = franchise_elo_postgame, color = franchise_name)) +
       plotDefaults +
-      geom_hline(yintercept = 1500, color = var.colorRed, size = 0.5, alpha = 0.75) + # default elo
+      geom_hline(yintercept = 1500, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # default elo
       
-      geom_vline(xintercept = 13, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2017
-      geom_vline(xintercept = 25, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2018
-      geom_vline(xintercept = 37, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2019
-      geom_vline(xintercept = 49, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2020
-      geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
-      geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
-      geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
-      geom_vline(xintercept = 100, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2024
+      geom_vline(xintercept = 13, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2017
+      geom_text(label = "2017", x = 13, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 25, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2018
+      geom_text(label = "2018", x = 25, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 37, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2019
+      geom_text(label = "2019", x = 37, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 49, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2020
+      geom_text(label = "2020", x = 49, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 61, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2021
+      geom_text(label = "2021", x = 61, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 74, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2022
+      geom_text(label = "2022", x = 74, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 87, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2023
+      geom_text(label = "2023", x = 87, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 100, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2024
+      geom_text(label = "2024", x = 100, y = 1300, color = var.colorRed, size = 3.5) +
       
       geom_point(color = var.colorAccent, alpha = 0.3) +
       geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
@@ -277,7 +292,7 @@ renderPlot({
         legend.position = "top",
         legend.text = element_text(size = 12)
       ) +
-      scale_x_discrete(limits = c(1, 76))
+      scale_x_discrete(limits = c(1, 113))
 })
 ```
 

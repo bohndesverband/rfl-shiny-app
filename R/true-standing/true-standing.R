@@ -22,26 +22,26 @@ current_standing <- elo %>%
       dplyr::arrange(week) %>%
       dplyr::summarise(
         pp_dist = list(unique(pp / 2) / week),
-        dplyr::across(win:all_play_wins, \(x) sum(x, na.rm = TRUE)),
+        dplyr::across(wins:all_play_wins, \(x) sum(x, na.rm = TRUE)),
         .groups = "drop"
       ) %>%
       dplyr::mutate(
         pf_rank = dplyr::dense_rank(dplyr::desc(pf)),
         pp_rank = dplyr::dense_rank(dplyr::desc(pp)),
-        record_rank = dplyr::dense_rank(dplyr::desc(win)),
+        record_rank = dplyr::dense_rank(dplyr::desc(wins)),
         all_play_rank = dplyr::dense_rank(dplyr::desc(all_play_wins)),
         coach_rank = dplyr::dense_rank(dplyr::desc(coach)),
         true_standing = pf_rank + pp_rank + record_rank + all_play_rank + coach_rank
       ) %>%
-      dplyr::arrange(true_standing, win, pf_rank) %>%
+      dplyr::arrange(true_standing, wins, pf_rank) %>%
       dplyr::mutate(true_rank = dplyr::row_number()),
     by = "franchise_id"
   ) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(
     week = nflreadr::get_current_week() - 1,
     place = row_number(),
-    loss = (2 * week) - win,
+    loss = (2 * week) - wins,
     pf = pf,
     pp = pp,
     #dplyr::across(pf_rank:coach_rank, ~ 37 - .x),
@@ -56,17 +56,17 @@ current_standing <- elo %>%
     subline = paste(division_name, conference_name, sep = ", ")
   ) %>%
   dplyr::group_by(division_name) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(rank_div = row_number()) %>%
   dplyr::group_by(conference_name, rank_div) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(
     seed = case_when(
       rank_div == 1 ~ row_number()
     )
   ) %>%
   dplyr::group_by(conference_name) %>%
-  dplyr::arrange(seed, desc(win), desc(pf)) %>%
+  dplyr::arrange(seed, desc(wins), desc(pf)) %>%
   dplyr::mutate(
     seed = ifelse(is.na(seed), row_number(), seed),
     bowl = case_when(
@@ -79,7 +79,7 @@ current_standing <- elo %>%
   ) %>%
   dplyr::ungroup() %>%
   dplyr::group_by(conference_name) %>%
-  dplyr::select(season, week, franchise_name, win, loss, winloss, pf_sparkline, pp_dist, pf_rank:true_rank, elo_shift, franchise_elo_postgame, subline, seed, bowl, conference_name, -true_standing)
+  dplyr::select(season, week, franchise_name, wins, loss, winloss, pf_sparkline, pp_dist, pf_rank:true_rank, elo_shift, franchise_elo_postgame, subline, seed, bowl, conference_name, -true_standing)
 
 power_ranking <- true_standing %>%
   dplyr::group_by(franchise_id, franchise_name) %>%
@@ -87,9 +87,9 @@ power_ranking <- true_standing %>%
   dplyr::mutate(
     running_pf = cumsum(pf),
     running_pp = cumsum(pp),
-    running_coach = cumsum(coach),
-    running_wins = cumsum(win),
-    running_all_play_wins = cumsum(all_play_wins)
+    running_wins = cumsum(wins),
+    running_all_play_wins = cumsum(all_play_wins),
+    running_coach = cumsum(coach)
   ) %>%
   dplyr::group_by(week) %>%
   dplyr::mutate(

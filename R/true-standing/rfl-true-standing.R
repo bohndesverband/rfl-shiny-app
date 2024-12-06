@@ -17,7 +17,7 @@ current_standing_table <- current_standing %>%
 
   gt::tab_spanner(
     label = "Standings",
-    columns = c(win, loss, winloss, pf_sparkline, pp_dist)
+    columns = c(wins, loss, winloss, pf_sparkline, pp_dist)
   ) %>%
 
   gtExtras::gt_plt_winloss(
@@ -82,7 +82,7 @@ current_standing_table <- current_standing %>%
     franchise_name = "Team",
     franchise_elo_postgame = "ELO",
     elo_shift = "+/-",
-    win = "W",
+    wins = "W",
     loss = "L",
     winloss = "Ergebnisse",
     pf_sparkline = "Points For",
