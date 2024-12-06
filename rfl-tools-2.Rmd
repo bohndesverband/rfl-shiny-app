@@ -1,0 +1,159 @@
+---
+title: "RFL Tools"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    css: styles.css
+    theme:
+      version: 4
+      bg: "#ffffff"
+      fg: "#485460"
+      primary: "#808e9b"
+      base_font: 
+        google: Poppins
+      heading_font:
+        google: Poppins
+      code_font:
+        google: 
+          family: JetBrains Mono
+          local: false
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(ffscrapr)
+library(dplyr)
+library(tidyr)
+library(RCurl)
+library(DT)
+library(ggplot2)
+library(scales)
+library(ggbump)
+library(gt)
+library(formattable)
+library(jsonlite)
+library(gtExtras)
+library(svglite)
+library(webshot2)
+library(emoji)
+library(ggridges)
+library(ggrepel)
+library(plotly)
+library(ggalt)
+library(shinyWidgets)
+library(waffle)
+```
+
+```{r global, message=TRUE, warning=TRUE, include=FALSE}
+source("R new/base_data/variables.R", local = TRUE)
+source("R new/base_data/mfl-players.R", local = TRUE)
+source("R new/base_data/league.R", local = TRUE)
+source("R new/base_data/elo.R", local = TRUE)
+source("R new/base_data/war.R", local = TRUE)
+source("R new/base_data/standings.R", local = TRUE)
+source("R new/base_data/rosters.R", local = TRUE)
+```
+
+# Überblick
+
+# Sidebar {.sidebar}
+
+```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
+
+#shiny::sliderInput("selectYear", "Jahre", min = current_season, max = current_season + 4, value = c(current_season, current_season + 1), step = 1, sep = "")
+
+shinyWidgets::pickerInput(
+  "selectRflTeams",
+  "RFL Teams",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  #selected = franchises$franchise_id,
+  #selected = "0007",
+  options = list("actions-box" = TRUE),
+  multiple = TRUE
+)
+
+shiny::selectizeInput(
+  "selectRflTeam",
+  "RFL Team",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple = FALSE,
+  selected = "0007"
+  #options = list(
+  #  placeholder = "Team wählen",
+  #  onInitialize = I('function() { this.setValue(""); }')
+  #)
+)
+
+#shiny::selectizeInput(
+#  "selectSingleTeam",
+#  "GDL Teams",
+#  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+#  selected = franchises$franchise_id[1]
+#)
+
+#shinyWidgets::pickerInput(
+#  "selectPositions",
+#  "Position",
+#  choices = positions,
+#  selected = positions,
+#  options = list("actions-box" = TRUE),
+#  multiple = TRUE
+#)
+
+#shiny::sliderInput("selectContractYears", "Vertragsjahre", min = 1, max = 4, value = c(1, 4), step = 1, sep = "")
+
+```
+
+
+# Conferences {data-navmenu="Standings"}
+
+## Row
+```{r current-standing, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/standing/current_standing.R", local = TRUE)
+source("R new/standing/standing_table.R", local = TRUE)
+
+gt::gt_output("current_standing_table")
+```
+
+# IR Analyse {data-navmenu="Teams"}
+
+## Row
+```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/roster/ir.R", local = TRUE)
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shiny::plotOutput("ir"),
+      width = 12
+    ),
+    style = "height: 830px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shiny::plotOutput("ir_player"),
+      width = 6
+    ),
+    shiny::column(
+      shiny::plotOutput("ir_fpts"),
+      width = 6
+    ),
+    style = "height: 2525px"
+  )
+)
+```
+
+# Super Bow {data-navmenu="Bowls"}
+
+# Team Report {data-navmenu="Reports"}
+
+## Row
+```{r team-report, echo=FALSE, fig.height=5000, message=FALSE, warning=FALSE}
+source("R new/reports/team_report.R", local = TRUE)
+shiny::uiOutput("teamReport")
+
+# ToDo: abfrage, dass es erst nach WK13 angezeigt wird
+
+```
