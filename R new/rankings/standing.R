@@ -1,4 +1,4 @@
-current_standing <- team_elo %>%
+weekly_standing <- team_elo %>%
   dplyr::filter(season == max(season)) %>%
   dplyr::mutate(
     winloss = ifelse(score_diff > 0, 1, 0)
@@ -7,7 +7,7 @@ current_standing <- team_elo %>%
   dplyr::arrange(week) %>%
   dplyr::summarise(
     winloss = list(winloss),
-    dplyr::across(c(season, dplyr::starts_with("franchise"), division_name, conference_name), last),
+    dplyr::across(c(season, dplyr::starts_with("franchise"), division, division_name, conference_id, conference_name), last),
     .groups = "drop"
   ) %>%
   dplyr::left_join(
@@ -17,6 +17,7 @@ current_standing <- team_elo %>%
   ) %>%
   dplyr::group_by(week) %>%
   dplyr::mutate(
+    elo_shift = franchise_elo_postgame - franchise_elo_pregame,
     elo_rank = dplyr::min_rank(dplyr::desc(franchise_elo_postgame)),
     true_standing = ((pf_rank + pp_rank * elo_rank) * 2) + record_rank + all_play_rank + (eff_rank / 4),
   ) %>%
@@ -39,14 +40,7 @@ current_standing <- team_elo %>%
   dplyr::mutate(
     power_rank_change = dplyr::lag(power_rank) - power_rank
   ) %>%
-  dplyr::summarise(
-    winloss = list(unlist(winloss)),
-    pf_sparkline = list(unique(franchise_score)),
-    elo_sparkline = list(unique(franchise_elo_postgame)),
-    dplyr::across(c(franchise_name, division_name, conference_name, season, franchise_elo_pregame), first),
-    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, dplyr::ends_with("_rank"), power_rank_change, bowl, seed, seed_emoji), last),
-    .groups = "drop"
-  ) %>%
+  dplyr::ungroup() %>%
   dplyr::mutate(
     power_rank_emoji = dplyr::case_when(
       power_rank_change == 0 ~ "⭤",
@@ -55,7 +49,20 @@ current_standing <- team_elo %>%
       power_rank_change < -3 ~ "⮇",
       power_rank_change < 0 ~ "⭣",
     ),
-    power_rank_change = paste(power_rank, power_rank_emoji)
+    power_rank_change = paste(power_rank, power_rank_emoji),
+    seed_emoji = ifelse(is.na(seed_emoji), seed, seed_emoji)
+  )
+
+current_standing <- weekly_standing %>%
+  dplyr::group_by(franchise_id) %>%
+  dplyr::arrange(week) %>%
+  dplyr::summarise(
+    winloss = list(unlist(winloss)),
+    pf_sparkline = list(unique(franchise_score)),
+    elo_sparkline = list(unique(franchise_elo_postgame)),
+    dplyr::across(c(franchise_name, division, division_name, conference_name, season, franchise_elo_pregame), first),
+    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, elo_shift, dplyr::ends_with("_rank"), power_rank_change, bowl, seed, seed_emoji, power_rank_emoji), last),
+    .groups = "drop"
   ) %>%
   dplyr::group_by(bowl, conference_name) %>%
   dplyr::arrange(seed) %>%
@@ -64,7 +71,6 @@ current_standing <- team_elo %>%
   ) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(
-    seed = ifelse(is.na(seed_emoji), seed, seed_emoji)
   ) %>%
-  dplyr::select(season, week, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, dplyr::ends_with("_rank"), power_rank_emoji, bowl, seed, divider) %>%
+  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, seed_emoji, divider) %>%
   dplyr::arrange(league_rank)

@@ -4,7 +4,7 @@ team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
     col_types = "iiccnnnnnnn"
   )
 }) %>%
-  dplyr::left_join(franchises %>% select(franchise_id, franchise_name, division_name, conference_name), by = "franchise_id") %>%
+  dplyr::left_join(franchises %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
   dplyr::left_join(franchises %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
 
 player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {

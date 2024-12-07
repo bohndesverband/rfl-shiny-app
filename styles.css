@@ -1,0 +1,98 @@
+:root {
+  --color__bg: white;
+  --color__red: #f53b57;
+}
+
+.sidebar {
+  width: 350px !important;
+}
+
+.sidebar blockquote {
+  display: none;
+}
+
+#dashboard-container {
+  padding-left: 350px !important;
+}
+
+/* Seiten ohne Sidebar */
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active), /* Conference Standing */
+.sidebar:has(~ #dashboard-container #section-überblick.active) /* Überblick */ {
+  display: none;
+}
+
+#dashboard-container:has(#section-conference-ranking.active), /* Conference Standing */
+#dashboard-container:has(~ #section-überblick.active) /* Überblick */ {
+  padding-left: 0 !important;
+}
+
+#dashboard-container:has(#section-conference-ranking.active) .section /* Conference Standing */ {
+  justify-content: center;
+}
+
+/* IR Analyse */
+.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
+  display: none;
+}
+
+/* Power Ranking */
+/* ELO */
+/* Draft Reihenfolge */
+.sidebar:has(~ #dashboard-container #section-power-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
+.sidebar:has(~ #dashboard-container #section-elo-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
+.sidebar:has(~ #dashboard-container #section-draft-reihenfolge.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+  display: none;
+}
+
+.sidebar:has(~ #dashboard-container #section-elo-ranking.active) blockquote:nth-of-type(1) {
+  display: block;
+}
+
+/* Player WAR */
+.sidebar:has(~ #dashboard-container #section-wins-above-replacement.active) .form-group:not(:has(#selectYears-label)) {
+  display: none;
+}
+
+.sidebar:has(~ #dashboard-container #section-wins-above-replacement.active) blockquote:nth-of-type(2) {
+  display: block;
+}
+
+
+/* Team Report */
+.sidebar:has(~ #dashboard-container #section-team-report.active) .form-group:not(:has(#selectRflTeam-label)) {
+  display: none;
+}
+
+/* Fehlermeldungen */
+.shiny-output-error {
+  color: var(--color__red) !important;
+  background: var(--color__bg);
+  padding: 1em;
+  font-weight: bold;
+}
+
+/* Formulare */
+.btn.dropdown-toggle {
+  background: var(--color__bg);
+}
+
+/* Spinner Fix für Seiten mit gt
+#dashboard-container:has(#section-conferences.active) .dashboard-row /* Conference Standing {
+  display: block !important;
+}*/
+
+/* gt fixes */
+[id*="_table"] > * {
+  padding-top: 0 !important;
+  padding-block: 0 !important;
+}
+
+/*.datatables.html-widget.html-widget-static-bound {
+  height: auto !important;
+}
+.dataTables_scrollBody {
+  height: unset !important;
+}
+.dataTable tbody td {white-space: pre-wrap;}
+.dataTable tbody td::first-line { font-weight: bold; }
+*/

@@ -37,7 +37,18 @@ color_orange <- "#ffa801"
 color_yellow <- "#ffd32a"
 color_bg <- "white"
 
-colors <- c(color_red, color_blue)
+colors <- c(color_red, color_blue, color_green, color_orange, color_cyan, color_yellow)
+
+colors_position <- c(
+  "QB" = "#feca57",
+  "RB" = "#1dd1a1",
+  "WR" = "#54a0ff",
+  "TE" = "#ff6b6b",
+  "PK" = "#c8d6e5",
+  "DL" = "#48dbfb",
+  "LB" = "#ff9ff3",
+  "DB" = "#00d2d3"
+)
 
 color_text <- color_black
 
@@ -52,22 +63,22 @@ plot_defaults <- theme(
   plot.margin = ggplot2::margin(25, 25, 25, 25),
   text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
 
-
-  plot.title = ggplot2::element_text(size = 24, face = "bold", lineheight = 0.8),
+  plot.title = ggplot2::element_text(size = 24, face = "bold", lineheight = 0.8, margin = ggplot2::margin(b = 15)),
   plot.title.position = "plot",
-  plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 5, b = 15)),
+  plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = -5, b = 15)),
 
   axis.title = ggplot2::element_text(size = 14, face = "bold"),
   axis.title.x = ggplot2::element_text(vjust = -5),
   axis.title.y = ggplot2::element_text(vjust = 2.5),
+  #axis.title.y.right = ggplot2::element_text(vjust = 2.5, hjust = 1),
   axis.text = ggplot2::element_text(size = 12),
   #axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
   #axis.ticks = element_line(color = var.colorAccent, linewidth = 0.5),
 
-  #strip.background = element_rect(fill = var.colorAccent),
-  #strip.text = element_text(size = 10, color = var.colorBlue, family = var.fontTextBold),
+  strip.background = ggplot2::element_rect(fill = color_grey_dark),
+  strip.text = ggplot2::element_text(size = 12, color = color_bg, face = "bold"),
 
-  #legend.background = element_blank(),
+  legend.background = ggplot2::element_blank(),
   legend.title = ggplot2::element_text(size = 14, face = "bold"),
   #legend.key = element_blank(),
   legend.key.size = ggplot2::unit(6, "pt"),
@@ -75,14 +86,15 @@ plot_defaults <- theme(
   legend.position = "top",
   legend.margin = ggplot2::margin(t = 25),
 
-  panel.background = ggplot2::element_blank()
-  #panel.grid.major = element_line(color = var.colorBlue, linewidth = 0.35),
-  #panel.grid.minor = element_line(color = var.colorBlue, linewidth = 0.25)
+  panel.background = ggplot2::element_blank(),
+  panel.grid.major = ggplot2::element_line(color = color_grey_light, linewidth = 0.35),
+  panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
 )
 
 plot_clean <- theme(
   plot.background = ggplot2::element_blank(),
-  panel.grid = ggplot2::element_blank(),
+  panel.grid.major = ggplot2::element_blank(),
+  panel.grid.minor = ggplot2::element_blank(),
   axis.ticks = ggplot2::element_blank()
 )
 
@@ -114,23 +126,30 @@ gtDefaults <- function(df) {
       table.font.size = gt::px(14),
       table.font.color = color_text,
       table.border.top.color = color_bg,
+      table.border.bottom.color = color_bg,
+      table_body.border.bottom.color = color_bg,
+      table_body.border.bottom.width = gt::px(5),
+
       heading.border.bottom.color = color_bg,
-      heading.title.font.size = gt::px(40),
-      heading.title.font.weight = "light",
+      heading.title.font.size = gt::px(22),
+      heading.title.font.weight = "bold",
       heading.subtitle.font.size = gt::px(16),
 
       row_group.font.weight = "bold",
+      row_group.padding.horizontal = gt::px(15),
+
+      data_row.padding.horizontal = gt::px(15),
+
+      stub.border.color = color_grey_light,
 
       column_labels.font.weight = "bold",
       column_labels.padding = gt::px(10),
       column_labels.padding.horizontal = gt::px(15),
-      table_body.border.bottom.color = color_grey_light,
       column_labels.border.top.color = color_bg,
-      stub.border.color = color_grey_light,
       column_labels.border.bottom.color = color_grey_dark,
 
-      #footnotes.padding = gt::px(100),
-      footnotes.padding.horizontal = gt::px(35),
-      footnotes.border.bottom.color = color_grey_dark
+      footnotes.background.color = color_grey_light,
+      footnotes.padding = gt::px(7),
+      footnotes.padding.horizontal = gt::px(15)
     )
 }

@@ -49,22 +49,24 @@ team_ir_weekly <- roster_data %>%
     status = ifelse(is.na(status), "ACTIVE", status)
   ) %>%
 
-  # add elo
+  dplyr::ungroup() %>%
   dplyr::left_join(
-    player_elo %>%
+    player_ppg %>%
       dplyr::group_by(mfl_id) %>%
-      dplyr::summarise(
-        player_name = last(display_name),
-        player_elo_post = last(player_elo_post),
-        .groups = "drop"
-      ),
+      dplyr::filter(games >= 3) %>%  # min 3 games played
+      dplyr::filter(season == max(season)) %>%
+      dplyr::select(mfl_id, ppg),
     by = c("player_id" = "mfl_id")
   ) %>%
-
-  dplyr::mutate(player_elo_post = ifelse(is.na(player_elo_post), 1400, player_elo_post)) %>%
-  dplyr::group_by(franchise_id, week) %>%
-  dplyr::arrange(dplyr::desc(player_elo_post)) %>%
-  dplyr::ungroup()
+  dplyr::mutate(ppg = ifelse(is.na(ppg), 0, ppg)) %>%
+  dplyr::left_join(
+    player_elo %>%
+      dplyr::select(mfl_id, display_name) %>%
+      dplyr::distinct() %>%
+      dplyr::rename(player_name = display_name),
+    by = c("player_id" = "mfl_id"),
+    relationship = "many-to-many"
+  )
 
 team_ir <- team_ir_weekly %>%
   dplyr::filter(status == "RES") %>%
@@ -72,17 +74,13 @@ team_ir <- team_ir_weekly %>%
   dplyr::summarise(
     player_count = n(),
     franchise_name = first(franchise_name),
-    elo_high = max(player_elo_post),
-    elo_low = min(player_elo_post),
-    elo_avg = round(mean(player_elo_post), 0),
-    elo_sum = sum(player_elo_post),
-    elo_median = median(player_elo_post),
+    ppg_median = median(ppg),
     .groups = "drop"
   )
 
 ## plot data ----
-output$ir <- shiny::renderPlot({
-  ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = elo_median, color = franchise_name)) +
+output$ir_weekly <- shiny::renderPlot({
+  ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = ppg_median, color = franchise_name)) +
     ggplot2::geom_boxplot(aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
     ggplot2::geom_jitter(ggplot2::aes(size = player_count, alpha = player_count), width = 0.25, color = color_grey_mid) +
 
@@ -99,9 +97,9 @@ output$ir <- shiny::renderPlot({
     plot_clean +
     ggplot2::scale_x_continuous(limits = c(0.4, max(team_ir$week) + 0.4), labels = c(1:max(team_ir$week)), breaks = c(1:max(team_ir$week))) +
     ggplot2::labs(
-      title = "Median ELO aller Spieler auf der NFL IR",
+      title = "Median FPts/G aller Spieler auf der NFL IR",
       x = "Woche",
-      y = "IR Median ELO",
+      y = "IR Median FPts/G",
       color = "RFL Teams",
       size = "Anzahl Spieler auf IR"
     ) +
@@ -109,6 +107,7 @@ output$ir <- shiny::renderPlot({
       color = ggplot2::guide_legend(order = 1)
     ) +
     ggplot2::theme(
+      legend.position = "inside",
       legend.position.inside = c(0.09, 0.8)
     )
 }, height = 800)
@@ -116,7 +115,7 @@ output$ir <- shiny::renderPlot({
 # create data for IR players by team ----
 team_ir_players <- team_ir_weekly %>%
   dplyr::filter(status == "RES") %>%
-  dplyr::select(franchise_id, franchise_name, player_id, player_name, games_on_ir, player_elo_post) %>%
+  dplyr::select(franchise_id, franchise_name, player_id, player_name, games_on_ir, ppg) %>%
   dplyr::distinct()
 
 all_ir_players <- team_ir_players %>%
@@ -126,7 +125,7 @@ all_ir_players <- team_ir_players %>%
 
 ## plot data ----
 output$ir_player <- shiny::renderPlot({
-  ggplot2::ggplot(all_ir_players, ggplot2::aes(x = games_on_ir, y = reorder(player_name, player_elo_post))) +
+  ggplot2::ggplot(all_ir_players, ggplot2::aes(x = games_on_ir, y = reorder(player_name, ppg))) +
     ggplot2::geom_col(fill = color_grey_light) +
     ggplot2::geom_col(data = subset(team_ir_players, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(fill = franchise_name)) +
 
@@ -134,7 +133,7 @@ output$ir_player <- shiny::renderPlot({
     ggplot2::scale_x_continuous(limits = c(0, max(team_ir_players$games_on_ir)), labels = c(0:max(team_ir_players$games_on_ir)), breaks = c(0:max(team_ir_players$games_on_ir))) +
     ggplot2::labs(
       title = "Ausgefallene Spieler",
-      subtitle = "Angezeigt werden alle Spieler, die mind. 1 Spiel verpasst haben, weil sie in der NFL auf IR waren.\nSortiert absteigend nach ihrer aktuellen ELO.",
+      subtitle = "Angezeigt werden alle Spieler, die mind. 1 Spiel verpasst haben, weil sie in der NFL auf IR waren.\nSortiert absteigend nach ihren aktuellen FPts/G.",
       x = "Missed Games",
       y = "",
       fill = ""
@@ -144,17 +143,8 @@ output$ir_player <- shiny::renderPlot({
 }, height = 2500)
 
 # create data for lost FPTS ----
-team_ir_ppg <- team_ir_players %>%
-  dplyr::left_join(
-    player_ppg %>%
-      dplyr::group_by(mfl_id) %>%
-      dplyr::filter(games >= 3) %>%  # min 3 games played
-      dplyr::filter(season == max(season)) %>%
-      dplyr::select(mfl_id, ppg),
-    by = c("player_id" = "mfl_id")
-  ) %>%
+team_ir_fpts <- team_ir_players %>%
   dplyr::mutate(
-    ppg = ifelse(is.na(ppg), 0, ppg),
     missed_fpts = games_on_ir * ppg
   ) %>%
   dplyr::group_by(franchise_id, franchise_name) %>%
@@ -166,25 +156,48 @@ team_ir_ppg <- team_ir_players %>%
 
 ## plot data ----
 output$ir_fpts <- shiny::renderPlot({
-  ggplot2::ggplot(team_ir_ppg, ggplot2::aes(x = missed_fpts, y = reorder(franchise_name, missed_fpts))) +
+  ggplot2::ggplot(team_ir_fpts, ggplot2::aes(x = missed_fpts, y = reorder(franchise_name, missed_fpts))) +
     ggplot2::geom_col(fill = color_grey_light) +
-    ggplot2::geom_col(data = subset(team_ir_ppg, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(fill = franchise_name)) +
+    ggplot2::geom_col(data = subset(team_ir_fpts, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(fill = franchise_name)) +
     ggplot2::scale_fill_discrete(type = colors, guide = "none") +
     plot_defaults +
     plot_clean +
     ggplot2::labs(
       title = "Durch IR verlorene Fantasy Punkte",
       subtitle = "Für die Berechnung werden die durchschnittlichen Fantasy Punkte pro Spiel (FPts/G) aus der\naktuellsten Saison mit mind. 3 Spielen genommen. Diese werden mit den dieses Jahr verpassten\nSpielen multipliziert.",
-      x = "FPts/G",
+      x = "FPts",
       y = "",
       fill = ""
     )
 }, height = 1000)
 
-# daten für team report ----
+team_ir_weekly_filteres <- shiny::reactive({
+  team_ir_weekly %>%
+    dplyr::filter(franchise_id %in% c(input$selectRflTeams)) %>%
+    dplyr::arrange(dplyr::desc(ppg))
+})
 
-#ggplot2::ggplot(data = subset(team_ir_weekly, franchise_id %in% c("0007")), ggplot2::aes(values = 1, fill = status)) +
-#  waffle::geom_waffle(color = "white", linewidth = 1.125, n_rows = 10) +
-#  facet_wrap(~week, ncol = 3) +
-#  plot_defaults +
-#  plot_clean
+output$ir_roster <- shiny::renderPlot({
+  shiny::validate(
+    shiny::need(input$selectRflTeams != "", "Wähle ein Team, um diese Grafik anzuzeigen")
+  )
+
+  ggplot2::ggplot(team_ir_weekly_filteres(), ggplot2::aes(values = 1, fill = status)) +
+    waffle::geom_waffle(color = color_bg, size = 1.5, n_rows = 10) +
+    ggplot2::facet_wrap(~week, ncol = 3) +
+    ggplot2::scale_fill_discrete(type = c(color_grey_light, color_red), guide = "none") +
+    scale_y_discrete() +
+    plot_defaults +
+    plot_clean +
+    ggplot2::labs(
+      title = paste(team_ir_weekly_filteres()$franchise_name[1], "Roster\nmit ausgefallenen Spielern je Woche"),
+      subtitle = "Die Spieler sind nach ihrer FPts/G sortiert. Die meisten unten links, die wenigsten oben rechts.\n10 Spieler pro Spalte.",
+      x = "",
+      y = ""
+    ) +
+    ggplot2::theme(
+      axis.text = ggplot2::element_blank()
+    )
+}, height = 1500)
+
+
