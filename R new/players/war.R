@@ -17,12 +17,13 @@ player_war <- shiny::reactive({
     dplyr::mutate(
       war = round(war, 2),
       war_pct = war / max(war),
-      player_name = nflreadr::clean_player_names(player_name)
+      display_name = nflreadr::clean_player_names(player_name)
     ) %>%
     dplyr::group_by(pos) %>%
     dplyr::mutate(war_pct_pos = war / max(war)) %>%
     dplyr::ungroup() %>%
-    dplyr::select(player_id, player_name, pos, team, dplyr::starts_with("war"), dplyr::starts_with("games_"))
+    dplyr::rename(position = pos) %>%
+    dplyr::select(player_id, display_name, position, team, dplyr::starts_with("war"), dplyr::starts_with("games_"))
 })
 
 
@@ -53,7 +54,7 @@ output$player_war <- gt::render_gt({
 
     gt::cols_align(
       align = "left",
-      columns = c(player_name)
+      columns = c(display_name)
     ) %>%
 
     gt::fmt_percent(
@@ -63,20 +64,17 @@ output$player_war <- gt::render_gt({
 
     gt::data_color(
       c(war_pct:games_missed),
-      palette = c(color_bg, color_grey_dark)
+      palette = c(color_bg, color_grey_mid)
     ) %>%
 
     gt::data_color(
       war,
-      palette = c(color_red, color_blue)
+      palette = c(color_red, color_yellow, color_green, color_blue)
     ) %>%
 
     gt::cols_hide(player_id) %>%
 
     gt::cols_label(
-      player_name = "Spieler",
-      pos = "Pos",
-      team = "Team",
       war = "Tot",
       war_pct = "Pct",
       war_pct_pos = "Pos Pct",
@@ -86,22 +84,13 @@ output$player_war <- gt::render_gt({
 
     gtDefaults() %>%
 
-    gt::tab_options(
-      ihtml.active = TRUE,
-      ihtml.use_filters = TRUE,
-      ihtml.use_search = TRUE,
-      ihtml.use_pagination = TRUE,
-      ihtml.use_page_size_select = TRUE,
-      ihtml.page_size_default = 12,
-      ihtml.page_size_values = c(12, 25, 50, 100),
-      ihtml.use_highlight = TRUE
-    )
+    gt_player()
 })
 
 # best players per position ----
 best_position_players <- shiny::reactive({
   player_war() %>%
-    dplyr::group_by(pos) %>%
+    dplyr::group_by(position) %>%
     dplyr::arrange(dplyr::desc(war)) %>%
     dplyr::filter(dplyr::row_number() <= 3) %>%
     dplyr::mutate(
@@ -117,11 +106,11 @@ best_position_players <- shiny::reactive({
 
 output$war_best_players <- shiny::renderPlot({
   ggplot2::ggplot(best_position_players(), aes(x = factor(pos_rank, levels = c(2,1,3)), y = col_height)) +
-    ggplot2::facet_wrap(~factor(pos, c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")), ncol = 1, strip.position = "bottom") +
-    ggplot2::geom_col(aes(fill = pos)) +
+    ggplot2::facet_wrap(~factor(position, c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")), ncol = 1, strip.position = "bottom") +
+    ggplot2::geom_col(aes(fill = position)) +
 
     ggplot2::geom_text(mapping = ggplot2::aes(label = war), vjust = 2, size = 4, color = color_bg, fontface = "bold") +
-    ggplot2::geom_text(ggplot2::aes(label = sapply(player_name, function(x) paste(strwrap(x, width = 5), collapse = "\n"))), vjust = -0.5, hjust = 0.5, size = 4, color = color_grey_mid, lineheight = 0.8) +
+    ggplot2::geom_text(ggplot2::aes(label = sapply(display_name, function(x) paste(strwrap(x, width = 14), collapse = "\n"))), nudge_y = 0.15, vjust = 0, hjust = 0.5, size = 4, color = color_grey_mid, lineheight = 0.8) +
     ggplot2::scale_fill_manual(values = colors_position, guide = "none") +
 
     ggplot2::coord_cartesian(ylim = c(0.1, 1.5)) +

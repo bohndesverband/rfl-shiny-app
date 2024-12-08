@@ -57,11 +57,35 @@
   display: block;
 }
 
+/* Player ELO */
+.sidebar:has(~ #dashboard-container #section-elo.active) .form-group:not(:has(#selectPosition-label)):not(:has(#selectPlayers-label)):not(:has(#selectRflTeam-label)) {
+  display: none;
+}
+
+.sidebar:has(~ #dashboard-container #section-elo.active) blockquote:nth-of-type(3) {
+  display: block;
+}
 
 /* Team Report */
 .sidebar:has(~ #dashboard-container #section-team-report.active) .form-group:not(:has(#selectRflTeam-label)) {
   display: none;
 }
+
+/* Info für Teamsauswahl um Spieler vorzufiltern */
+.sidebar form > p {
+  display: none;
+
+}
+
+.sidebar p:has(small) {
+  line-height: 1.2;
+}
+
+.sidebar:has(~ #dashboard-container #section-elo.active) .form-group:has(#selectPlayers-label) + p {
+  display: block;
+}
+
+
 
 /* Fehlermeldungen */
 .shiny-output-error {

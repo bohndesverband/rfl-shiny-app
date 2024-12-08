@@ -34,10 +34,6 @@ elo_change <- running_elo %>%
 output$running_elo <- renderPlot({
   ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
     ggplot2::geom_hex(bins = 70) +
-    ggplot2::scale_fill_continuous(type = "gradient") +
-    ggplot2::scale_fill_gradientn(colors = c(color_bg, color_grey_dark), guide = "none") +
-
-    geom_hline(yintercept = 1500, color = color_red, linewidth = 0.5, alpha = 0.75) + # default elo
 
     ggplot2::geom_vline(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(xintercept = game), color = color_grey_light, linewidth = 0.5) +
     ggplot2::geom_text(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(label = season, x = game), nudge_x = 3, y = 1300, color = color_grey_dark, size = 4) +
@@ -48,32 +44,11 @@ output$running_elo <- renderPlot({
 
     ggplot2::geom_point(data = subset(running_elo, (franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions)) & (game == min(game) | game == max(game))), ggplot2::aes(color = franchise_name), size = 5) +
 
-    # arrow
-    #ggplot2::geom_segment(
-    #  data = subset(elo_change, franchise_id %in% c("0007")),
-    #  ggplot2::aes(xend = xmax, x = xmin, yend = ymax, y = ymin),
-    #  arrow = ggplot2::arrow(length = ggplot2::unit(6, "pt"), type = "closed"),
-    #  linewidth = 0.8,
-    #  color = color_grey_dark
-    #)
-
-
-    ggplot2::scale_color_discrete(type = colors) +
-
-    plot_defaults +
-    plot_clean +
+    plot_elo_defaults +
 
     ggplot2::labs(
       title = paste("RFL ELO Rating"),
       #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
-      y = "ELO",
-      x = "",
-      color = ""
-    ) +
-    ggplot2::theme(
-      legend.position = "inside",
-      legend.position.inside = c(0.08, 0.9),
-      axis.text.x = ggplot2::element_blank()
     )
 }, height = 800)
 

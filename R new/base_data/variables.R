@@ -21,6 +21,7 @@ mfl_connection <- ffscrapr::mfl_connect(season = new_season_march, league_id = l
 
 # base data----
 position_order <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP")
+positions <- c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")
 
 # color ----
 # https://flatuicolors.com/palette/se
@@ -58,7 +59,7 @@ var.fontTextBold <- "Open Sans Semibold"
 var.fontHeadline <- "Open Sans Semibold"
 
 # dark: https://iibawards-prod.s3.amazonaws.com/projects/images/000/006/283/page.png?1693573818
-# plot defaults ----
+# ggplot defaults ----
 plot_defaults <- theme(
   plot.margin = ggplot2::margin(25, 25, 25, 25),
   text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
@@ -96,6 +97,28 @@ plot_clean <- theme(
   panel.grid.major = ggplot2::element_blank(),
   panel.grid.minor = ggplot2::element_blank(),
   axis.ticks = ggplot2::element_blank()
+)
+
+## elo ----
+plot_elo_defaults <- list(
+  ggplot2::aes(lwd = 1.2),
+  ggplot2::scale_linewidth_identity(),
+  ggplot2::scale_fill_continuous(type = "gradient"),
+  ggplot2::scale_fill_gradientn(colors = c("#f1f4f6", color_grey_mid), guide = "none"),
+  geom_hline(yintercept = 1500, color = color_grey_light, linewidth = 0.5, alpha = 0.75), # default elo
+  ggplot2::scale_color_discrete(type = colors),
+  plot_defaults,
+  plot_clean,
+  ggplot2::labs(
+    y = "ELO",
+    x = "",
+    color = ""
+  ),
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.08, 0.9),
+    axis.text.x = ggplot2::element_blank()
+  )
 )
 
 ## geoms ----
@@ -152,4 +175,25 @@ gtDefaults <- function(df) {
       footnotes.padding = gt::px(7),
       footnotes.padding.horizontal = gt::px(15)
     )
+}
+
+## player tables ----
+gt_player <- function(df) {
+  df %>%
+    gt::cols_label(
+      display_name = "Spieler",
+      position = "Pos",
+      team = "Team"
+    ) %>%
+    gt::tab_options(
+      ihtml.active = TRUE,
+      ihtml.use_filters = TRUE,
+      ihtml.use_search = TRUE,
+      ihtml.use_pagination = TRUE,
+      ihtml.use_page_size_select = TRUE,
+      ihtml.page_size_default = 12,
+      ihtml.page_size_values = c(12, 25, 50, 100),
+      ihtml.use_highlight = TRUE
+    ) %>%
+    gtDefaults
 }
