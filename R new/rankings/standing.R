@@ -28,7 +28,7 @@ weekly_standing <- team_elo %>%
       bowl == "SB" & seed <= 2 ~ emoji::emoji("zzz"),
       bowl %in% c("PB", "TB") & seed <= 4 ~ emoji::emoji("zzz"),
     ),
-    bowl = dplyr::case_when(
+    bowl_emoji = dplyr::case_when(
       bowl == "SB" ~ emoji::emoji("trophy"),
       bowl == "PB" ~ emoji::emoji("sports medal"),
       bowl == "TB" ~ emoji::emoji("pile of poo")
@@ -55,13 +55,14 @@ weekly_standing <- team_elo %>%
 
 current_standing <- weekly_standing %>%
   dplyr::group_by(franchise_id) %>%
+  #filter(week == 12) %>%
   dplyr::arrange(week) %>%
   dplyr::summarise(
     winloss = list(unlist(winloss)),
     pf_sparkline = list(unique(franchise_score)),
     elo_sparkline = list(unique(franchise_elo_postgame)),
     dplyr::across(c(franchise_name, division, division_name, conference_name, season, franchise_elo_pregame), first),
-    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, elo_shift, dplyr::ends_with("_rank"), power_rank_change, bowl, seed, seed_emoji, power_rank_emoji), last),
+    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, elo_shift, dplyr::ends_with("_rank"), power_rank_change, bowl, bowl_emoji, seed, seed_emoji, power_rank_emoji), last),
     .groups = "drop"
   ) %>%
   dplyr::group_by(bowl, conference_name) %>%
@@ -70,7 +71,5 @@ current_standing <- weekly_standing %>%
     divider = ifelse(dplyr::row_number() == 6, 1, 0),
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::mutate(
-  ) %>%
-  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, seed_emoji, divider) %>%
+  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider) %>%
   dplyr::arrange(league_rank)

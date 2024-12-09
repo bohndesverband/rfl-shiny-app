@@ -24,7 +24,7 @@ ranking_table_base <- function(df) {
     gt::cols_label(
       franchise_name = "Team"
     ) %>%
-    gt::cols_hide(c(season:division, div_rank:league_rank, divider)) %>%
+    gt::cols_hide(c(franchise_id, season:division, div_rank:league_rank, seed, bowl, divider)) %>%
 
     gtExtras::gt_highlight_rows(
       rows = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions),
@@ -63,11 +63,6 @@ ranking_table_standing <- function(df) {
       palette = c(color_grey_light, color_green)
     ) %>%
 
-    gt::tab_spanner(
-      label = "ELO",
-      columns = c(franchise_elo_postgame, elo_sparkline)
-    ) %>%
-
     gt::cols_label(
       wins_total = "W",
       losses_total = "L",
@@ -96,6 +91,11 @@ ranking_table_elo <- function(df) {
       palette = c(color_text, color_grey_mid),
       #font_size = c("14px", "10px"),
       font_weight = c("normal", "normal")
+    ) %>%
+
+    gt::tab_spanner(
+      label = "ELO",
+      columns = c(franchise_elo_postgame, elo_sparkline)
     ) %>%
 
     gt::cols_move(franchise_elo_postgame, elo_sparkline) %>%
@@ -177,7 +177,7 @@ ranking_table_power_rank <- function(df) {
 ranking_table_bowl <- function(df) {
   df %>%
     gtExtras::gt_merge_stack(
-      bowl,
+      bowl_emoji,
       seed_emoji,
       small_cap = FALSE,
       palette = c(color_text, color_text),
@@ -185,7 +185,7 @@ ranking_table_bowl <- function(df) {
     ) %>%
 
     gt::cols_label(
-      bowl = "Bowl"
+      bowl_emoji = "Bowl"
     )
 }
 

@@ -61,101 +61,140 @@ options(spinner.color = color_grey_dark)
 
 ```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
 shiny::sliderInput(
-    "selectYears",
-    "Saisons",
-    min = 2016,
-    max = new_season_sept + 1,
-    value = c(new_season_sept, new_season_sept + 1),
-    step = 1,
-    sep = ""
+  "selectYears",
+  "Saisons",
+  min = 2016,
+  max = new_season_sept + 1,
+  value = c(new_season_sept, new_season_sept + 1),
+  step = 1,
+  sep = ""
+)
+
+shinyWidgets::pickerInput(
+  "selectRflTeams",
+  "RFL Teams",
+  choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
+  #selected = franchises$franchise_id,
+  #selected = "0007",
+  options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
+  multiple = TRUE
+)
+
+shiny::selectizeInput(
+  "selectRflTeam",
+  "RFL Team",
+  choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
+  multiple = FALSE,
+  #selected = "0007"
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
   )
+)
 
-  shinyWidgets::pickerInput(
-    "selectRflTeams",
-    "RFL Teams",
-    choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
-    #selected = franchises$franchise_id,
-    #selected = "0007",
-    options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
-    multiple = TRUE
+shinyWidgets::pickerInput(
+  "selectRflDivisions",
+  "RFL Divisions",
+  choices = setNames(unique(franchises$division[order(franchises$division_name)]), unique(franchises$division_name[order(franchises$division_name)])),
+  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
+  multiple = TRUE,
+)
+
+shiny::selectizeInput(
+  "selectRflConference",
+  "RFL Conferences",
+  choices = unique(franchises$conference_name[order(franchises$conference_name)]),
+  selected = "BFC",
+  options = list(
+    placeholder = "Conference wählen"
+  ),
+  multiple = FALSE,
+)
+
+shinyWidgets::pickerInput(
+  "selectRflConferenceTeams",
+  "RFL Teams",
+  choices = NULL,
+  #selected = franchises$franchise_id,
+  #selected = "0007",
+  options = list("actions-box" = TRUE, "none-selected-text" = "Team wählen"),
+  multiple = TRUE
+)
+
+mfl_teams_preselection_conf <- shiny::reactive({
+  # Grundfilter basierend auf der Position
+  franchises %>% 
+    dplyr::filter(conference_name == input$selectRflConference)
+})
+
+shiny::observe({
+  req(mfl_players_preselection())
+  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
+
+  shinyWidgets::updatePickerInput(
+    session,
+    "selectRflConferenceTeams",
+    choices = mfl_teams_preselection_conf()$franchise_name[order(mfl_teams_preselection_conf()$franchise_name)],
+    selected = mfl_teams_preselection_conf()$franchise_name
   )
+})
 
-  shiny::selectizeInput(
-    "selectRflTeam",
-    "RFL Team",
-    choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
-    multiple = FALSE,
-    #selected = "0007"
-    options = list(
-      placeholder = "Team wählen",
-      onInitialize = I('function() { this.setValue(""); }')
-    )
-  )
+shiny::selectizeInput(
+  "selectPosition",
+  "Position",
+  choices = positions,
+  selected = "RB",
+  options = list(
+    placeholder = "Position wählen"
+    #onInitialize = I('function() { this.setValue(""); }')
+  ),
+  multiple = FALSE
+)
 
-  shinyWidgets::pickerInput(
-    "selectRflDivisions",
-    "RFL Divisions",
-    choices = setNames(unique(franchises$division[order(franchises$division_name)]), unique(franchises$division_name[order(franchises$division_name)])),
-    options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
-    multiple = TRUE,
-  )
+shinyWidgets::pickerInput(
+  "selectPlayers",
+  "NFL Spieler",
+  choices = NULL,
+  multiple = TRUE,
+  options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Spieler gewählt werden", "none-selected-text" = "Spieler wählen"),
+)
 
-  shiny::selectizeInput(
-    "selectPosition",
-    "Position",
-    choices = positions,
-    selected = "RB",
-    options = list(
-      placeholder = "Position wählen"
-      #onInitialize = I('function() { this.setValue(""); }')
-    ),
-    multiple = FALSE
-  )
-
-  shinyWidgets::pickerInput(
-    "selectPlayers",
-    "NFL Spieler",
-    choices = NULL,
-    multiple = TRUE,
-    options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Spieler gewählt werden", "none-selected-text" = "Spieler wählen"),
-  )
-
-  mfl_players_preselection <- shiny::reactive({
-    # Grundfilter basierend auf der Position
-    filtered_data <- mfl_players_with_elo %>% 
-      dplyr::filter(grouped_pos %in% c(input$selectPosition)) %>% 
-      dplyr::arrange(player_name)
-    
-    # Optionaler Filter basierend auf dem ausgewählten Team
-    if (!is.null(input$selectRflTeam) && input$selectRflTeam != "") {
-      filtered_data <- filtered_data %>%
-        dplyr::filter(grepl(paste0("\\b", input$selectRflTeam, "\\b"), franchise_ids)) %>% 
-        dplyr::arrange(dplyr::desc(player_elo_post))
-    }
-    
-    # Sortiere nach Spielernamen
-    filtered_data
-      
-  })
-
-  shiny::observe({
-    req(mfl_players_preselection())
-    req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
-
-    top_player_id <- mfl_players_preselection() %>%
-      dplyr::filter(season == season_before_wk_1) %>%
-      dplyr::filter(player_elo_post == max(player_elo_post)) %>%
-      dplyr::pull(player_id)
-
-    shinyWidgets::updatePickerInput(
-      session,
-      "selectPlayers",
-      choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name),
-      selected = top_player_id
-    )
-  })
+mfl_players_preselection <- shiny::reactive({
+  # Grundfilter basierend auf der Position
+  filtered_data <- mfl_players_with_elo %>% 
+    dplyr::filter(grouped_pos %in% c(input$selectPosition)) %>% 
+    dplyr::arrange(player_name)
   
-  shiny::markdown("<small>**Tipp:** Wenn du oben ein RFL Team auswählst,<br>werden dir Spieler aus dessen Roster angezeigt.</small>")
+  # Optionaler Filter basierend auf dem ausgewählten Team
+  if (!is.null(input$selectRflTeam) && input$selectRflTeam != "") {
+    filtered_data <- filtered_data %>%
+      dplyr::filter(grepl(paste0("\\b", input$selectRflTeam, "\\b"), franchise_ids)) %>% 
+      dplyr::arrange(dplyr::desc(player_elo_post))
+  }
+  
+  # Sortiere nach Spielernamen
+  filtered_data
+    
+})
+
+shiny::observe({
+  req(mfl_players_preselection())
+  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
+
+  top_player_id <- mfl_players_preselection() %>%
+    dplyr::filter(season == season_before_wk_1) %>%
+    dplyr::filter(player_elo_post == max(player_elo_post)) %>%
+    dplyr::pull(player_id)
+
+  shinyWidgets::updatePickerInput(
+    session,
+    "selectPlayers",
+    choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name),
+    selected = top_player_id
+  )
+})
+
+shiny::markdown("<small>**Tipp:** Wenn du oben ein RFL Team auswählst,<br>werden dir Spieler aus dessen Roster angezeigt.</small>")
 ```
 
 > Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
@@ -163,6 +202,8 @@ shiny::sliderInput(
 > WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet. [Mehr dazu gibts hier zu lesen](https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory)
 
 > Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
+
+> Die "Magic Number" ist die Summe an Siegen des führenden Teams und den Niederlagen des Verfolgerteams in den verbleibenden Spielen, die das Verfolgerteam aus dem entsprechendem Platzierungskampf eliminiert. **Faustregel:** je kleiner der Wert, desto unwahrscheinlicher ist es, für das obere Team auf das an der Seite aufzuholen. 
 
 # Conference Ranking {data-navmenu="Liga"}
 
@@ -180,6 +221,29 @@ shiny::fluidPage(
   )
 )
 
+```
+
+# Magic Number {data-navmenu="Liga"}
+
+## 
+```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/rankings/magic_number.R", local = TRUE)
+
+if (current_standing$week[1] < 13) {
+  shiny::fluidPage(
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(gt::gt_output("magic_number_table")),
+        width = 12
+        )
+      )
+    )
+} else {
+  div(
+    style = "text-align: center; font-size: 18px; color: #f53b57; margin-top: 20px; padding-left: 30px;",
+    "Die Saison ist vorbei, hier gibt es nichts mehr zu sehen. Schau dir stattdessen das Conference Standing an."
+  )
+}
 ```
 
 # Power Ranking {data-navmenu="Liga"}

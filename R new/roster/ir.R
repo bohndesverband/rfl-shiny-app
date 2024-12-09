@@ -179,7 +179,11 @@ team_ir_weekly_filteres <- shiny::reactive({
 
 output$ir_roster <- shiny::renderPlot({
   shiny::validate(
-    shiny::need(input$selectRflTeams != "", "Wähle ein Team, um diese Grafik anzuzeigen")
+    shiny::need(input$selectRflTeams != "", "Wähle ein Team, um diese Grafik anzuzeigen.")
+  )
+
+  shiny::validate(
+    shiny::need(length(input$selectRflTeams) <= 1, "Bitte wähle  nur ein Team aus. Die Daten werden sonst nicht korrekt dargestellt.")
   )
 
   ggplot2::ggplot(team_ir_weekly_filteres(), ggplot2::aes(values = 1, fill = status)) +
