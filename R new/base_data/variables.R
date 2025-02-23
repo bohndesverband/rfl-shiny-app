@@ -60,7 +60,7 @@ var.fontHeadline <- "Open Sans Semibold"
 
 # dark: https://iibawards-prod.s3.amazonaws.com/projects/images/000/006/283/page.png?1693573818
 # ggplot defaults ----
-plot_defaults <- theme(
+plot_defaults <- ggplot2::theme(
   plot.margin = ggplot2::margin(25, 25, 25, 25),
   text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
 
@@ -74,7 +74,7 @@ plot_defaults <- theme(
   #axis.title.y.right = ggplot2::element_text(vjust = 2.5, hjust = 1),
   axis.text = ggplot2::element_text(size = 12),
   #axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
-  #axis.ticks = element_line(color = var.colorAccent, linewidth = 0.5),
+  axis.ticks = ggplot2::element_blank(),
 
   strip.background = ggplot2::element_rect(fill = color_grey_dark),
   strip.text = ggplot2::element_text(size = 12, color = color_bg, face = "bold"),
@@ -92,7 +92,7 @@ plot_defaults <- theme(
   panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
 )
 
-plot_clean <- theme(
+plot_clean <- ggplot2::theme(
   plot.background = ggplot2::element_blank(),
   panel.grid.major = ggplot2::element_blank(),
   panel.grid.minor = ggplot2::element_blank(),

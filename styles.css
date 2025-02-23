@@ -17,22 +17,17 @@
 
 /* Seiten ohne Sidebar */
 .sidebar:has(~ #dashboard-container #section-conference-ranking.active), /* Conference Standing */
-.sidebar:has(~ #dashboard-container #section-überblick.active) /* Überblick */ {
+.sidebar:has(~ #dashboard-container #section-alle-matchups.active) /* Matchup History */{
   display: none;
 }
 
 #dashboard-container:has(#section-conference-ranking.active), /* Conference Standing */
-#dashboard-container:has(~ #section-überblick.active) /* Überblick */ {
+#dashboard-container:has(#section-alle-matchups.active) /* Matchup History */ {
   padding-left: 0 !important;
 }
 
 #dashboard-container:has(#section-conference-ranking.active) .section /* Conference Standing */ {
   justify-content: center;
-}
-
-/* IR Analyse */
-.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
-  display: none;
 }
 
 /* Power Ranking */
@@ -46,6 +41,25 @@
 
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) blockquote:nth-of-type(1) {
   display: block;
+}
+
+/* Magic Number */
+.sidebar:has(~ #dashboard-container #section-magic-number.active) .form-group:not(:has(#selectRflConference-label)):not(:has(#selectRflConferenceTeams-label)) {
+  display: none;
+}
+
+.sidebar:has(~ #dashboard-container #section-magic-number.active) blockquote:nth-of-type(4) {
+  display: block;
+}
+
+/* Team WAR */
+.sidebar:has(~ #dashboard-container #section-war.active) .form-group:not(:has(#selectRflGames-label)) {
+  display: none;
+}
+
+/* IR Analyse */
+.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
+  display: none;
 }
 
 /* Player WAR */
@@ -64,6 +78,16 @@
 
 .sidebar:has(~ #dashboard-container #section-elo.active) blockquote:nth-of-type(3) {
   display: block;
+}
+
+/* Matchup Projections */
+.sidebar:has(~ #dashboard-container #section-projections.active) .form-group:not(:has(#selectRflMatchup-label)) {
+  display: none;
+}
+
+/* Matchup History */
+#section-alle-matchups.active .dataTables_scrollBody {
+  height: calc(100vh - 230px) !important;
 }
 
 /* Team Report */
@@ -85,7 +109,10 @@
   display: block;
 }
 
-
+/* Player Awards */
+#player_awards img {
+  width: 100%;
+}
 
 /* Fehlermeldungen */
 .shiny-output-error {
