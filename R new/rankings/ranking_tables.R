@@ -24,6 +24,15 @@ ranking_table_base <- function(df) {
     gt::cols_label(
       franchise_name = "Team"
     ) %>%
+
+    gt::cols_align(
+      align = "left",
+      columns = c(franchise_name)
+    ) %>%
+
+    gt::cols_label(
+      franchise_name = "Team"
+    ) %>%
     gt::cols_hide(c(franchise_id, season:division, div_rank:league_rank, seed, bowl, divider)) %>%
 
     gtExtras::gt_highlight_rows(

@@ -73,3 +73,51 @@ current_standing <- weekly_standing %>%
   dplyr::ungroup() %>%
   dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider) %>%
   dplyr::arrange(league_rank)
+
+# draft order----
+draft_order <- weekly_standing %>%
+  dplyr::select(week, franchise_id, franchise_name, pick)
+
+if (current_week > 13) {
+  postseason_teams <- draft_order %>%
+    dplyr::filter(week == max(week) & pick > 24) %>%
+    dplyr::select(-week)
+
+  postseason_results <- readr::read_csv(paste0("https://github.com/bohndesverband/rfl-data/releases/download/postseason_data/rfl_postseason_", new_season_sept, ".csv"), col_types = "icciccdcii") %>%
+    dplyr::filter(bowl == "SB" & (match_result == "L" | title == 1) & bracket != "Spiel um Platz drei") %>%
+    dplyr::left_join(postseason_teams, by = "franchise_id") %>%
+    dplyr::group_by(week) %>%
+    dplyr::arrange(pick) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(week) %>%
+    dplyr::mutate(
+      pick = dplyr::case_when(
+        week == 17 & title == 0 ~ 35,
+        week == 17 & title == 1 ~ 36,
+        TRUE ~ row_number() + 24
+      ),
+      week = 14
+    ) %>%
+    dplyr::arrange(pick) %>%
+    dplyr::select(week, franchise_id, pick) %>%
+    dplyr::left_join(
+      franchises %>%
+        dplyr::select(franchise_id, franchise_name),
+      by = "franchise_id"
+    ) %>%
+    dplyr::select(week, franchise_id, franchise_name, pick)
+
+  draft_order_postseason <- draft_order %>%
+    dplyr::filter(week == 13) %>%
+    dplyr::arrange(pick) %>%
+    dplyr::filter(pick <= 24) %>%
+    dplyr::mutate(week = 14) %>%
+    dplyr::bind_rows(postseason_results)
+
+  draft_order <- rbind(draft_order, draft_order_postseason) %>%
+    dplyr::left_join(
+      franchises %>%
+        dplyr::select(franchise_id, division),
+      by = "franchise_id"
+    )
+}
