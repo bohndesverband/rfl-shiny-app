@@ -37,7 +37,7 @@ ranking_table_base <- function(df) {
 
     gtExtras::gt_highlight_rows(
       rows = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions),
-      fill = color_grey_light
+      fill = color_grey_dark
     )
 }
 
@@ -233,7 +233,7 @@ output$conf_standing_table <- gt::render_gt({
     gt::cols_hide(elo_shift) %>%
 
     gt::tab_style(
-      style = gt::cell_borders(sides = c("bottom"), weight = px(1), color = color_grey_mid),
+      style = gt::cell_borders(sides = c("bottom"), weight = px(1), color = color_grey_dark),
       locations = cells_body(rows = divider == 1)
     ) %>%
 
@@ -285,3 +285,66 @@ output$elo_ranking_table <- gt::render_gt({
 
     gtDefaults()
 })
+
+# draft order ----
+current_draft_order_week <- current_standing$week[1]
+
+if (current_week > 13 & current_week <= 17) {
+  current_draft_order_week <- current_week
+}
+
+if (current_week > 17) {
+  current_draft_order_week <- 17
+}
+
+output$draft_order_table <- gt::render_gt({
+  draft_order %>%
+    dplyr::filter(week == max(week)) %>%
+    dplyr::left_join(
+      current_standing %>%
+        dplyr::filter(week == max(week)) %>%
+        dplyr::select(franchise_id, season, div_rank, league_rank, divider, division_name, pp_total, power_rank, seed, bowl, bowl_emoji, seed_emoji),
+      by = "franchise_id"
+    ) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = paste("RFL Draft Reihenfolge"),
+      subtitle = paste("Woche", current_draft_order_week, current_standing$season[1])
+    ) %>%
+    ranking_table_base() %>%
+    ranking_table_bowl() %>%
+    gtDefaults() %>%
+    gt::cols_hide(week) %>%
+    #gtExtras::gt_highlight_rows(rows = highlight_rows, fill = color_grey_light, font_weight = NULL) %>%
+    gtExtras::gt_highlight_rows(
+      rows = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions),
+      fill = color_grey_light
+    ) %>%
+    gt::tab_style(
+      style = gt::cell_borders(sides = c("bottom"), weight = px(1), color = color_grey_dark),
+      locations = cells_body(
+        rows = seq(3, 36, 3)
+      )
+    ) %>%
+    gt::data_color(
+      pp_total,
+      palette = c(color_red, color_blue)
+    ) %>%
+    gt::data_color(
+      power_rank,
+      palette = c(color_blue, color_red),
+      domain = c(1,36)
+    ) %>%
+    gt::data_color(
+      pick,
+      palette = c(color_red, color_blue),
+      domain = c(1,36)
+    ) %>%
+    gt::cols_label(
+      pick = "Pick",
+      pp_total = "Potential Points",
+      power_rank = "Power Rank"
+    ) %>%
+    gtExtras::gt_add_divider(c(franchise_name, pick, pp_total, power_rank), color = color_grey_light, include_labels = FALSE)
+})
+

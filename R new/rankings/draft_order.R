@@ -19,7 +19,7 @@ draft_order_plot <- shiny::reactive({
     plot_defaults +
     plot_clean +
     labs(
-      title = paste0("Draft Reihenfolge Wochen ", min(draft_order$week), "-", max(draft_order$week), " ", new_season_sept),
+      title = paste0("RFL Draft Reihenfolge Wochen ", min(draft_order$week), "-", max(draft_order$week), " ", new_season_sept),
       subtitle = "Woche 14 fast alle Postseason Ergebnisse zusammen",
       x = "Woche",
       y = "Draft Pick",
