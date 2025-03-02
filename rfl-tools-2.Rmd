@@ -358,7 +358,7 @@ shiny::fluidPage(
 )
 ```
 
-# WAR {data-navmenu="Roster"}
+# WAR {data-navmenu="Teams"}
 
 ##
 ```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
@@ -374,7 +374,7 @@ shiny::fluidPage(
 )
 ```
 
-# IR Analyse {data-navmenu="Roster"}
+# IR Analyse {data-navmenu="Teams"}
 
 ## 
 ```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
@@ -406,6 +406,22 @@ shiny::fluidPage(
       width = 6
     ),
     style = "height: 2525px"
+  )
+)
+```
+
+# Punktehistorie {data-navmenu="Teams"}
+
+##
+```{r team-point-history, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/roster/point_history.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("roster_point_history")),
+      width = 12
+    )
   )
 )
 ```
@@ -472,17 +488,12 @@ shiny::fluidPage(
 source("R new/players/awards.R", local = TRUE)
 
 shiny::fluidPage(
-  id = "player-awards",
   shiny::fluidRow(
     shiny::column(
       shinycssloaders::withSpinner(shiny::uiOutput("player_awards")),
+      shinycssloaders::withSpinner(shiny::uiOutput("best_players")),
+      shinycssloaders::withSpinner(shiny::uiOutput("league_mvps")),
       width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      #shinycssloaders::withSpinner(shiny::plotOutput("rflMVPs")),
-      width = 6
     )
   )
 )

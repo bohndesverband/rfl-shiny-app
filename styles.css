@@ -62,6 +62,11 @@
   display: none;
 }
 
+/* Team Punktehistorie */
+.sidebar:has(~ #dashboard-container #section-punktehistorie.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+  display: none;
+}
+
 /* Player WAR */
 .sidebar:has(~ #dashboard-container #section-wins-above-replacement.active) .form-group:not(:has(#selectYears-label)) {
   display: none;
@@ -110,7 +115,7 @@
 }
 
 /* Player Awards */
-#player_awards img {
+#section-awards img {
   width: 100%;
 }
 
