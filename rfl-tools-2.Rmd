@@ -239,6 +239,7 @@ shiny::selectizeInput(
 # Conference Ranking {data-navmenu="Liga"}
 
 ## 
+
 ```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/standing.R", local = TRUE)
 source("R new/rankings/ranking_tables.R", local = TRUE)
@@ -257,6 +258,7 @@ shiny::fluidPage(
 # Magic Number {data-navmenu="Liga"}
 
 ## 
+
 ```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/magic_number.R", local = TRUE)
 
@@ -279,7 +281,8 @@ if (current_standing$week[1] < 13) {
 
 # Power Ranking {data-navmenu="Liga"}
 
-## 
+##
+
 ```{r power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/power_ranking.R", local = TRUE)
 
@@ -302,7 +305,8 @@ shiny::fluidPage(
 
 # ELO Ranking {data-navmenu="Liga"}
 
-## 
+##
+
 ```{r team-elo, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/elo.R", local = TRUE)
 
@@ -337,6 +341,7 @@ shiny::fluidPage(
 # Draft Reihenfolge {data-navmenu="Liga"}
 
 ##
+
 ```{r draft-order, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/roster/war.R", local = TRUE)
 
@@ -360,7 +365,8 @@ shiny::fluidPage(
 
 # WAR {data-navmenu="Teams"}
 
-##
+## 
+
 ```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/draft_order.R", local = TRUE)
 
@@ -374,9 +380,31 @@ shiny::fluidPage(
 )
 ```
 
+# Roster Tiefe {data-navmenu="Teams"}
+
+##
+
+```{r team-depth, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/roster/depth.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_season")),
+      width = 6
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_weekly")),
+      width = 6
+    )
+  )
+)
+```
+
 # IR Analyse {data-navmenu="Teams"}
 
 ## 
+
 ```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/roster/ir.R", local = TRUE)
 
@@ -413,6 +441,7 @@ shiny::fluidPage(
 # Punktehistorie {data-navmenu="Teams"}
 
 ##
+
 ```{r team-point-history, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/roster/point_history.R", local = TRUE)
 
@@ -429,6 +458,7 @@ shiny::fluidPage(
 # Wins above Replacement {data-navmenu="Spieler"}
 
 ##
+
 ```{r player-war, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/players/war.R", local = TRUE)
 
@@ -450,6 +480,7 @@ shiny::fluidPage(
 # ELO {data-navmenu="Spieler"}
 
 ## 
+
 ```{r player-elo, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/players/elo.R", local = TRUE)
 
@@ -484,6 +515,7 @@ shiny::fluidPage(
 # Awards {data-navmenu="Spieler"}
 
 ## 
+
 ```{r player-awards, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/players/awards.R", local = TRUE)
 
@@ -502,6 +534,7 @@ shiny::fluidPage(
 # Projections {data-navmenu="Matchups"}
 
 ##
+
 ```{r matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 source("R new/matchups/projections.R", local = TRUE)
 
@@ -522,6 +555,7 @@ shiny::fluidPage(
 # Alle Matchups {data-navmenu="Matchups"}
 
 ##
+
 ```{r matchup-history, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/matchups/history.R", local = TRUE)
 
@@ -538,6 +572,7 @@ shiny::fluidPage(
 # Upsets {data-navmenu="Matchups"}
 
 ##
+
 ```{r upsets, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/matchups/history.R", local = TRUE)
 
@@ -554,6 +589,7 @@ shiny::fluidPage(
 # Liga Bericht
 
 ##
+
 ```{r league-report, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/reports/league-report.R", local = TRUE)
 
