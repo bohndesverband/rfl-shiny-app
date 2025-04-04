@@ -13,7 +13,7 @@ ir_players <- roster_data %>%
 
   # add nfl IR status
   dplyr::left_join(
-    nflreadr::load_rosters_weekly() %>%
+    nflreadr::load_rosters_weekly(season_before_wk_2) %>%
       dplyr::filter(status == "RES" & week <= 13) %>%
       dplyr::group_by(gsis_id) %>%
       dplyr::arrange(week) %>%
@@ -40,7 +40,7 @@ team_ir_weekly <- roster_data %>%
     by = "franchise_id"
   ) %>%
   dplyr::left_join(
-    nflreadr::load_rosters_weekly() %>%
+    nflreadr::load_rosters_weekly(season_before_wk_2) %>%
       dplyr::filter(status == "RES") %>%
       dplyr::select(gsis_id, week, status),
     by = c("gsis_id", "week")

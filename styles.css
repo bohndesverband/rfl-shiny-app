@@ -57,7 +57,9 @@
   display: none;
 }
 
+/* Roster Depth */
 /* IR Analyse */
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)),
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
   display: none;
 }
@@ -85,6 +87,11 @@
   display: block;
 }
 
+/* Player Awards */
+.sidebar:has(~ #dashboard-container #section-awards.active) .form-group:not(:has(#selectYear-label)) {
+  display: none;
+}
+
 /* Matchup Projections */
 .sidebar:has(~ #dashboard-container #section-projections.active) .form-group:not(:has(#selectRflMatchup-label)) {
   display: none;
@@ -103,7 +110,6 @@
 /* Info für Teamsauswahl um Spieler vorzufiltern */
 .sidebar form > p {
   display: none;
-
 }
 
 .sidebar p:has(small) {

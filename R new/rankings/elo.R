@@ -55,7 +55,7 @@ output$running_elo <- renderPlot({
 
 output$elo_change <- shiny::renderPlot({
   ggplot2::ggplot(elo_change, ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +
-    ggforce::geom_link(aes(x = elo_start, xend = elo_end, yend = franchise_name, size = ggplot2::after_stat(index))) +
+    ggforce::geom_link(aes(x = elo_start, xend = elo_end, yend = franchise_name, linewidth = ggplot2::after_stat(index))) +
     ggplot2::scale_size_continuous(guide = "none") +
     ggplot2::geom_point(ggplot2::aes(x = elo_end), size = 4.7) +
 

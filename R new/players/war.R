@@ -5,7 +5,7 @@ player_war <- shiny::reactive({
     dplyr::group_by(player_id) %>%
     dplyr::summarise(
       dplyr::across(c(player_name, pos), last),
-      dplyr::across(c(points, war, games_played, games_missed), sum),
+      dplyr::across(c(points, war, games_played, games_missed), ~ sum(.x, na.rm = TRUE)),
       .groups = "drop"
     ) %>%
     dplyr::left_join(
@@ -25,7 +25,6 @@ player_war <- shiny::reactive({
     dplyr::rename(position = pos) %>%
     dplyr::select(player_id, display_name, position, team, dplyr::starts_with("war"), dplyr::starts_with("games_"))
 })
-
 
 output$player_war <- gt::render_gt({
   player_war() %>%
