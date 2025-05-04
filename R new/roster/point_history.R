@@ -45,7 +45,7 @@ output$roster_point_history <- gt::render_gt({
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Positions Ranking nach Total Points"),
-      subtitle = paste("Abschneiden der Teams nach erzielten Total Points je Positionsgruppen")
+      subtitle = paste("Abschneiden der Teams nach erzielten Total Points je Positionsgruppe")
     ) %>%
     gt::cols_hide(c(franchise_id, division)) %>%
     gtDefaults() %>%

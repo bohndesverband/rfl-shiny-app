@@ -1,5 +1,3 @@
-source("R new/base_data/starter.R", local = TRUE)
-
 roster_war <- roster_data %>%
   dplyr::filter(week == max(week)) %>%
   dplyr::left_join(

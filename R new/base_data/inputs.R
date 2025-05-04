@@ -1,0 +1,81 @@
+find_top_elo_player <- function(df) {
+  df %>%
+    dplyr::filter(season == max(season)) %>%
+    dplyr::arrange(dplyr::desc(player_elo_post)) %>%
+    head(3) %>%
+    dplyr::pull(player_id)
+}
+
+# set reactive to active tab ----
+active_tab <- shiny::reactive({
+  input$active_tab
+})
+
+## debug ----
+output$active_tab <- renderText({
+  paste("Aktive Tab:", active_tab())
+})
+
+# set inputs based on active tab ----
+shiny::observeEvent(active_tab(), {
+  if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
+    # draft klasse & draft hit rates
+    shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_sept))
+  } else {
+    shiny::updateSliderInput(session, "selectYears", min = 2016, value = c(new_season_sept, new_season_sept))
+  }
+
+  if (active_tab() == "#section-elo") {
+    # player elo
+
+    req(mfl_players_preselection())
+    req(nrow(mfl_players_preselection()) > 0)
+
+    top_player_id <- find_top_elo_player(mfl_players_preselection())
+
+    shinyWidgets::updatePickerInput(session, "selectPosition", selected = "QB")
+    shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
+  }
+})
+
+# create preselection of mfl players ----
+mfl_players_preselection <- shiny::reactive({
+  req(input$selectPosition)
+
+  # Grundfilter basierend auf der Position
+  filtered_data <- mfl_players_with_elo %>%
+    dplyr::filter(grouped_pos %in% input$selectPosition) %>%
+    dplyr::arrange(player_name)
+
+  # Optionaler Filter basierend auf dem ausgewählten Team
+  if (!is.null(input$selectRflTeam) && input$selectRflTeam != "") {
+    filtered_data <- filtered_data %>%
+      dplyr::filter(grepl(paste0("\\b", input$selectRflTeam, "\\b"), franchise_ids)) %>%
+      dplyr::arrange(dplyr::desc(player_elo_post))
+  }
+
+  filtered_data
+})
+
+# set inputs based on other inputs ----
+shiny::observe({
+  req(mfl_players_preselection())
+  req(nrow(mfl_players_preselection()) > 0)
+
+  top_player_id <- find_top_elo_player(mfl_players_preselection())
+
+  shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
+})
+
+shiny::observe({
+  req(input$selectRflDivisions)
+
+  div_teams <- franchises %>%
+    dplyr::filter(division %in% input$selectRflDivisions)
+
+  shinyWidgets::updatePickerInput(
+    session,
+    "selectRflTeams",
+    selected = setNames(div_teams$franchise_id, div_teams$franchise_name)
+  )
+})

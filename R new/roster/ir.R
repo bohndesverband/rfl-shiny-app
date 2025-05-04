@@ -81,7 +81,7 @@ team_ir <- team_ir_weekly %>%
 ## plot data ----
 output$ir_weekly <- shiny::renderPlot({
   ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = ppg_median, color = franchise_name)) +
-    ggplot2::geom_boxplot(aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
+    ggplot2::geom_boxplot(ggplot2::aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
     ggplot2::geom_jitter(ggplot2::aes(size = player_count, alpha = player_count), width = 0.25, color = color_grey_mid) +
 
     ggalt::geom_xspline(data = subset(team_ir, franchise_id %in% c(input$selectRflTeams)), spline_shape = -0.5) +

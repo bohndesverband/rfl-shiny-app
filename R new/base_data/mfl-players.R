@@ -20,13 +20,14 @@ mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=play
 mfl_players_with_elo <- mfl_players %>%
   dplyr::left_join(
     player_elo %>%
-      dplyr::filter(season == season_before_wk_1 & week == max(week)) %>%
+      dplyr::group_by(mfl_id) %>%
+      dplyr::slice_tail(n = 1) %>%
       dplyr::select(mfl_id, player_elo_post, season),
     by = c("player_id" = "mfl_id")
   ) %>%
+  dplyr::filter(!is.na(player_elo_post)) %>%
   dplyr::left_join(
-    roster_data %>%
-      dplyr::filter(week == max(week)) %>%
+    rfl_current_roster %>%
       dplyr::group_by(player_id) %>%
       dplyr::summarise(franchise_ids = paste(franchise_id, collapse = ", "), .groups = "drop"),
     by = "player_id"

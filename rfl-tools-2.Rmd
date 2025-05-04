@@ -21,10 +21,19 @@ output:
 runtime: shiny
 ---
 
+```{js}
+$("body").on("shown.bs.tab", "a[data-toggle='tab']", function(e) {
+  Shiny.setInputValue("active_tab", $(this).attr('href'));
+   console.log($(this).attr('href'));
+})
+
+```
+
 ```{r setup, include=FALSE}
 library(flexdashboard)
 library(tidyverse)
-#library(ffscrapr)
+library(nflreadr)
+library(ffscrapr)
 library(DT)
 library(ggplot2)
 #library(scales)
@@ -43,16 +52,22 @@ library(shinyWidgets)
 library(waffle)
 library(shinycssloaders)
 library(ggforce)
+#library(shinyjs)
 ```
 
 ```{r global, message=TRUE, warning=TRUE, include=FALSE}
 source("R new/base_data/variables.R", local = TRUE)
-source("R new/base_data/league.R", local = TRUE)
+source("R new/base_data/league.R", local = TRUE) # als erstes
 source("R new/base_data/elo.R", local = TRUE)
+source("R new/base_data/player_scores.R", local = TRUE)
+source("R new/base_data/fantasy_finishes.R", local = TRUE) # nach player_scores
+source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes
 source("R new/base_data/rosters.R", local = TRUE)
-source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
-source("R new/base_data/war.R", local = TRUE)
 source("R new/base_data/standings.R", local = TRUE)
+source("R new/base_data/starter.R", local = TRUE)
+source("R new/base_data/trades.R", local = TRUE)
+source("R new/base_data/war.R", local = TRUE)
+source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
 
 options(spinner.color = color_grey_dark)
 ```
@@ -60,12 +75,16 @@ options(spinner.color = color_grey_dark)
 # Sidebar {.sidebar}
 
 ```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/base_data/inputs.R", local = TRUE)
+
+textOutput("active_tab")
+
 shiny::sliderInput(
   "selectYears",
   "Saisons",
   min = 2016,
-  max = new_season_sept + 1,
-  value = c(new_season_sept, new_season_sept + 1),
+  max = new_season_sept,
+  value = c(new_season_sept, new_season_sept),
   step = 1,
   sep = ""
 )
@@ -76,6 +95,16 @@ shiny::sliderInput(
   min = 2016,
   max = new_season_sept,
   value = new_season_sept,
+  step = 1,
+  sep = ""
+)
+
+shiny::sliderInput(
+  "selectDraftRounds",
+  "Draft Runden",
+  min = 1,
+  max = 7,
+  value = c(1, 7),
   step = 1,
   sep = ""
 )
@@ -121,6 +150,7 @@ shiny::selectizeInput(
   multiple = FALSE,
 )
 
+# TODO: genutzt in magic number - evtl löschen, dafür selectRflTeams dynamisch setzen
 shinyWidgets::pickerInput(
   "selectRflConferenceTeams",
   "RFL Teams",
@@ -132,7 +162,6 @@ shinyWidgets::pickerInput(
 )
 
 mfl_teams_preselection_conf <- shiny::reactive({
-  # Grundfilter basierend auf der Position
   franchises %>% 
     dplyr::filter(conference_name == input$selectRflConference)
 })
@@ -149,16 +178,22 @@ shiny::observe({
   )
 })
 
-shiny::selectizeInput(
+shinyWidgets::pickerInput(
   "selectPosition",
   "Position",
   choices = positions,
-  selected = "RB",
-  options = list(
-    placeholder = "Position wählen"
-    #onInitialize = I('function() { this.setValue(""); }')
-  ),
+  selected = NULL,
+  options = list("actions-box" = TRUE, "none-selected-text" = "Position wählen"),
   multiple = FALSE
+)
+
+shinyWidgets::pickerInput(
+  "selectPositions",
+  "Positionen",
+  choices = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+  selected = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+  options = list("actions-box" = TRUE, "none-selected-text" = "Position wählen"),
+  multiple = TRUE
 )
 
 shinyWidgets::pickerInput(
@@ -166,45 +201,10 @@ shinyWidgets::pickerInput(
   "NFL Spieler",
   choices = NULL,
   multiple = TRUE,
-  options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Spieler gewählt werden", "none-selected-text" = "Spieler wählen"),
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Spieler gewählt werden", "none-selected-text" = "Spieler wählen"),
 )
 
-mfl_players_preselection <- shiny::reactive({
-  # Grundfilter basierend auf der Position
-  filtered_data <- mfl_players_with_elo %>% 
-    dplyr::filter(grouped_pos %in% c(input$selectPosition)) %>% 
-    dplyr::arrange(player_name)
-  
-  # Optionaler Filter basierend auf dem ausgewählten Team
-  if (!is.null(input$selectRflTeam) && input$selectRflTeam != "") {
-    filtered_data <- filtered_data %>%
-      dplyr::filter(grepl(paste0("\\b", input$selectRflTeam, "\\b"), franchise_ids)) %>% 
-      dplyr::arrange(dplyr::desc(player_elo_post))
-  }
-  
-  # Sortiere nach Spielernamen
-  filtered_data
-    
-})
-
-shiny::observe({
-  req(mfl_players_preselection())
-  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
-
-  top_player_id <- mfl_players_preselection() %>%
-    dplyr::filter(season == season_before_wk_1) %>%
-    dplyr::filter(player_elo_post == max(player_elo_post)) %>%
-    dplyr::pull(player_id)
-
-  shinyWidgets::updatePickerInput(
-    session,
-    "selectPlayers",
-    choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name),
-    selected = top_player_id
-  )
-})
-
-shiny::markdown("<small>**Tipp:** Wenn du oben ein RFL Team auswählst,<br>werden dir Spieler aus dessen Roster angezeigt.</small>")
+shiny::markdown("<small>**Tipp:** Wenn du oben ein RFL Team auswählst,<br>werden dir nur Spieler aus dessen Roster angezeigt.</small>")
 
 shiny::sliderInput(
   "selectRflGames",
@@ -234,7 +234,11 @@ shiny::selectizeInput(
 
 > Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
 
-> Die "Magic Number" ist die Summe an Siegen des führenden Teams und den Niederlagen des Verfolgerteams in den verbleibenden Spielen, die das Verfolgerteam aus dem entsprechendem Platzierungskampf eliminiert. **Faustregel:** je kleiner der Wert, desto unwahrscheinlicher ist es, für das obere Team auf das an der Seite aufzuholen. 
+> Die "Magic Number" ist die Summe an Siegen des führenden Teams und den Niederlagen des Verfolgerteams in den verbleibenden Spielen, die das Verfolgerteam aus dem entsprechendem Platzierungskampf eliminiert. **Faustregel:** je kleiner der Wert, desto unwahrscheinlicher ist es, für das obere Team auf das an der Seite aufzuholen.
+
+> Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler; mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
+Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)<br><br>
+Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
 
 # Conference Ranking {data-navmenu="Liga"}
 
@@ -303,7 +307,24 @@ shiny::fluidPage(
 )
 ```
 
-# ELO Ranking {data-navmenu="Liga"}
+# WAR {data-navmenu="Teams"}
+
+## 
+
+```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/rankings/draft_order.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("roster_war")),
+      width = 12
+    )
+  )
+)
+```
+
+# ELO Ranking {data-navmenu="Teams"}
 
 ##
 
@@ -334,48 +355,6 @@ shiny::fluidPage(
       width = 4
     ),
     style = "height: 830px"
-  )
-)
-```
-
-# Draft Reihenfolge {data-navmenu="Liga"}
-
-##
-
-```{r draft-order, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/roster/war.R", local = TRUE)
-
-shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_order")),
-      width = 12
-    ),
-    style = "height: 1030px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("draft_order_table")),
-      width = 12
-    ),
-    style = "height: 1030px"
-  )
-)
-```
-
-# WAR {data-navmenu="Teams"}
-
-## 
-
-```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/draft_order.R", local = TRUE)
-
-shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("roster_war")),
-      width = 12
-    )
   )
 )
 ```
@@ -512,6 +491,93 @@ shiny::fluidPage(
 )
 ```
 
+# Fantasy Finishes {data-navmenu="Spieler"}
+
+## 
+
+```{r player-fantasy-finishes, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/players/fantasy_finishes_output.R", local = TRUE)
+
+# TODO: reset selectYears to 2016
+# Add grouped Positions to SelectizeInput
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes")),
+      width = 12
+    )
+  )
+)
+```
+
+# Trade Bait {data-navmenu="Spieler"}
+
+## 
+
+```{r trade-bait, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/players/elo.R", local = TRUE)
+source("R new/players/trade_bait.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    #shiny::column(
+      #shinycssloaders::withSpinner(shiny::plotOutput("running_player_elo")),
+    #  width = 6
+    #),
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("trade_bait")),
+      width = 6
+    ),
+    style = "height: 680px"
+  )
+)
+```
+
+# Trade History {data-navmenu="Spieler"}
+
+## 
+
+```{r trade-history, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/players/trades.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Trade History"),
+      shinyWidgets::pickerInput(
+        "selectTradeAsset",
+        "Filter nach Asset",
+        choices = "",
+        options = list("actions-box" = TRUE, "none-selected-text" = "Asset wählen", "live-search" = TRUE),
+        multiple = TRUE
+      ),
+      shinycssloaders::withSpinner(DT::DTOutput("trade_history")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Am meisten getradete Spieler"),
+      shinycssloaders::withSpinner(DT::DTOutput("most_tradet_players")),
+      width = 6
+    ),
+    shiny::column(
+      tags$h5("Anzahl von Trades zwischen zwei Teams"),
+      shinycssloaders::withSpinner(DT::DTOutput("trades_between_teams")),
+      width = 6
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Team-Trades je Jahr"),
+      shinycssloaders::withSpinner(DT::DTOutput("trades_by_franchise")),
+      width = 12
+    )
+  )
+)
+```
+
 # Awards {data-navmenu="Spieler"}
 
 ## 
@@ -556,7 +622,7 @@ shiny::fluidPage(
 
 ##
 
-```{r matchup-history, echo=FALSE, message=FALSE, warning=FALSE}
+```{r matchup-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 source("R new/matchups/history.R", local = TRUE)
 
 shiny::fluidPage(
@@ -573,7 +639,7 @@ shiny::fluidPage(
 
 ##
 
-```{r upsets, echo=FALSE, message=FALSE, warning=FALSE}
+```{r upsets, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 source("R new/matchups/history.R", local = TRUE)
 
 shiny::fluidPage(
@@ -586,19 +652,86 @@ shiny::fluidPage(
 )
 ```
 
-# Liga Bericht
+# Basics {data-navmenu="Draft"}
 
-##
-
-```{r league-report, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/reports/league-report.R", local = TRUE)
+```{r draft-basics, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/draft/basics.R", local = TRUE)
 
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(shiny::uiOutput("leagueReport")),
+      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_basics_average")),
       width = 12
     )
+  )
+)
+```
+
+# Draftklassen {data-navmenu="Draft"}
+
+```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/draft/classes.R", local = TRUE)
+
+tags$style(HTML("
+  #draft_classes {
+    height: 900px !important;
+  }
+"))
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_classes", height = NULL)),
+      width = 12
+    )
+  )
+)
+```
+
+# Hit Rates {data-navmenu="Draft"}
+
+##
+
+```{r draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/draft/hit_rates.R", local = TRUE)
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_plot")),
+      width = 12
+    ),
+    style = "height: 900px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("team_hit_rates_table")),
+      width = 12
+    )
+  )
+)
+```
+
+# Draft Reihenfolge {data-navmenu="Draft"}
+
+##
+
+```{r draft-order, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/roster/war.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_order")),
+      width = 12
+    ),
+    style = "height: 1030px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("draft_order_table")),
+      width = 12
+    ),
+    style = "height: 1030px"
   )
 )
 ```

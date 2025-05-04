@@ -22,6 +22,7 @@ mfl_connection <- ffscrapr::mfl_connect(season = new_season_march, league_id = l
 # base data----
 position_order <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP")
 positions <- c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")
+positions_full <- c("QB", "RB", "WR", "TE", "PK", "DT", "DE", "DL", "LB", "CB", "S", "DB")
 
 # color ----
 # https://flatuicolors.com/palette/se

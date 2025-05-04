@@ -135,7 +135,7 @@ output$roster_depth_weekly <- shiny::renderPlot({
   ggplot2::ggplot(roster_depth_weekly, ggplot2::aes(x = points_back, y = pppg)) +
     roster_depth_plot(roster_depth_weekly) +
 
-    ggplot2::geom_point(data = subset(roster_depth_weekly, franchise_id %in% c("0007")), ggplot2::aes(color = franchise_name, alpha = week), size = 5) +
+    ggplot2::geom_point(data = subset(roster_depth_weekly, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name, alpha = week), size = 5) +
     ggplot2::scale_color_discrete(type = colors) +
     ggplot2::scale_alpha_continuous(range = c(0.5, 1), guide = "none") +
 

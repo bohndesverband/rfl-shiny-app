@@ -12,7 +12,7 @@ running_player_elo <- player_elo %>%
 ## output ----
 output$running_player_elo <- renderPlot({
   ggplot2::ggplot(running_player_elo, ggplot2::aes(x = game, y = player_elo_post)) +
-    ggplot2::geom_hex(data = subset(running_player_elo, active == 1 & position %in% c(input$selectPosition)), bins = 70) +
+    ggplot2::geom_hex(data = subset(running_player_elo, active == 1 & position == input$selectPosition), bins = 70) +
 
     ggalt::geom_xspline(data = subset(running_player_elo, mfl_id %in% c(input$selectPlayers)), ggplot2::aes(color = display_name), spline_shape = -0.5) +
     ggplot2::coord_cartesian(xlim = c(0, max(running_player_elo$game)), ylim = c(min(running_player_elo$player_elo_post) - 10, max(running_player_elo$player_elo_post)), expand = FALSE) +
