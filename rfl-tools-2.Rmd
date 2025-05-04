@@ -669,19 +669,14 @@ shiny::fluidPage(
 
 # Draftklassen {data-navmenu="Draft"}
 
-```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE}
+```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE, out.height="900px"}
 source("R new/draft/classes.R", local = TRUE)
-
-tags$style(HTML("
-  #draft_classes {
-    height: 900px !important;
-  }
-"))
 
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_classes", height = NULL)),
+      tags$p("Klicke auf einen Datenpunkt um dir diese Draftklasse im Detail anzuschauen."),
+      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_classes")),
       width = 12
     )
   )

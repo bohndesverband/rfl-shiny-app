@@ -20,7 +20,7 @@ output$active_tab <- renderText({
 shiny::observeEvent(active_tab(), {
   if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
     # draft klasse & draft hit rates
-    shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_sept))
+    shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_march - 3))
   } else {
     shiny::updateSliderInput(session, "selectYears", min = 2016, value = c(new_season_sept, new_season_sept))
   }

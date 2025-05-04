@@ -148,8 +148,8 @@
 }
 
 /* Draft Classes*/
-#section-draftklassen.active .chart-wrapper-flex {
-  height: calc(100vh - 72px) !important;
+#section-draftklassen.active .chart-stage {
+  height: calc(100vh - 73px) !important;
   overflow-y: scroll !important;
 }
 
