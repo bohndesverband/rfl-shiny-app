@@ -1,17 +1,5 @@
-output$fantasy_finishes <- gt::render_gt({
-  rfl_fantasy_finishes_summarised %>%
-    dplyr::filter(
-      last_season >= new_season_march - 1
-    ) %>%
-    dplyr::filter(
-      if(isTruthy(input$selectPositions))
-        sapply(seq_along(pos), function(i) {
-          any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
-        })
-      else
-        TRUE
-    ) %>%
-    #filter(pos == "QB") %>%
+gt_fantasy_finishes <- function(df) {
+  df %>%
     dplyr::arrange(dplyr::desc(top5)) %>%
     dplyr::select(-seasons, -last_season) %>%
     dplyr::rename(display_name = player_name, position = pos) %>%
@@ -69,4 +57,21 @@ output$fantasy_finishes <- gt::render_gt({
     gtDefaults() %>%
 
     gt_player()
+}
+
+output$fantasy_finishes <- gt::render_gt({
+  rfl_fantasy_finishes_summarised %>%
+    dplyr::filter(
+      last_season >= new_season_march - 1
+    ) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        sapply(seq_along(pos), function(i) {
+          any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
+        })
+      else
+        TRUE
+    ) %>%
+    #filter(pos == "QB") %>%
+    gt_fantasy_finishes()
 })

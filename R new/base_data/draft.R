@@ -1,9 +1,10 @@
-rfl_drafts_data <- purrr::map_df(2016:2024, function(x) {
+rfl_drafts_data <- purrr::map_df(2016:2025, function(x) {
   readr::read_csv(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/rfl_draft_{x}.csv"),
-    col_types = "iTiciccccccci"
+    col_types = "iTiiiccccccci"
   )
 }) %>%
+  dplyr::filter(!is.na(timestamp)) %>%
   dplyr::mutate(
     pos_grouped = dplyr::case_when(
       pos %in% c("DT", "DE") ~ "DL",
@@ -38,7 +39,6 @@ rfl_drafts_rookies <- rfl_drafts_data %>%
   dplyr::filter(season > 2016 & is_rookie) # nur rookie drafts & rookies
 
 rfl_drafts_with_elo <- rfl_drafts_data %>%
-  dplyr::mutate(round = as.numeric(round)) %>%
   dplyr::left_join(
     player_elo %>%
       dplyr::group_by(mfl_id) %>%
@@ -55,3 +55,14 @@ rfl_drafts_with_elo <- rfl_drafts_data %>%
       dplyr::select(player_id, dplyr::starts_with("top")),
     by = c("mfl_id" = "player_id")
   )
+
+rfl_draft_orders <- purrr::map_df(2018:2025, function(x) {
+  readr::read_csv(
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/rfl_draft-order_{x}.csv"),
+    col_types = "ici"
+  )
+})
+
+nfl_drafts <- nflreadr::load_draft_picks(2017:2025) %>%
+  dplyr::select(gsis_id, round) %>%
+  dplyr::rename(nfl_round = round)

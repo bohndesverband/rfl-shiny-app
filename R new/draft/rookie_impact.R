@@ -24,7 +24,7 @@ ggplot2::ggplot(rookie_impact, ggplot2::aes(x = overall, y = ppg)) +
     y = "ELO",
     x = "",
     color = ""
-  ),
+  )
   ggplot2::theme(
     legend.position = "inside",
     legend.position.inside = c(0.08, 0.9),

@@ -21,8 +21,14 @@ shiny::observeEvent(active_tab(), {
   if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
     # draft klasse & draft hit rates
     shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_march - 3))
+  } else if(active_tab() == "#section-basics") {
+    # draft basics
+    shiny::updateSliderInput(session, "selectYears", min = 2017, max = season_before_wk_2, value = c(2017, season_before_wk_2))
+    # season_before_wk_2 weil nach gsis_id gesynct wird und die erst nach den ersten spielen vorhanden ist
+  } else if(active_tab() == "#section-trade-history") {
+    shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2025, value = c(2025, 2025))
   } else {
-    shiny::updateSliderInput(session, "selectYears", min = 2016, value = c(new_season_sept, new_season_sept))
+    shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   }
 
   if (active_tab() == "#section-elo") {
@@ -35,6 +41,21 @@ shiny::observeEvent(active_tab(), {
 
     shinyWidgets::updatePickerInput(session, "selectPosition", selected = "QB")
     shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
+  }
+
+  if (active_tab() == "#section-trade-history") {
+    # trade history
+    shinyWidgets::updatePickerInput(
+      session,
+      "selectPositions",
+      selected = ""
+    )
+  } else {
+    shinyWidgets::updatePickerInput(
+      session,
+      "selectPositions",
+      selected = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+    )
   }
 })
 

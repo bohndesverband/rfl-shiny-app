@@ -143,16 +143,21 @@
 #section-trade-history [class*="col-"] { background: white; }
 
 /* Draft Basics */
-.sidebar:has(~ #dashboard-container #section-basics.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeam-label)):not(:has(#selectPositions-label)) {
-  display: none;
-}
-
-/* Draft Classes*/
-#section-draftklassen.active .chart-stage {
+#section-draftklassen.active .chart-stage,
+#section-basics.active .chart-wrapper {
   height: calc(100vh - 73px) !important;
   overflow-y: scroll !important;
 }
 
+.sidebar:has(~ #dashboard-container #section-basics.active) .form-group:not(:has(#selectYears-label)) {
+  display: none;
+}
+
+#section-basics.active .chart-stage {
+  overflow-y: scroll !important;
+}
+
+/* Draft Classes*/
 #section-draftklassen.active .chart-wrapper-flex .chart-stage {
   overflow: unset !important;
 }
@@ -160,6 +165,9 @@
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflDivisions-label)):not(:has(#selectDraftRounds-label)) {
   display: none;
 }
+
+#section-draftklassen.active .gt_table td,
+#section-draftklassen.active .dataTables_scroll td { white-space: pre-wrap; }
 
 /* Draft Hit Rates */
 .sidebar:has(~ #dashboard-container #section-hit-rates.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflDivisions-label)):not(:has(#selectDraftRounds-label)) {
@@ -174,21 +182,21 @@
   vertical-align: top;
 }
 
-#section-hit-rates.active .rt-table .rt-thead .rt-tr:nth-child(2) .rt-th:not(:nth-child(1)):not(:nth-child(4)):not(:nth-child(7)):not(:nth-child(10)),
-#section-hit-rates.active .rt-table .rt-tbody .rt-tr .rt-td:not(:nth-child(1)):not(:nth-child(4)):not(:nth-child(7)):not(:nth-child(10)) {
+#section-hit-rates.active #team_hit_rates_table .rt-table .rt-thead .rt-tr:nth-child(2) .rt-th:not(:nth-child(1)):not(:nth-child(4)):not(:nth-child(7)):not(:nth-child(10)),
+#section-hit-rates.active #team_hit_rates_table .rt-table .rt-tbody .rt-tr .rt-td:not(:nth-child(1)):not(:nth-child(4)):not(:nth-child(7)):not(:nth-child(10)) {
   width: 20px !important;
   min-width: 20px !important;
   flex: 20 0 auto !important;
 }
 
-#section-hit-rates.active .rt-table .rt-thead .rt-tr:nth-child(2) .rt-th:nth-child(1),
-#section-hit-rates.active .rt-table .rt-tbody .rt-tr .rt-td:nth-child(1) {
+#section-hit-rates.active #team_hit_rates_table .rt-table .rt-thead .rt-tr:nth-child(2) .rt-th:nth-child(1),
+#section-hit-rates.active #team_hit_rates_table .rt-table .rt-tbody .rt-tr .rt-td:nth-child(1) {
   width: 80px !important;
   min-width: 80px !important;
   flex: 80 0 auto !important;
 }
 
-#section-hit-rates.active .rt-table .rt-tbody .rt-tr .rt-td { white-space: pre-wrap; }
+#section-hit-rates.active #team_hit_rates_table .rt-table .rt-tbody .rt-tr .rt-td { white-space: pre-wrap; }
 
 /* Fehlermeldungen */
 .shiny-output-error {

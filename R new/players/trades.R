@@ -1,13 +1,13 @@
 trade_assets <- shiny::reactive({
-  test <- trades %>%
+  rfl_trades %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= (input$selectYears[2])
     ) %>%
-    dplyr::select(asset_id, asset_name) %>%
+    dplyr::select(trade_asset_id, asset_name) %>%
     dplyr::mutate(
-      asset_name = ifelse(grepl("DP_", asset_id), gsub("\\s*\\([^\\)]+\\)","", asset_name), asset_name),
-      asset_name = ifelse(grepl("DP_", asset_id), gsub("\\d+$","", asset_name), asset_name),
-      asset_type = ifelse(grepl("DP_", asset_id), "Picks", "Spieler")
+      asset_name = ifelse(grepl("DP_", trade_asset_id), gsub("\\s*\\([^\\)]+\\)","", asset_name), asset_name),
+      asset_name = ifelse(grepl("DP_", trade_asset_id), gsub("\\d+$","", asset_name), asset_name),
+      asset_type = ifelse(grepl("DP_", trade_asset_id), "Picks", "Spieler")
     ) %>%
     dplyr::distinct() %>%
     dplyr::filter(!(asset_type == "Picks" & grepl("\\.", asset_name))) %>%
@@ -18,13 +18,13 @@ shiny::observeEvent(input$selectYears, {
   shinyWidgets::updatePickerInput(
     session,
     "selectTradeAsset",
-    choices = split(setNames(trade_assets()$asset_id, trade_assets()$asset_name), trade_assets()$asset_type)
+    choices = split(setNames(trade_assets()$trade_asset_id, trade_assets()$asset_name), trade_assets()$asset_type)
   )
 })
 
 # trade history ----
 trade_history <- reactive({
-  trades %>%
+  rfl_trades %>%
     dplyr::left_join(
       franchises %>%
         dplyr::select(franchise_id, franchise_name),
@@ -40,7 +40,8 @@ trade_history <- reactive({
     dplyr::group_by(trade_id) %>%
     dplyr::mutate(
       asset_types = paste(asset_type, collapse = ","),
-      asset_ids = paste(asset_id, collapse = ","),
+      asset_ids = paste(trade_asset_id, collapse = ","),
+      trade_asset_ids = paste(asset_id, collapse = ","),
       asset_positions = paste(pos, collapse = ", "),
       franchise_ids = paste(franchise_id, collapse = ",")
     ) %>%
@@ -48,19 +49,22 @@ trade_history <- reactive({
     dplyr::summarise(
       date = dplyr::first(date),
       asset_ids = dplyr::first(asset_ids),
+      trade_asset_ids = dplyr::first(trade_asset_ids),
       asset_types = dplyr::first(asset_types),
       asset_positions = dplyr::first(asset_positions),
       franchise_ids = dplyr::first(franchise_ids),
-      asset_names = paste(asset_name, collapse = "\n"),
+      asset_names = paste(trade_asset_name, collapse = "\n"),
+      franchise_id = dplyr::first(franchise_id),
       franchise_name = dplyr::first(franchise_name),
       .groups = "drop"
     ) %>%
     dplyr::mutate(
-      asset_names = paste0(franchise_name, " sends\n", asset_names)
+      trade_assets = asset_names,
+      asset_names = paste0(franchise_name, " sends\n", asset_names),
     ) %>%
 
     dplyr::filter(
-      season >= input$selectYears[1] & season <= (input$selectYears[2])
+      season >= input$selectYears[1] & season <= input$selectYears[2]
     ) %>%
 
     # strsplit(franchise_ids[i], ",") teilt die kommagetrennte Liste auf.
@@ -85,14 +89,14 @@ trade_history <- reactive({
         TRUE
     ) %>%
 
-    dplyr::filter(
-      if(isTruthy(input$selectPositions))
-        sapply(seq_along(asset_positions), function(i) {
-          any(input$selectPositions %in% trimws(strsplit(asset_positions[i], ",")[[1]]))
-        })
-      else
-        TRUE
-    ) %>%
+    #dplyr::filter(
+    #  if(isTruthy(input$selectPositions))
+    #    sapply(seq_along(asset_positions), function(i) {
+    #      any(input$selectPositions %in% trimws(strsplit(asset_positions[i], ",")[[1]]))
+    #    })
+    #  else
+    #    TRUE
+    #) %>%
     #dplyr::filter(
     #  if(input$tradeHistoryType == "Picks")
     #    !grepl("player", as.character(asset_types))
@@ -124,11 +128,11 @@ output$trade_history <- DT::renderDataTable({
 })
 
 # most traded players ----
-most_tradet_players <- trades %>%
-  dplyr::filter(!grepl("DP_", asset_id) & !is.na(asset_name)) %>%
+most_tradet_players <- rfl_trades %>%
+  dplyr::filter(!grepl("DP_", trade_asset_id) & !is.na(asset_name)) %>%
   dplyr::group_by(asset_id) %>%
   dplyr::summarise(Trades = n(), .groups = "drop") %>%
-  dplyr::left_join(trades %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
+  dplyr::left_join(rfl_trades %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
   dplyr::select(asset_name, Trades) %>%
   dplyr::rename(Spieler = asset_name) %>%
   dplyr::mutate(
@@ -146,7 +150,7 @@ output$most_tradet_players <- DT::renderDataTable({
 })
 
 # trades between franchises ----
-trades_between_teams <- trades %>%
+trades_between_teams <- rfl_trades %>%
   dplyr::select(trade_id, franchise_id) %>%
   dplyr::distinct() %>%
   dplyr::group_by(trade_id) %>%
@@ -190,7 +194,7 @@ output$trades_between_teams <- DT::renderDataTable({
 })
 
 # trades per franchise ----
-trades_by_franchise <- trades %>%
+trades_by_franchise <- rfl_trades %>%
   dplyr::mutate(season = lubridate::year(date)) %>%
   dplyr::select(trade_id, franchise_id, season) %>%
   dplyr::distinct() %>%

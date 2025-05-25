@@ -48,8 +48,12 @@ colors_position <- c(
   "TE" = "#ff6b6b",
   "PK" = "#c8d6e5",
   "DL" = "#48dbfb",
+  "DT" = "#48dbfb",
+  "DE" = "#ffa801",
   "LB" = "#ff9ff3",
-  "DB" = "#00d2d3"
+  "DB" = "#00d2d3",
+  "CB" = "#00d2d3",
+  "S" = "#3c40c6"
 )
 
 color_text <- color_black

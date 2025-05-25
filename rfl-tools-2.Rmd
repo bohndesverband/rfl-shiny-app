@@ -41,7 +41,7 @@ library(ggbump)
 library(gt)
 #library(formattable)
 library(gtExtras)
-#library(svglite)
+library(svglite)
 #library(webshot2)
 library(emoji)
 #library(ggridges)
@@ -70,6 +70,7 @@ source("R new/base_data/war.R", local = TRUE)
 source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
 
 options(spinner.color = color_grey_dark)
+tags$head(tags$meta(charset = "UTF-8"))
 ```
 
 # Sidebar {.sidebar}
@@ -77,7 +78,7 @@ options(spinner.color = color_grey_dark)
 ```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/base_data/inputs.R", local = TRUE)
 
-textOutput("active_tab")
+#textOutput("active_tab")
 
 shiny::sliderInput(
   "selectYears",
@@ -236,7 +237,7 @@ shiny::selectizeInput(
 
 > Die "Magic Number" ist die Summe an Siegen des führenden Teams und den Niederlagen des Verfolgerteams in den verbleibenden Spielen, die das Verfolgerteam aus dem entsprechendem Platzierungskampf eliminiert. **Faustregel:** je kleiner der Wert, desto unwahrscheinlicher ist es, für das obere Team auf das an der Seite aufzuholen.
 
-> Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler; mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
+> Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler); mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
 Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)<br><br>
 Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
 
@@ -558,12 +559,12 @@ shiny::fluidPage(
   ),
   shiny::fluidRow(
     shiny::column(
-      tags$h5("Am meisten getradete Spieler"),
+      tags$h5("Am meisten getradete Spieler seit 2016"),
       shinycssloaders::withSpinner(DT::DTOutput("most_tradet_players")),
       width = 6
     ),
     shiny::column(
-      tags$h5("Anzahl von Trades zwischen zwei Teams"),
+      tags$h5("Anzahl von Trades zwischen zwei Teams seit 2016"),
       shinycssloaders::withSpinner(DT::DTOutput("trades_between_teams")),
       width = 6
     )
@@ -660,7 +661,8 @@ source("R new/draft/basics.R", local = TRUE)
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_basics_average")),
+      #shinycssloaders::withSpinner(plotly::plotlyOutput("draft_basics_average")),
+      shinycssloaders::withSpinner(shiny::plotOutput("rfl_picks_over_nfl_rounds")),
       width = 12
     )
   )
@@ -679,6 +681,17 @@ shiny::fluidPage(
       shinycssloaders::withSpinner(plotly::plotlyOutput("draft_classes")),
       width = 12
     )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("single_draft_class")),
+      width = 5
+    ),
+    shiny::column(
+      tags$h4("Alle Trades mit Picks dieses Drafts"),
+      shinycssloaders::withSpinner(DT::DTOutput("single_draft_class_trades")),
+      width = 7
+    )
   )
 )
 ```
@@ -689,6 +702,7 @@ shiny::fluidPage(
 
 ```{r draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/draft/hit_rates.R", local = TRUE)
+
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
@@ -700,6 +714,19 @@ shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
       shinycssloaders::withSpinner(gt::gt_output("team_hit_rates_table")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_by_round")),
+      width = 12
+    ),
+    style = "height: 900px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("hit_rates_fantasy_finishes")),
       width = 12
     )
   )
