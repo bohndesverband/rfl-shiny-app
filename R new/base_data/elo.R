@@ -1,12 +1,5 @@
 # teams ----
-team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
-  readr::read_csv(
-    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_team-elo_{x}.csv"),
-    col_types = "iiccnnnnnnn"
-  )
-}) %>%
-  dplyr::left_join(franchises %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
-  dplyr::left_join(franchises %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
+team_elo <- feather::read_feather("data/rfl_team_elo.feather")
 
 rfl_matchups_history <- team_elo %>%
   mutate(
@@ -17,10 +10,4 @@ rfl_matchups_history <- team_elo %>%
   dplyr::select(season, week, franchise_id, opponent_id, franchise_name, elo_shift, franchise_elo_pregame, franchise_score, elo_diff, opponent_score, opponent_elo_pregame, opponent_name, upset, label)
 
 # spieler ----
-player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
-  readr::read_csv(
-    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_player-elo_{x}.csv"),
-    col_types = "iicccccnniiiii"
-  )
-}) %>%
-  dplyr::left_join(nflreadr::load_players() %>% select(display_name, gsis_id), by = "gsis_id")
+player_elo <- feather::read_feather("data/rfl_player_elo.feather")

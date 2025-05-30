@@ -11,20 +11,20 @@ if(nrow(rfl_matchups > 0)) {
     dplyr::rename(away = "._2_id") %>%
     dplyr::select(home, away) %>%
     dplyr::left_join(
-      franchises %>%
+      rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name) %>%
         dplyr::rename(home_name = franchise_name),
       by = c("home" = "franchise_id")
     ) %>%
     dplyr::left_join(
-      franchises %>%
+      rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name) %>%
         dplyr::rename(away_name = franchise_name),
       by = c("away" = "franchise_id")
     ) %>%
     dplyr::mutate(matchup = paste(home_name, "vs", away_name))
 
-  starter_data <- jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=weeklyResults&L=", league_id, "&W=", current_week, "&JSON=1"))$weeklyResults$matchup %>%
+  rfl_starter_data <- jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=weeklyResults&L=", league_id, "&W=", current_week, "&JSON=1"))$weeklyResults$matchup %>%
     dplyr::tibble() %>%
     tidyr::unnest_wider(1) %>%
     tidyr::unnest_wider(franchise, names_sep = "_") %>%
@@ -59,8 +59,8 @@ if(nrow(rfl_matchups > 0)) {
     dplyr::select(id, live, time_remaining)
 
   starter <- data.frame(
-    franchise_id = c(starter_data$franchise_1_id, starter_data$franchise_2_id),
-    id = c(starter_data$franchise_1_starters, starter_data$franchise_2_starters)
+    franchise_id = c(rfl_starter_data$franchise_1_id, rfl_starter_data$franchise_2_id),
+    id = c(rfl_starter_data$franchise_1_starters, rfl_starter_data$franchise_2_starters)
   ) %>%
     dplyr::distinct() %>%
     tidyr::separate_rows(id, sep = ",") %>%

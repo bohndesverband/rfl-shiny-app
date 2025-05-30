@@ -3,7 +3,7 @@
 rfl_hit_rates <- shiny::reactive({
   #rfl_hit_rates <-
 
-  rfl_drafts_with_elo %>%
+  rfl_drafts_data %>%
     #filter(mfl_id == "15329") %>%
     #filter(pos_grouped == "TE") %>%
     dplyr::filter((season >= input$selectYears[1] & season <= input$selectYears[2]) & (round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])) %>%
@@ -277,7 +277,7 @@ nfl_drafts_with_hit_rates <- shiny::reactive({
     filter(season > 2016) %>%
     dplyr::select(gsis_id, pos, hr, hit, miss) %>%
     dplyr::left_join(
-      nfl_drafts,
+      nfl_drafts_data,
       by = "gsis_id",
       relationship = "many-to-many"
     ) %>%
@@ -328,7 +328,7 @@ output$draft_hit_rates_by_round <- shiny::renderPlot({
 source("R new/players/fantasy_finishes_output.R", local = TRUE)
 
 output$hit_rates_fantasy_finishes <- gt::render_gt({
-  rfl_fantasy_finishes_summarised %>%
+  rfl_fantasy_finishes %>%
     dplyr::left_join(
       nflreadr::load_ff_playerids() %>%
         dplyr::select(mfl_id, gsis_id),

@@ -32,6 +32,7 @@ $("body").on("shown.bs.tab", "a[data-toggle='tab']", function(e) {
 ```{r setup, include=FALSE}
 library(flexdashboard)
 library(tidyverse)
+library(feather)
 library(nflreadr)
 library(ffscrapr)
 library(DT)
@@ -56,18 +57,9 @@ library(ggforce)
 ```
 
 ```{r global, message=TRUE, warning=TRUE, include=FALSE}
-source("R new/base_data/variables.R", local = TRUE)
-source("R new/base_data/league.R", local = TRUE) # als erstes
-source("R new/base_data/elo.R", local = TRUE)
-source("R new/base_data/player_scores.R", local = TRUE)
-source("R new/base_data/fantasy_finishes.R", local = TRUE) # nach player_scores
-source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes
-source("R new/base_data/rosters.R", local = TRUE)
-source("R new/base_data/standings.R", local = TRUE)
-source("R new/base_data/starter.R", local = TRUE)
-source("R new/base_data/trades.R", local = TRUE)
-source("R new/base_data/war.R", local = TRUE)
-source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
+#profvis({
+source("R new/base_data/base_data.R", local = TRUE)
+#})
 
 options(spinner.color = color_grey_dark)
 tags$head(tags$meta(charset = "UTF-8"))
@@ -78,7 +70,7 @@ tags$head(tags$meta(charset = "UTF-8"))
 ```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/base_data/inputs.R", local = TRUE)
 
-#textOutput("active_tab")
+textOutput("active_tab")
 
 shiny::sliderInput(
   "selectYears",
@@ -113,7 +105,7 @@ shiny::sliderInput(
 shinyWidgets::pickerInput(
   "selectRflTeams",
   "RFL Teams",
-  choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
+  choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
   #selected = franchises$franchise_id,
   #selected = "0007",
   options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
@@ -123,7 +115,7 @@ shinyWidgets::pickerInput(
 shiny::selectizeInput(
   "selectRflTeam",
   "RFL Team",
-  choices = setNames(franchises$franchise_id[order(franchises$franchise_name)], franchises$franchise_name[order(franchises$franchise_name)]),
+  choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
   multiple = FALSE,
   #selected = "0007"
   options = list(
@@ -135,7 +127,7 @@ shiny::selectizeInput(
 shinyWidgets::pickerInput(
   "selectRflDivisions",
   "RFL Divisions",
-  choices = setNames(unique(franchises$division[order(franchises$division_name)]), unique(franchises$division_name[order(franchises$division_name)])),
+  choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
   options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
   multiple = TRUE,
 )
@@ -143,7 +135,7 @@ shinyWidgets::pickerInput(
 shiny::selectizeInput(
   "selectRflConference",
   "RFL Conferences",
-  choices = unique(franchises$conference_name[order(franchises$conference_name)]),
+  choices = unique(rfl_franchise_data$conference_name[order(rfl_franchise_data$conference_name)]),
   selected = "BFC",
   options = list(
     placeholder = "Conference wählen"
@@ -163,7 +155,7 @@ shinyWidgets::pickerInput(
 )
 
 mfl_teams_preselection_conf <- shiny::reactive({
-  franchises %>% 
+  rfl_franchise_data %>% 
     dplyr::filter(conference_name == input$selectRflConference)
 })
 
@@ -246,8 +238,19 @@ Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und
 ## 
 
 ```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/standing.R", local = TRUE)
-source("R new/rankings/ranking_tables.R", local = TRUE)
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-conference-standing") {
+    
+    # Nur einmal laden oder erneut?
+    # Option 1: Einmal beim ersten Aufruf
+    if (is.null(globalenv()$standing_data_loaded) || !globalenv()$standing_data_loaded) {
+      source("R new/rankings/standing.R", local = TRUE)
+      source("R new/rankings/ranking_tables.R", local = TRUE)
+      globalenv()$standing_data_loaded <- TRUE
+    }
+  }
+}, once = TRUE)
+
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -257,7 +260,6 @@ shiny::fluidPage(
     )
   )
 )
-
 ```
 
 # Magic Number {data-navmenu="Liga"}
@@ -267,7 +269,7 @@ shiny::fluidPage(
 ```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/rankings/magic_number.R", local = TRUE)
 
-if (current_standing$week[1] < 13) {
+if (rfl_current_standing$week[1] < 13) {
   shiny::fluidPage(
     shiny::fluidRow(
       shiny::column(
@@ -672,7 +674,23 @@ shiny::fluidPage(
 # Draftklassen {data-navmenu="Draft"}
 
 ```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE, out.height="900px"}
-source("R new/draft/classes.R", local = TRUE)
+draft_classes_data_loaded <- reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draftklassen") {
+    print("draft klassen")
+    
+    if (!draft_classes_data_loaded()) {
+      print("start loading sources")
+      source("R new/draft/classes.R", local = TRUE)
+      
+      draft_classes_data_loaded(TRUE)
+      print("sources loadded")
+    } else {
+      print("sources already loaded")
+    }
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(

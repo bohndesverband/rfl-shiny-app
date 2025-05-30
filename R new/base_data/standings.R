@@ -1,1 +1,0 @@
-standing_data <- readr::read_csv(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_", season_before_wk_2, ".csv"), col_types = "icccdddiiiddiiiiiiiiicii")

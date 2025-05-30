@@ -1,4 +1,4 @@
-rfl_point_history_raw <- starter_data %>%
+rfl_point_history_raw <- rfl_starter_data %>%
   dplyr::mutate(
     pos = case_when(
       pos %in% c("DT", "DE") ~ "DL",
@@ -27,7 +27,7 @@ rfl_point_history_starter <- rfl_point_history_raw %>%
   dplyr::ungroup() %>%
   dplyr::mutate(pos = factor(pos, levels = position_order)) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name, division),
     by = "franchise_id"
   ) %>%

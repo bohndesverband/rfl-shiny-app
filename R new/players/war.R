@@ -1,6 +1,6 @@
 # war ----
 player_war <- shiny::reactive({
-  war_data %>%
+  rfl_war_data %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::group_by(player_id) %>%
     dplyr::summarise(

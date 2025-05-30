@@ -1,5 +1,5 @@
 trade_assets <- shiny::reactive({
-  rfl_trades %>%
+  rfl_trades_data %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= (input$selectYears[2])
     ) %>%
@@ -24,9 +24,9 @@ shiny::observeEvent(input$selectYears, {
 
 # trade history ----
 trade_history <- reactive({
-  rfl_trades %>%
+  rfl_trades_data %>%
     dplyr::left_join(
-      franchises %>%
+      rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%
@@ -128,11 +128,11 @@ output$trade_history <- DT::renderDataTable({
 })
 
 # most traded players ----
-most_tradet_players <- rfl_trades %>%
+most_tradet_players <- rfl_trades_data %>%
   dplyr::filter(!grepl("DP_", trade_asset_id) & !is.na(asset_name)) %>%
   dplyr::group_by(asset_id) %>%
   dplyr::summarise(Trades = n(), .groups = "drop") %>%
-  dplyr::left_join(rfl_trades %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
+  dplyr::left_join(rfl_trades_data %>% dplyr::select(asset_id, asset_name), by = "asset_id", multiple = "last") %>%
   dplyr::select(asset_name, Trades) %>%
   dplyr::rename(Spieler = asset_name) %>%
   dplyr::mutate(
@@ -150,7 +150,7 @@ output$most_tradet_players <- DT::renderDataTable({
 })
 
 # trades between franchises ----
-trades_between_teams <- rfl_trades %>%
+trades_between_teams <- rfl_trades_data %>%
   dplyr::select(trade_id, franchise_id) %>%
   dplyr::distinct() %>%
   dplyr::group_by(trade_id) %>%
@@ -170,12 +170,12 @@ trades_between_teams <- rfl_trades %>%
   dplyr::filter(row_number() == 1) %>%
   dplyr::ungroup() %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name) %>%
       dplyr::rename(Accepted = franchise_name),
     by = c("partner" = "franchise_id")
@@ -194,7 +194,7 @@ output$trades_between_teams <- DT::renderDataTable({
 })
 
 # trades per franchise ----
-trades_by_franchise <- rfl_trades %>%
+trades_by_franchise <- rfl_trades_data %>%
   dplyr::mutate(season = lubridate::year(date)) %>%
   dplyr::select(trade_id, franchise_id, season) %>%
   dplyr::distinct() %>%
@@ -208,7 +208,7 @@ trades_by_franchise <- rfl_trades %>%
   ) %>%
   tidyr::spread(season, Trades, fill = 0) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%

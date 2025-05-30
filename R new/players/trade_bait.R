@@ -5,7 +5,7 @@ rfl_trade_baits <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=
   tidyr::separate_rows(willGiveUp, sep = ",") %>%
   dplyr::mutate(willGiveUp = willGiveUp) %>%
   dplyr::left_join(mfl_players %>% dplyr::select(player_id, player_name, pos, team), by = c("willGiveUp" = "player_id")) %>%
-  dplyr::left_join(franchises %>% dplyr::select(franchise_id, franchise_name), by = "franchise_id") %>%
+  dplyr::left_join(rfl_franchise_data %>% dplyr::select(franchise_id, franchise_name), by = "franchise_id") %>%
   dplyr::left_join(
     player_elo %>%
       dplyr::group_by(mfl_id) %>%

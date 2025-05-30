@@ -116,7 +116,7 @@ ranking_table_elo <- function(df) {
 
     gt::cols_label(
       elo_sparkline = "Saisonverlauf",
-      franchise_elo_postgame = paste("WK", current_standing$week[1]),
+      franchise_elo_postgame = paste("WK", rfl_current_standing$week[1]),
       elo_shift = "+/-"
     ) %>%
 
@@ -210,22 +210,18 @@ ranking_table_interactive <- function(df) {
 
 # conference standing ----
 output$conf_standing_table <- gt::render_gt({
-  current_standing %>%
+  rfl_current_standing %>%
     group_by(conference_name) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Standing"),
-      subtitle = paste("Woche", current_standing$week[1], current_standing$season[1])
+      subtitle = paste("Woche", rfl_current_standing$week[1], rfl_current_standing$season[1])
     ) %>%
 
     ranking_table_base() %>%
-
     ranking_table_standing() %>%
-
     ranking_table_elo() %>%
-
     ranking_table_power_rank() %>%
-
     ranking_table_bowl() %>%
 
     gt::cols_move(elo_rank, franchise_elo_postgame) %>%
@@ -245,13 +241,13 @@ output$conf_standing_table <- gt::render_gt({
 
 # power ranking ----
 output$power_ranking_table <- gt::render_gt({
-  current_standing %>%
+  rfl_current_standing %>%
     dplyr::arrange(power_rank) %>%
     #dplyr::select(-season, -week, -div_rank, -conf_rank, -league_rank) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Power Ranking"),
-      subtitle = paste("Woche", current_standing$week[1], current_standing$season[1])
+      subtitle = paste("Woche", rfl_current_standing$week[1], rfl_current_standing$season[1])
     ) %>%
 
     ranking_table_base() %>%
@@ -269,13 +265,13 @@ output$power_ranking_table <- gt::render_gt({
 
 # elo ----
 output$elo_ranking_table <- gt::render_gt({
-  current_standing %>%
+  rfl_current_standing %>%
     dplyr::arrange(dplyr::desc(franchise_elo_postgame)) %>%
     #dplyr::select(-season, -week, -div_rank, -conf_rank, -league_rank) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL ELO Ranking"),
-      subtitle = paste("Woche", current_standing$week[1], current_standing$season[1])
+      subtitle = paste("Woche", rfl_current_standing$week[1], rfl_current_standing$season[1])
     ) %>%
 
     ranking_table_base() %>%
@@ -287,7 +283,7 @@ output$elo_ranking_table <- gt::render_gt({
 })
 
 # draft order ----
-current_draft_order_week <- current_standing$week[1]
+current_draft_order_week <- rfl_current_standing$week[1]
 
 if (current_week > 13 & current_week <= 17) {
   current_draft_order_week <- current_week
@@ -301,7 +297,7 @@ output$draft_order_table <- gt::render_gt({
   draft_order %>%
     dplyr::filter(week == max(week)) %>%
     dplyr::left_join(
-      current_standing %>%
+      rfl_current_standing %>%
         dplyr::filter(week == max(week)) %>%
         dplyr::select(franchise_id, season, div_rank, league_rank, divider, division_name, pp_total, power_rank, seed, bowl, bowl_emoji, seed_emoji),
       by = "franchise_id"
@@ -309,7 +305,7 @@ output$draft_order_table <- gt::render_gt({
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Draft Reihenfolge"),
-      subtitle = paste("Woche", current_draft_order_week, current_standing$season[1])
+      subtitle = paste("Woche", current_draft_order_week, rfl_current_standing$season[1])
     ) %>%
     ranking_table_base() %>%
     ranking_table_bowl() %>%

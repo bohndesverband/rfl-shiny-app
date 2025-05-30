@@ -1,0 +1,23 @@
+source("R new/base_data/variables.R", local = TRUE)
+
+rfl_franchise_data <- feather::read_feather("data/rfl_franchises.feather")
+
+source("R new/base_data/elo.R", local = TRUE)
+
+rfl_player_scores <- feather::read_feather("data/rfl_player_scores.feather")
+
+rfl_fantasy_finishes <- feather::read_feather("data/rfl_fantasy_finishes.feather")
+
+source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes
+
+source("R new/base_data/rosters.R", local = TRUE)
+
+rfl_standing_data <- feather::read_feather("rfl_standing_data.feather")
+
+rfl_starter_data <- feather::read_feather("data/rfl_starter_data.feather")
+
+rfl_trades_data <- feather::read_feather("data/rfl_trades_data.feather")
+
+rfl_war_data <- feather::read_feather("rfl_war_data.feather")
+
+source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters

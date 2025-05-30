@@ -18,8 +18,12 @@ output$active_tab <- renderText({
 
 # set inputs based on active tab ----
 shiny::observeEvent(active_tab(), {
+
   if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
-    # draft klasse & draft hit rates
+    # draft klasse
+    shiny::updateSliderInput(session, "selectYears", min = 2017, max = 2025, value = c(2017, new_season_march - 3))
+  } else if (active_tab() == "#section-hit-rates") {
+    # draft hit rates
     shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_march - 3))
   } else if(active_tab() == "#section-basics") {
     # draft basics
@@ -50,6 +54,13 @@ shiny::observeEvent(active_tab(), {
       "selectPositions",
       selected = ""
     )
+  } else if(active_tab() == "#section-fantasy-finishes") {
+    shinyWidgets::updatePickerInput(
+      session,
+      "selectPositions",
+      choices = positions,
+      selected = positions,
+    )
   } else {
     shinyWidgets::updatePickerInput(
       session,
@@ -64,7 +75,7 @@ mfl_players_preselection <- shiny::reactive({
   req(input$selectPosition)
 
   # Grundfilter basierend auf der Position
-  filtered_data <- mfl_players_with_elo %>%
+  filtered_data <- mfl_players %>%
     dplyr::filter(grouped_pos %in% input$selectPosition) %>%
     dplyr::arrange(player_name)
 
@@ -91,7 +102,7 @@ shiny::observe({
 shiny::observe({
   req(input$selectRflDivisions)
 
-  div_teams <- franchises %>%
+  div_teams <- rfl_franchise_data %>%
     dplyr::filter(division %in% input$selectRflDivisions)
 
   shinyWidgets::updatePickerInput(

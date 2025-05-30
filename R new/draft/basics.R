@@ -56,7 +56,7 @@ output$rfl_picks_over_nfl_rounds <- shiny::renderPlot({
     dplyr::rename(rfl_round = round) %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2], pos != "PK") %>%
     dplyr::left_join(
-      nfl_drafts %>%
+      nfl_drafts_data %>%
         dplyr::filter(!is.na(gsis_id)),
       by = "gsis_id"
     ) %>%

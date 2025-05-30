@@ -2,7 +2,7 @@
 source("R new/players/fpts.R", local = TRUE)
 
 # create base data ----
-ir_players <- roster_data %>%
+ir_players <- rfl_roster_data %>%
   dplyr::select(player_id) %>%
   dplyr::distinct() %>%
   dplyr::left_join(
@@ -29,13 +29,13 @@ ir_players <- roster_data %>%
   dplyr::select(-dplyr::ends_with("week_on_ir"))
 
 # create data for weekly IR analysis ----
-team_ir_weekly <- roster_data %>%
+team_ir_weekly <- rfl_roster_data %>%
   dplyr::left_join(
     ir_players,
     by = "player_id"
   ) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%

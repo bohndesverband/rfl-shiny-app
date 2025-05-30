@@ -34,7 +34,7 @@ rfl_transactions %>%
     .groups = "drop"
   ) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%

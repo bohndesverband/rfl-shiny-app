@@ -4,16 +4,16 @@ source("R new/rankings/ranking_tables.R", local = TRUE)
 total_games <- 27
 
 magic_number_data <- expand.grid(
-    franchise_id = current_standing$franchise_id,
-    franchise_id_b = current_standing$franchise_id
+    franchise_id = rfl_current_standing$franchise_id,
+    franchise_id_b = rfl_current_standing$franchise_id
   ) %>%
   dplyr::filter(franchise_id != franchise_id_b) %>%  # Ausschließen von Paaren mit derselben Franchise
   dplyr::left_join(
-    current_standing,
+    rfl_current_standing,
     by = "franchise_id"
   ) %>%
   dplyr::left_join(
-    current_standing %>%
+    rfl_current_standing %>%
       dplyr::select(franchise_id, franchise_name, conference_name, wins_total, losses_total) %>%
       dplyr::rename(franchise_name_b = franchise_name, wins_b = wins_total, losses_b = losses_total, conference_b = conference_name),
     by = c("franchise_id_b" = "franchise_id")

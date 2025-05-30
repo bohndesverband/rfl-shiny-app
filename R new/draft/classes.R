@@ -1,6 +1,6 @@
 rfl_draft_classes <- shiny::reactive({
-  rfl_drafts_with_elo %>%
-    #filter(franchise_id == "0034") %>%
+  rfl_draft_classes <- rfl_drafts_data %>%
+    #filter(franchise_id == "0027") %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2]) %>%
     dplyr::mutate(
@@ -21,11 +21,11 @@ rfl_draft_classes <- shiny::reactive({
 
 output$draft_classes <- plotly::renderPlotly({
   draft_classes_plot <- ggplot2::ggplot(rfl_draft_classes(), ggplot2::aes(x = elo_shift, y = elo_peak)) +
-    geom_point(ggplot2::aes(size = picks, alpha = season, text = paste(franchise_name, season)), color = color_grey_mid) +
+    ggplot2::geom_point(ggplot2::aes(size = picks, alpha = season, text = paste(franchise_name, season)), color = color_grey_mid) +
 
-    geom_point(data = subset(rfl_draft_classes(), franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name, size = picks, alpha = season)) +
+    ggplot2::geom_point(data = subset(rfl_draft_classes(), franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name, size = picks, alpha = season)) +
 
-    scale_color_discrete(type = colors) +
+    ggplot2::scale_color_discrete(type = colors) +
     plot_defaults +
     ggplot2::labs(
       title = paste("RFL Draftklassen"),
@@ -35,7 +35,7 @@ output$draft_classes <- plotly::renderPlotly({
     ) +
     plot_clean
 
-  team_draft_classes <- rfl_drafts_with_elo %>%
+  team_draft_classes <- rfl_drafts_data %>%
     dplyr::filter(
       franchise_id %in% input$selectRflTeams & (season >= input$selectYears[1] & season <= input$selectYears[2]) & (round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])
     )
@@ -121,7 +121,7 @@ observeEvent(event_data("plotly_click", source = "A"), {
 })
 
 draft_class_trades <- shiny::reactive({
-  draft_class_trades <- rfl_trades %>%
+  draft_class_trades <- rfl_trades_data %>%
     filter(season <= input$selectYear) %>%
     #filter(season <= 2024) %>%
     dplyr::group_by(trade_id) %>%
@@ -132,49 +132,65 @@ draft_class_trades <- shiny::reactive({
     ) %>%
     dplyr::ungroup() %>%
     dplyr::filter(grepl(input$selectRflTeams, franchise_ids) & (grepl(paste0(input$selectRflTeams, "_", input$selectYear), asset_ids) | grepl(input$selectYear, asset_names))) %>%
-    #dplyr::filter(grepl("0034", franchise_ids) & (grepl(paste0("0034_", 2024), asset_ids) | grepl(2024, asset_names))) %>%
+    #dplyr::filter(grepl("0027", franchise_ids) & (grepl(paste0("0027_", 2024), asset_ids) | grepl(2024, asset_names))) %>%
     dplyr::mutate(
       side = ifelse(franchise_id == input$selectRflTeams, "sent", "received"),
-      #side = ifelse(franchise_id == "0034", "sent", "received")
+      #side = ifelse(franchise_id == "0027", "sent", "received")
     ) %>%
     dplyr::select(season, date, trade_id, side, trade_asset_name, asset_id) %>%
     dplyr::rename(asset_name = trade_asset_name) %>%
     tidyr::separate(asset_id, into = c("prefix", "pick_owner", "pick_year", "pick_round"), sep = "_", remove = FALSE) %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(
+      pick_year = dplyr::case_when(
+        prefix == "DP" ~ stringr::str_split(asset_name, " ")[[1]][2],
+        TRUE ~ pick_year
+      ),
       pick_round = dplyr::case_when(
         prefix == "FP" ~ as.integer(pick_round),
         prefix == "DP" ~ as.integer(pick_owner) + 1
-      ),
-      pick_year = as.integer(pick_year)
+      )
     ) %>%
+
+    # add draft order um pick für getradete future picks zu erhalten
     dplyr::left_join(
       rfl_draft_orders %>%
-        dplyr::mutate(season = season + 1),
-      by = c("pick_year" = "season", "pick_owner" = "franchise_id")
+        dplyr::mutate(pick_year = as.character(season)) %>%
+        dplyr::select(-season),
+      by = c("pick_year", "pick_owner" = "franchise_id")
     ) %>%
-    dplyr::rowwise() %>%
+
     dplyr::mutate(
-      asset_id_new = ifelse(prefix == "FP" & !is.na(pick), paste("DP", pick_round - 1, pick - 1, pick_year, sep = "_"), asset_id), # für future picks
-      asset_name = ifelse(grepl("DP_", asset_id_new) & !is.na(pick), paste0(pick_round, ".", pick, " ", pick_year), asset_name),
-      pick = ifelse(prefix == "DP", as.integer(pick_year) + 1, pick),
-      pick_year = ifelse(prefix == "DP", as.integer(stringr::str_split(asset_name, " ")[[1]][2]), pick_year),
-      asset_id_new = ifelse(prefix == "DP", paste(asset_id, pick_year, sep = "_"), asset_id_new), # für draft picks
-      asset_id = ifelse(pick_year == input$selectYear & prefix == "FP", asset_id_new, asset_id)
-      #asset_id = ifelse(pick_year == 2024 & prefix == "FP", asset_id_new, asset_id)
+      asset_id_new = dplyr::case_when(
+        # alle ehemaligen future picks, die jetzt in der gegenwart sind, erhalten eine ID für den aktuellen draft
+        prefix == "FP" & pick_year <= input$selectYear ~ paste("DP", pick_round - 1, pick - 1, pick_year, sep = "_"),
+        prefix == "DP" ~ paste0(asset_id, "_", pick_year),
+        TRUE ~ asset_id
+      ),
+      #asset_id_new = dplyr::case_when(
+      #  # alle ehemaligen future picks, die jetzt in der gegenwart sind, erhalten eine ID für den aktuellen draft
+      #  prefix == "FP" & pick_year <= 2024 ~ paste("DP", pick_round - 1, pick - 1, pick_year, sep = "_"),
+      #  prefix == "DP" ~ paste0(asset_id, "_", pick_year),
+      #  TRUE ~ asset_id
+      #),
+      pick = dplyr::case_when(
+        prefix == "DP" ~ as.integer(stringr::str_split(asset_id, "_")[[1]][3]) + 1,
+        TRUE ~ as.integer(pick)
+      )
     ) %>%
+    arrange(side) %>%
     dplyr::left_join(
       rfl_drafts_data %>%
-        dplyr::filter(season <= input$selectYear) %>%
-        #dplyr::filter(season <= 2024) %>%
         dplyr::mutate(
           round = as.integer(round),
           player_name = paste0(player_name, " (", pos, ", ", team, ")"),
+          pick_team_id = franchise_id,
+          pick_year = as.character(season)
         ) %>%
-        dplyr::select(season, round, pick, player_name),
-      by = c("pick_year" = "season", "pick_round" = "round", "pick")
+        dplyr::select(pick_year, round, pick, player_name, pick_team_id),
+      by = c("pick_year", "pick_round" = "round", "pick")
     ) %>%
-    dplyr::mutate(asset_name = ifelse(!is.na(player_name), paste(asset_name, player_name), asset_name)) %>%
-    dplyr::select(-prefix, -pick_owner:-pick, -player_name)
+    dplyr::select(-prefix, -pick_owner)
 })
 
 output$single_draft_class <- gt::render_gt({
@@ -187,18 +203,37 @@ output$single_draft_class <- gt::render_gt({
 
   draft <- rfl_drafts_data %>%
     dplyr::filter(season == input$selectYear & franchise_id == input$selectRflTeams) %>%
-    #dplyr::filter(season == 2024 & franchise_id == "0034") %>%
+    #dplyr::filter(season == 2024 & franchise_id == "0027") %>%
+    dplyr::left_join(
+      mfl_adp_data %>%
+        dplyr::mutate(adp = (rfl_min + rfl_max) / 2) %>%
+        dplyr::select(season, mfl_id, adp),
+      by = c("season", "mfl_id")
+    ) %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(
       side = "received",
       asset_id_new = paste("DP", as.integer(round) - 1, pick - 1, season, sep = "_"),
-      asset_name = paste(paste0(as.integer(round), ".", sprintf("%02d", pick), " (", overall, ") ", player_name, " (", pos, ")"))
+      across(
+        c(first_pick, second_pick, third_pick),
+        ~ ifelse(.x == overall, paste0("**", .x, "**"), as.character(.x))
+      ),
+      asset_name = paste(season, paste0(as.integer(round), ".", sprintf("%02d", pick)), player_name, paste0("(", pos, ", ", team, ")")),
+      text_rfl =  paste("RFL:", paste(na.omit(c(first_pick, second_pick, third_pick)), collapse = ", ")),
+      text_adp = paste0("ADP: ", adp),
+      subline = ifelse(
+        !is.na(adp),
+        paste(text_rfl, text_adp, sep = " - "),
+        text_rfl
+      )
     ) %>%
-    dplyr::select(season, timestamp, side, asset_name, asset_id_new) %>%
+    dplyr::select(season, timestamp, side, asset_id_new, asset_name, subline) %>%
     dplyr::rename(date = timestamp)
 
-  dplyr::bind_rows(
+  combined_data <- dplyr::bind_rows(
     lapply(
       list(draft, draft_class_trades()),
+      #list(draft, draft_class_trades),
       function(x) {
         if (is.data.frame(x) && nrow(x) > 0) x else NULL
       }
@@ -212,28 +247,90 @@ output$single_draft_class <- gt::render_gt({
     dplyr::mutate(
       side = ifelse(side == "sent", "Abgänge", "Zugänge"),
       type = dplyr::case_when(
-        #grepl("-", asset_name) ~ "2_past_pick",
-        #!is.na(trade_id) & grepl("DP_", asset_id) ~ "2_past_pick",
-        grepl("FP_", asset_id) ~ "3_future_pick",
-        grepl("DP_", asset_id_new) ~ "2_pick",
-        #is.na(asset_id_new) ~ "4_picked_player",
+        "asset_id_new" %in% names(.) && grepl("FP_", asset_id_new) ~ "3_future_pick",
+        "asset_id_new" %in% names(.) && grepl("DP_", asset_id_new) ~ "2_pick",
         TRUE ~ "1_Player"
       ),
-      date = dplyr::first(format(date, "%d.%m.%Y"))
+      date = dplyr::first(format(date, "%d.%m.%Y")),
+      player_info = paste(paste0(as.integer(pick_round), ".", sprintf("%02d", as.integer(pick))), player_name),
+      asset_name = dplyr::case_when(
+        # für draftpicks
+        !is.na(subline) ~ paste(asset_name, subline, sep = "\n"),
+        !is.na(player_name) & pick_year <= input$selectYear ~ player_info,
+        !is.na(player_name) & new_season_march > input$selectYear + 2 ~ paste(asset_name, player_info, sep = "\n"), # zeige gepickte spieler erst 2 jahre nach der gewählten draftklasse
+        pick_year > input$selectYear & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
+        #!is.na(player_name) & pick_year <= 2024 ~ player_info,
+        #!is.na(player_name) & new_season_march > 2024 + 2 ~ paste(asset_name, player_info, sep = "\n"),
+        #pick_year > 2024 & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
+        TRUE ~ asset_name
+      )
     ) %>%
     dplyr::group_by(side, type) %>%
-    dplyr::arrange(dplyr::desc(side), type, asset_name) %>%
+    dplyr::arrange(dplyr::desc(side), type, !!!if ("pick_year" %in% names(.)) rlang::syms("pick_year") else NULL, asset_name) # !!! und rlang::syms() erlauben es, Spaltennamen programmatisch einzufügen.
+
+  row_index_line_through <- which(combined_data$pick_team_id != input$selectRflTeams)[1]
+  #row_index_line_through <- which(combined_data$pick_team_id != "0027")[1]
+  row_index_first_pick <- which(is.na(combined_data$trade_id))[1]
+  row_index_future_picks <- which(combined_data$pick_year > input$selectYear)[1]
+  #row_index_future_picks <- which(combined_data$pick_year > 2024)[1]
+
+  table <- combined_data %>%
     dplyr::group_by(side) %>%
-    dplyr::select(-season, -type, -asset_id_new, -asset_id, -trade_id) %>%
+    dplyr::select(date, side, asset_name, pick_team_id) %>%
     gt::gt() %>%
     gt::tab_header(
-      title = paste(franchises$franchise_name[franchises$franchise_id == input$selectRflTeams], "Draftklasse", input$selectYear),
+      title = paste(rfl_franchise_data$franchise_name[rfl_franchise_data$franchise_id == input$selectRflTeams], "Draftklasse", input$selectYear)
     ) %>%
     gtDefaults() %>%
+    gt::tab_style(
+      style = gt::cell_text(decorate = "line-through"),
+      locations = cells_body(
+        columns = asset_name,
+        rows = side == "Zugänge" & pick_team_id != input$selectRflTeams
+        #rows = side == "Zugänge" & pick_team_id != "0027"
+      )
+    ) %>%
+    gt::fmt_markdown(columns = asset_name) %>%
+    gt::cols_hide(c(side, pick_team_id)) %>%
     gt::cols_label(
       date = "Datum",
       asset_name = "Asset"
     )
+
+  if (!is.na(row_index_line_through)) {
+    table <- table %>%
+      gt::tab_footnote(
+        footnote = "Durchgestrichenen Picks wurden nicht vom dem ausgewählten Team getätigt, sondern wurden weiter getradet.",
+        locations = cells_body(
+          columns = asset_name,
+          rows = row_index_line_through
+        )
+      )
+  }
+
+  if (!is.na(row_index_first_pick)) {
+    table <- table %>%
+      gt::tab_footnote(
+        footnote = "Der hervorgehobene RFL Pick ist der Spot, an dem das ausgewählte Team den Spieler gewählt hat.",
+        locations = cells_body(
+          columns = asset_name,
+          rows = row_index_first_pick
+        )
+      )
+  }
+
+  if (!is.na(row_index_future_picks)) {
+    table <- table %>%
+      gt::tab_footnote(
+        footnote = "Für Future Picks, die weniger als 2 Jahre in der Zukunft der Draftklasse sind, werden keine Spieler angezeigt.",
+        locations = cells_body(
+          columns = asset_name,
+          rows = row_index_future_picks
+        )
+      )
+  }
+
+  table
 
   # TODO: add UDFAs
 })
@@ -244,6 +341,18 @@ output$single_draft_class_trades <- DT::renderDataTable({
 
   DT::datatable(
     draft_class_trades() %>%
+      dplyr::mutate(
+        player_info = paste(paste0(as.integer(pick_round), ".", sprintf("%02d", as.integer(pick))), player_name),
+        asset_name = dplyr::case_when(
+          !is.na(player_name) & pick_year <= input$selectYear ~ player_info,
+          !is.na(player_name) & new_season_march > input$selectYear + 2 ~ paste(asset_name, player_info, sep = "\n"), # zeige gepickte spieler erst 2 jahre nach der gewählten draftklasse
+          pick_year > input$selectYear & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
+          #!is.na(player_name) & pick_year <= 2024 ~ player_info,
+          #!is.na(player_name) & new_season_march > 2024 + 2 ~ paste(asset_name, player_info, sep = "\n"),
+          #pick_year > 2024 & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
+          TRUE ~ asset_name
+        )
+      ) %>%
       dplyr::group_by(trade_id, side) %>%
       dplyr::arrange(asset_name) %>%
       dplyr::summarise(

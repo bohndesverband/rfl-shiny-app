@@ -6,6 +6,7 @@ gt_fantasy_finishes <- function(df) {
     gt::gt() %>%
     gt::tab_header(
       title = paste("Fantasy Finishes seit 2016"),
+      subtitle = "Nur RFL Regular Season"
     ) %>%
     gt::cols_hide(c(player_id)) %>%
     gt::tab_spanner(
@@ -60,7 +61,7 @@ gt_fantasy_finishes <- function(df) {
 }
 
 output$fantasy_finishes <- gt::render_gt({
-  rfl_fantasy_finishes_summarised %>%
+  rfl_fantasy_finishes %>%
     dplyr::filter(
       last_season >= new_season_march - 1
     ) %>%

@@ -1,7 +1,7 @@
 rfl_draft_production <- rfl_drafts_data %>%
   dplyr::filter(season > 2016 & is_rookie == 1) %>%
   dplyr::left_join(
-    player_scores %>%
+    rfl_player_scores %>%
       dplyr::group_by(player_id) %>%
       dplyr::summarise(
         ppg = round(mean(points, na.rm = TRUE), 2),

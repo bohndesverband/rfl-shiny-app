@@ -1,12 +1,12 @@
-roster_war <- roster_data %>%
+roster_war <- rfl_roster_data %>%
   dplyr::filter(week == max(week)) %>%
   dplyr::left_join(
-    war_data %>%
+    rfl_war_data %>%
       dplyr::filter(season == max(season)),
     by = c("player_id", "season")
   ) %>%
   dplyr::left_join(
-    starter_data %>%
+    rfl_starter_data %>%
       dplyr::filter(starter_status == "starter") %>%
       dplyr::mutate(player_id = as.character(player_id)) %>%
       dplyr::group_by(franchise_id, player_id) %>%
@@ -29,7 +29,7 @@ roster_War_filtered <- shiny::reactive({
     dplyr::ungroup() %>%
     tidyr::spread(pos, war) %>%
     dplyr::left_join(
-      franchises %>%
+      rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%

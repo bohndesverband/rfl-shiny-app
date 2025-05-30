@@ -1,14 +1,14 @@
-roster_depth_weekly <- standing_data %>%
+roster_depth_weekly <- rfl_standing_data %>%
   dplyr::select(week, franchise_id, pf, pp) %>%
   dplyr::rename(pppg = pp) %>%
   dplyr::mutate(points_back = pf - pppg) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   )
 
-roster_depth_season <- weekly_standing %>%
+roster_depth_season <- rfl_weekly_standing %>%
   dplyr::filter(season == season_before_wk_2 & week == max(week)) %>%
   dplyr::select(week, franchise_id, pf_total, pp_total) %>%
   dplyr::mutate(
@@ -16,7 +16,7 @@ roster_depth_season <- weekly_standing %>%
     points_back = round((pf_total - pp_total) / week, 2)
   ) %>%
   dplyr::left_join(
-    franchises %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   )
@@ -120,7 +120,7 @@ output$roster_depth_season <- shiny::renderPlot({
     ggplot2::scale_color_discrete(type = colors) +
 
     ggplot2::labs(
-      title = paste("RFL Rosterstärke Woche", max(standing_data$week), season_before_wk_2),
+      title = paste("RFL Rosterstärke Woche", max(rfl_standing_data$week), season_before_wk_2),
       x = "PF - PP pro Spiel",
       y = "PP pro Spiel",
       color = "RFL Teams"
