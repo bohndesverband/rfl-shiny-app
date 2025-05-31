@@ -1,4 +1,4 @@
-rfl_roster_data <- feather::read_feather("rfl_roster_data.feather")
+rfl_roster_data <- feather::read_feather("data/rfl_roster_data.feather")
 
 rfl_current_roster <- ffscrapr::ff_rosters(mfl_connection) %>%
   dplyr::mutate(
