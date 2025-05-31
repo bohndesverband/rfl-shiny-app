@@ -3,7 +3,9 @@
 rfl_draft_classes <- shiny::reactive({
   rfl_draft_classes <- rfl_drafts_data %>%
     dplyr::filter(season > 2016 & season < new_season_march) %>%
-    #filter(franchise_id == "0016") %>%
+
+    #filter(franchise_id == "0022") %>%
+    #dplyr::filter(season == 2024) %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2]) %>%
     #dplyr::mutate(
@@ -17,31 +19,32 @@ rfl_draft_classes <- shiny::reactive({
       franchise_name = first(franchise_name),
       picks = n(),
       #label = paste(label, collapse = "\n"),
-      elo_shift = sum(elo_shift, na.rm = TRUE) / picks,
-      elo_peak = sum(elo_peak, na.rm = TRUE) / picks,
+      elo_shift_per_pick = sum(elo_shift, na.rm = TRUE) / picks,
+      elo_per_pick = sum(current_player_elo, na.rm = TRUE) / picks,
+      ppg_per_pick = round(sum(ppg, na.rm = TRUE) / picks, 2),
       .groups = "drop"
     )
 })
 
 ## output ----
 output$draft_classes_overview <- shiny::renderPlot({
-  ggplot2::ggplot(subset(rfl_draft_classes(), !franchise_id %in% input$selectRflTeams), ggplot2::aes(x = elo_shift, y = elo_peak)) +
+  ggplot2::ggplot(subset(rfl_draft_classes(), !franchise_id %in% input$selectRflTeams), ggplot2::aes(x = elo_shift_per_pick, y = ppg_per_pick)) +
 
     plot_quadrants(
-      xmin = min(rfl_draft_classes()$elo_shift),
-      xmean = mean(rfl_draft_classes()$elo_shift),
-      xmax = max(rfl_draft_classes()$elo_shift),
-      ymin = min(rfl_draft_classes()$elo_peak),
-      ymean = mean(rfl_draft_classes()$elo_peak),
-      ymax = max(rfl_draft_classes()$elo_peak),
-      ltl = "Höherer Einfluss, schlechtere Breite",
-      ltr = "Höherere Einfluss, bessere Breite",
-      lbr = "Weniger Einfluss, bessere Breite",
-      lbl = "Weniger Einfluss, schlechtere Breite"
+      xmin = min(rfl_draft_classes()$elo_shift_per_pick),
+      xmean = mean(rfl_draft_classes()$elo_shift_per_pick),
+      xmax = max(rfl_draft_classes()$elo_shift_per_pick),
+      ymin = min(rfl_draft_classes()$ppg_per_pick),
+      ymean = mean(rfl_draft_classes()$ppg_per_pick),
+      ymax = max(rfl_draft_classes()$ppg_per_pick),
+      ltl = "Höherer Einfluss, schlechterer Trend",
+      ltr = "Höherere Einfluss, besserer Trend",
+      lbr = "Weniger Einfluss, besserer Trend",
+      lbl = "Weniger Einfluss, schlechterer Trend"
     ) +
 
-    ggplot2::geom_hline(yintercept = 1500, color = color_red, alpha = 0.5) +
-    ggplot2::geom_text(ggplot2::aes(x = max(rfl_draft_classes()$elo_shift)), y = 1490, color = color_red, vjust = 1, hjust = 1, label = "Default ELO", show.legend = FALSE) +
+    ggplot2::geom_vline(xintercept = 0, color = color_red, alpha = 0.5) +
+    #ggplot2::geom_text(ggplot2::aes(x = 0, y = 0), color = color_red, vjust = 1, hjust = -0.5, label = "Default ELO", show.legend = FALSE) +
 
     ggplot2::geom_point(ggplot2::aes(size = picks, alpha = season), color = color_grey_mid) +
 
@@ -54,8 +57,8 @@ output$draft_classes_overview <- shiny::renderPlot({
     ggplot2::labs(
       title = paste("RFL Draftklassen"),
       subtitle = paste("Angezeigt werden alle", paste(input$selectPositions, collapse = ", "), "Draftpicks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "von", input$selectYears[1], "bis", input$selectYears[2], "\nDie Größe der Punkte stellt die Anzahl der Spieler in der Draftklasse dar, die Transparenz die Aktualität (aktuellest = dunkelste)."),
-      x = "Derzeitige Gesamt-ELO pro Pick im Vergleich zum Draftjahr",
-      y = "Höchste Gesamt-ELO pro Pick",
+      x = "ELO-Veränderung pro Pick im Vergleich zum Draftjahr",
+      y = "Fantasy Points per Game pro Pick",
       color = "RFL Team",
     ) +
     plot_clean
@@ -169,10 +172,10 @@ draft_class_trades <- shiny::reactive({
     ) %>%
     dplyr::ungroup() %>%
     dplyr::filter(grepl(input$selectRflTeams, franchise_ids) & (grepl(paste0(input$selectRflTeams, "_", input$selectYear), asset_ids) | grepl(input$selectYear, asset_names))) %>%
-    #dplyr::filter(grepl("0016", franchise_ids) & (grepl(paste0("0016_", 2024), asset_ids) | grepl(2024, asset_names))) %>%
+    #dplyr::filter(grepl("0022", franchise_ids) & (grepl(paste0("0022_", 2024), asset_ids) | grepl(2024, asset_names))) %>%
     dplyr::mutate(
       side = ifelse(franchise_id == input$selectRflTeams, "sent", "received"),
-      #side = ifelse(franchise_id == "0016", "sent", "received")
+      #side = ifelse(franchise_id == "0022", "sent", "received")
     ) %>%
     dplyr::select(season, date, trade_id, side, trade_asset_name, asset_id) %>%
     dplyr::rename(asset_name = trade_asset_name) %>%
@@ -237,7 +240,7 @@ output$single_draft_class <- gt::render_gt({
 
   draft <- rfl_drafts_data %>%
     dplyr::filter(season == input$selectYear & franchise_id == input$selectRflTeams) %>%
-    #dplyr::filter(season == 2024 & franchise_id == "0016") %>%
+    #dplyr::filter(season == 2024 & franchise_id == "0022") %>%
     dplyr::left_join(
       mfl_adp_data %>%
         dplyr::mutate(adp = (rfl_min + rfl_max) / 2) %>%
@@ -303,7 +306,7 @@ output$single_draft_class <- gt::render_gt({
     dplyr::arrange(dplyr::desc(side), type, !!!if ("pick_year" %in% names(.)) rlang::syms("pick_year") else NULL, asset_name) # !!! und rlang::syms() erlauben es, Spaltennamen programmatisch einzufügen.
 
   row_index_line_through <- which(combined_data$side == "Zugänge" & combined_data$pick_team_id != input$selectRflTeams)[1]
-  #row_index_line_through <- which(combined_data$pick_team_id != "0016")[1]
+  #row_index_line_through <- which(combined_data$pick_team_id != "0022")[1]
   row_index_first_pick <- which(is.na(combined_data$trade_id))[1]
   row_index_future_picks <- which(combined_data$pick_year > input$selectYear)[1]
   #row_index_future_picks <- which(combined_data$pick_year > 2024)[1]
@@ -321,7 +324,7 @@ output$single_draft_class <- gt::render_gt({
       locations = cells_body(
         columns = asset_name,
         rows = side == "Zugänge" & pick_team_id != input$selectRflTeams
-        #rows = side == "Zugänge" & pick_team_id != "0016"
+        #rows = side == "Zugänge" & pick_team_id != "0022"
       )
     ) %>%
     gt::fmt_markdown(columns = asset_name) %>%

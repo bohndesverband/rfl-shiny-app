@@ -45,9 +45,9 @@ library(gtExtras)
 library(svglite)
 #library(webshot2)
 library(emoji)
-#library(ggridges)
 library(ggrepel)
 library(plotly)
+library(ggiraph)
 library(ggalt)
 library(shinyWidgets)
 library(waffle)
@@ -70,7 +70,7 @@ tags$head(tags$meta(charset = "UTF-8"))
 ```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
 source("R new/base_data/inputs.R", local = TRUE)
 
-textOutput("active_tab")
+#textOutput("active_tab")
 
 shiny::sliderInput(
   "selectYears",
@@ -238,19 +238,16 @@ Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und
 ## 
 
 ```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
-observeEvent(active_tab(), {
-  if (active_tab() == "#section-conference-standing") {
-    
-    # Nur einmal laden oder erneut?
-    # Option 1: Einmal beim ersten Aufruf
-    if (is.null(globalenv()$standing_data_loaded) || !globalenv()$standing_data_loaded) {
-      source("R new/rankings/standing.R", local = TRUE)
-      source("R new/rankings/ranking_tables.R", local = TRUE)
-      globalenv()$standing_data_loaded <- TRUE
-    }
-  }
-}, once = TRUE)
+loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
 
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-conference-ranking" & !loaded_data_conference_stanging()) {
+    source("R new/rankings/standing.R", local = TRUE)
+    source("R new/rankings/ranking_tables.R", local = TRUE)
+    
+    loaded_data_conference_stanging(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -267,7 +264,15 @@ shiny::fluidPage(
 ## 
 
 ```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/magic_number.R", local = TRUE)
+loaded_data_magic_number <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-magic-number" & !loaded_data_magic_number()) {
+    source("R new/rankings/magic_number.R", local = TRUE)
+    
+    loaded_data_magic_number(TRUE)
+  }
+})
 
 if (rfl_current_standing$week[1] < 13) {
   shiny::fluidPage(
@@ -291,7 +296,15 @@ if (rfl_current_standing$week[1] < 13) {
 ##
 
 ```{r power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/power_ranking.R", local = TRUE)
+loaded_data_power_ranking <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-power-ranking" & !loaded_data_power_ranking()) {
+    source("R new/rankings/power_ranking.R", local = TRUE)
+    
+    loaded_data_power_ranking(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -315,7 +328,15 @@ shiny::fluidPage(
 ## 
 
 ```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/draft_order.R", local = TRUE)
+loaded_data_war <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-war" & !loaded_data_war()) {
+    source("R new/roster/war.R", local = TRUE)
+    
+    loaded_data_war(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -332,7 +353,15 @@ shiny::fluidPage(
 ##
 
 ```{r team-elo, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/rankings/elo.R", local = TRUE)
+loaded_data_team_elo <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-elo-ranking" & !loaded_data_team_elo()) {
+    source("R new/rankings/elo.R", local = TRUE)
+    
+    loaded_data_team_elo(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -367,7 +396,15 @@ shiny::fluidPage(
 ##
 
 ```{r team-depth, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/roster/depth.R", local = TRUE)
+loaded_data_team_depth <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-roster-tiefe" & !loaded_data_team_depth()) {
+    source("R new/roster/depth.R", local = TRUE)
+    
+    loaded_data_team_depth(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -388,7 +425,15 @@ shiny::fluidPage(
 ## 
 
 ```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/roster/ir.R", local = TRUE)
+loaded_data_ir <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-ir-analyse" & !loaded_data_ir()) {
+    source("R new/roster/ir.R", local = TRUE)
+    
+    loaded_data_ir(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -425,7 +470,15 @@ shiny::fluidPage(
 ##
 
 ```{r team-point-history, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/roster/point_history.R", local = TRUE)
+loaded_data_team_point_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-punktehistorie" & !loaded_data_team_point_history()) {
+    source("R new/roster/point_history.R", local = TRUE)
+    
+    loaded_data_team_point_history(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -442,7 +495,15 @@ shiny::fluidPage(
 ##
 
 ```{r player-war, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/war.R", local = TRUE)
+loaded_data_player_war <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-wins-above-replacement" & !loaded_data_player_war()) {
+    source("R new/players/war.R", local = TRUE)
+    
+    loaded_data_player_war(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -464,7 +525,15 @@ shiny::fluidPage(
 ## 
 
 ```{r player-elo, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/elo.R", local = TRUE)
+loaded_data_player_elo <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-elo" & !loaded_data_player_elo()) {
+    source("R new/players/elo.R", local = TRUE)
+    
+    loaded_data_player_elo(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -499,10 +568,17 @@ shiny::fluidPage(
 ## 
 
 ```{r player-fantasy-finishes, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/fantasy_finishes_output.R", local = TRUE)
+loaded_data_player_fantasy_finishes <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-fantasy-finishes" & !loaded_data_player_fantasy_finishes()) {
+    source("R new/players/fantasy_finishes_output.R", local = TRUE)
+    
+    loaded_data_player_fantasy_finishes(TRUE)
+  }
+})
 
 # TODO: reset selectYears to 2016
-# Add grouped Positions to SelectizeInput
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -519,8 +595,16 @@ shiny::fluidPage(
 ## 
 
 ```{r trade-bait, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/elo.R", local = TRUE)
-source("R new/players/trade_bait.R", local = TRUE)
+loaded_data_trade_bait <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-trade-bait" & !loaded_data_trade_bait()) {
+    source("R new/players/elo.R", local = TRUE)
+    source("R new/players/trade_bait.R", local = TRUE)
+
+    loaded_data_trade_bait(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -542,7 +626,15 @@ shiny::fluidPage(
 ## 
 
 ```{r trade-history, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/trades.R", local = TRUE)
+loaded_data_trade_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-trade-history" & !loaded_data_trade_history()) {
+    source("R new/players/trades.R", local = TRUE)
+
+    loaded_data_trade_history(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -586,7 +678,15 @@ shiny::fluidPage(
 ## 
 
 ```{r player-awards, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/players/awards.R", local = TRUE)
+loaded_data_awards <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-awards" & !loaded_data_awards()) {
+    source("R new/players/awards.R", local = TRUE)
+
+    loaded_data_awards(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -658,7 +758,15 @@ shiny::fluidPage(
 # Basics {data-navmenu="Draft"}
 
 ```{r draft-basics, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/draft/basics.R", local = TRUE)
+loaded_data_draft_basics <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-basics" & !loaded_data_draft_basics()) {
+    source("R new/draft/basics.R", local = TRUE)
+
+    loaded_data_draft_basics(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -673,44 +781,27 @@ shiny::fluidPage(
 
 # Draftklassen {data-navmenu="Draft"}
 
-```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE, out.height="900px"}
-draft_classes_data_loaded <- reactiveVal(FALSE)
+```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE}
+draft_classes_data_loaded <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
-  if (active_tab() == "#section-draftklassen") {
-    print("draft klassen")
+  if (active_tab() == "#section-draftklassen" & !draft_classes_data_loaded()) {
+    source("R new/draft/classes.R", local = TRUE)
     
-    if (!draft_classes_data_loaded()) {
-      print("start loading sources")
-      source("R new/draft/classes.R", local = TRUE)
-      
-      draft_classes_data_loaded(TRUE)
-      print("sources loadded")
-    } else {
-      print("sources already loaded")
-    }
+    draft_classes_data_loaded(TRUE)
   }
 })
 
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      tags$p("Klicke auf einen Datenpunkt um dir diese Draftklasse im Detail anzuschauen."),
-      shinycssloaders::withSpinner(plotly::plotlyOutput("draft_classes")),
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_classes_overview")),
       width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("single_draft_class")),
-      width = 5
     ),
-    shiny::column(
-      tags$h4("Alle Trades mit Picks dieses Drafts"),
-      shinycssloaders::withSpinner(DT::DTOutput("single_draft_class_trades")),
-      width = 7
-    )
-  )
+    style = "height: 800px"
+  ),
+  shiny::uiOutput("team_draft_classes"),
+  shiny::uiOutput("team_draft_class")
 )
 ```
 
@@ -719,7 +810,15 @@ shiny::fluidPage(
 ##
 
 ```{r draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/draft/hit_rates.R", local = TRUE)
+loaded_data_draft_hit_rates <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-hit-rates" & !loaded_data_draft_hit_rates()) {
+    source("R new/draft/hit_rates.R", local = TRUE)
+
+    loaded_data_draft_hit_rates(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -756,7 +855,15 @@ shiny::fluidPage(
 ##
 
 ```{r draft-order, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/roster/war.R", local = TRUE)
+loaded_data_draft_order <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draft-reihenfolge" & !loaded_data_draft_order()) {
+    source("R new/rankings/draft_order.R", local = TRUE)
+
+    loaded_data_draft_order(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(

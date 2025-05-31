@@ -56,7 +56,23 @@ colors_position <- c(
   "S" = "#3c40c6"
 )
 
+colors_positions_grouped <- c(
+  "QB" = "#feca57",
+  "RB" = "#1dd1a1",
+  "WR" = "#54a0ff",
+  "TE" = "#ff6b6b",
+  "PK" = "#c8d6e5",
+  "DL" = "#48dbfb",
+  "LB" = "#ff9ff3",
+  "DB" = "#3c40c6"
+)
+
 color_text <- color_black
+
+#("Poppins")
+#gdtools::register_gfont("Open Sans")
+
+#systemfonts::register_font("Poppins")
 
 font <- "Poppins"
 
@@ -65,44 +81,178 @@ var.fontHeadline <- "Open Sans Semibold"
 
 # dark: https://iibawards-prod.s3.amazonaws.com/projects/images/000/006/283/page.png?1693573818
 # ggplot defaults ----
-plot_defaults <- ggplot2::theme(
-  plot.margin = ggplot2::margin(25, 25, 25, 25),
-  text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
+plot_defaults <- list(
+  ggplot2::labs(
+    caption = paste("RFL Tools, Stand", format(Sys.Date(), "%d.%m.%Y"))
+  ),
+  ggplot2::theme(
+    plot.margin = ggplot2::margin(25, 25, 25, 25),
+    text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
 
-  plot.title = ggplot2::element_text(size = 24, face = "bold", lineheight = 0.8, margin = ggplot2::margin(b = 15)),
-  plot.title.position = "plot",
-  plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = -5, b = 15)),
 
-  axis.title = ggplot2::element_text(size = 14, face = "bold"),
-  axis.title.x = ggplot2::element_text(vjust = -5),
-  axis.title.y = ggplot2::element_text(vjust = 2.5),
-  #axis.title.y.right = ggplot2::element_text(vjust = 2.5, hjust = 1),
-  axis.text = ggplot2::element_text(size = 12),
-  #axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
-  axis.ticks = ggplot2::element_blank(),
+    plot.title = ggplot2::element_text(size = 24, face = "bold", lineheight = 0.8, margin = ggplot2::margin(b = 15)),
+    plot.title.position = "plot",
+    plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = -5, b = 15)),
+    plot.caption = ggplot2::element_text(size = 12),
 
-  strip.background = ggplot2::element_rect(fill = color_grey_dark),
-  strip.text = ggplot2::element_text(size = 12, color = color_bg, face = "bold"),
+    axis.title = ggplot2::element_text(size = 14, face = "bold"),
+    axis.title.x = ggplot2::element_text(vjust = -5),
+    axis.title.y = ggplot2::element_text(vjust = 2.5),
+    #axis.title.y.right = ggplot2::element_text(vjust = 2.5, hjust = 1),
+    axis.text = ggplot2::element_text(size = 12),
+    #axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
+    axis.ticks = ggplot2::element_blank(),
 
-  legend.background = ggplot2::element_blank(),
-  legend.title = ggplot2::element_text(size = 14, face = "bold"),
-  #legend.key = element_blank(),
-  legend.key.size = ggplot2::unit(6, "pt"),
-  legend.text = ggplot2::element_text(size = 12),
-  legend.position = "top",
-  legend.margin = ggplot2::margin(t = 25),
+    strip.background = ggplot2::element_rect(fill = color_grey_dark),
+    strip.text = ggplot2::element_text(size = 12, color = color_bg, face = "bold"),
 
-  panel.background = ggplot2::element_blank(),
-  panel.grid.major = ggplot2::element_line(color = color_grey_light, linewidth = 0.35),
-  panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
+    legend.background = ggplot2::element_blank(),
+    legend.title = ggplot2::element_text(size = 14, face = "bold"),
+    #legend.key = element_blank(),
+    legend.key.size = ggplot2::unit(6, "pt"),
+    legend.text = ggplot2::element_text(size = 12),
+    legend.position = "top",
+    legend.margin = ggplot2::margin(t = 25),
+
+    panel.background = ggplot2::element_blank(),
+    panel.grid.major = ggplot2::element_line(color = color_grey_light, linewidth = 0.35),
+    panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
+  )
 )
 
-plot_clean <- ggplot2::theme(
-  plot.background = ggplot2::element_blank(),
-  panel.grid.major = ggplot2::element_blank(),
-  panel.grid.minor = ggplot2::element_blank(),
-  axis.ticks = ggplot2::element_blank()
+plot_clean <- list(
+  ggplot2::theme(
+    plot.background = ggplot2::element_blank(),
+    panel.grid.major = ggplot2::element_blank(),
+    panel.grid.minor = ggplot2::element_blank(),
+    axis.ticks = ggplot2::element_blank()
+  )
 )
+
+## geoms ----
+
+plot_geom_point <- function(...) {
+  ggplot2::geom_point(size = 5, ...)
+}
+
+plot_geom_xspline <- function(...) {
+  df %>%
+    ggalt::geom_xspline(spline_shape = -0.2, ...) +
+    ggplot2::aes(lwd = 1) +
+    ggplot2::scale_linewidth_identity()
+}
+
+plot_geom_vline <- function(xintercept, ...) {
+  ggplot2::geom_vline(xintercept = xintercept, color = color_grey_mid, linewidth = 0.5, linetype = "dashed", ...)
+}
+
+plot_geom_hline <- function(yintercept, ...) {
+  ggplot2::geom_hline(yintercept = yintercept, color = color_grey_mid, linewidth = 0.5, linetype = "dashed", ...)
+}
+
+plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, lbl) { # ltp = label top left etc, bottom right etc.
+  abs_x = (abs(xmax - xmin) / 100) * 3
+  abs_y = (abs(ymax - ymin) / 100) * 5
+
+  list <- list(
+    # oben links fläche
+    ggplot2::annotate(
+      "rect",
+      xmin = xmin - abs_x,
+      xmax = xmean,
+      ymin = ymean,
+      ymax = ymax + abs_y,
+      fill = color_green,
+      alpha = 0.10
+    ),
+    # oben links text
+    ggplot2::annotate(
+      "text",
+      label = ltl,
+      x = xmin,
+      y = ymax,
+      hjust = 0,
+      vjust = 1,
+      lineheight = 0.9,
+    ),
+    # oben rechts fläche
+    ggplot2::annotate(
+      "rect",
+      xmin = xmean,
+      xmax = xmax + abs_x,
+      ymin = ymean,
+      ymax = ymax + abs_y,
+      fill = color_blue,
+      alpha = 0.15
+    ),
+    # oben rechts text
+    ggplot2::annotate(
+      "text",
+      label = ltr,
+      x = xmax,
+      y = ymax,
+      hjust = 1,
+      vjust = 1,
+      lineheight = 0.9,
+    ),
+    # unten rechts fläche
+    ggplot2::annotate(
+      "rect",
+      xmin = xmean,
+      xmax = xmax + abs_x,
+      ymin = ymin - abs_y,
+      ymax = ymean,
+      fill = color_yellow,
+      alpha = 0.2
+    ),
+    # unten rechts text
+    ggplot2::annotate(
+      "text",
+      label = lbr,
+      x = xmax,
+      y = ymin,
+      hjust = 1,
+      vjust = 0,
+      lineheight = 0.9,
+    ),
+    # unten links fläche
+    ggplot2::annotate(
+      "rect",
+      xmin = xmin - abs_x,
+      xmax = xmean,
+      ymin = ymin - abs_y,
+      ymax = ymean,
+      fill = color_red,
+      alpha = 0.15
+    ),
+    # unten links text
+    ggplot2::annotate(
+      "text",
+      label = lbl,
+      x = xmin,
+      y = ymin,
+      hjust = 0,
+      vjust = 0,
+      lineheight = 0.9,
+    ),
+    plot_geom_vline(xmean),
+    plot_geom_hline(ymean),
+    ggplot2::scale_x_continuous(expand = c(0, 0)),
+    ggplot2::scale_y_continuous(expand = c(0, 0))
+  )
+
+  list
+}
+
+
+
+#plot_geom_large_text <- function(color = c_light, ...) {
+#  geom_text(color = color, size = 6, family = "accent", ...)
+#}
+
+#plot_geom_xsmall_text <- function(...) {
+#  geom_text(size = 2, family = "accent", ...)
+#}
 
 ## elo ----
 plot_elo_defaults <- list(
@@ -125,27 +275,6 @@ plot_elo_defaults <- list(
     axis.text.x = ggplot2::element_blank()
   )
 )
-
-## geoms ----
-
-plot_geom_point <- function(...) {
-  ggplot2::geom_point(size = 5, ...)
-}
-
-plot_geom_xspline <- function(...) {
-  df %>%
-    ggalt::geom_xspline(spline_shape = -0.2, ...) +
-    ggplot2::aes(lwd = 1) +
-    ggplot2::scale_linewidth_identity()
-}
-
-#plot_geom_large_text <- function(color = c_light, ...) {
-#  geom_text(color = color, size = 6, family = "accent", ...)
-#}
-
-#plot_geom_xsmall_text <- function(...) {
-#  geom_text(size = 2, family = "accent", ...)
-#}
 
 # gt ----
 gtDefaults <- function(df) {

@@ -31,6 +31,8 @@ shiny::observeEvent(active_tab(), {
     # season_before_wk_2 weil nach gsis_id gesynct wird und die erst nach den ersten spielen vorhanden ist
   } else if(active_tab() == "#section-trade-history") {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2025, value = c(2025, 2025))
+  } else if(active_tab() == "#section-fantasy-finishes") {
+    shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_march - 1, value = c(new_season_march - 3, new_season_march - 1))
   } else {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   }

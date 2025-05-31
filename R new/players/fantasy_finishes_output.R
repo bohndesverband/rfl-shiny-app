@@ -1,11 +1,11 @@
 gt_fantasy_finishes <- function(df) {
   df %>%
     dplyr::arrange(dplyr::desc(top5)) %>%
-    dplyr::select(-seasons, -last_season) %>%
+    dplyr::select(-last_season) %>%
     dplyr::rename(display_name = player_name, position = pos) %>%
     gt::gt() %>%
     gt::tab_header(
-      title = paste("Fantasy Finishes seit 2016"),
+      title = paste("Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
       subtitle = "Nur RFL Regular Season"
     ) %>%
     gt::cols_hide(c(player_id)) %>%
@@ -60,17 +60,26 @@ gt_fantasy_finishes <- function(df) {
     gt_player()
 }
 
-output$fantasy_finishes <- gt::render_gt({
+rfl_fantasy_finishes_filtered <- shiny::reactive({
   rfl_fantasy_finishes %>%
     dplyr::filter(
-      last_season >= new_season_march - 1
+      season >= input$selectYears[1] & season <= input$selectYears[2]
     ) %>%
+    summarize_fantasy_finishes()
+})
+
+output$fantasy_finishes <- gt::render_gt({
+  rfl_fantasy_finishes_filtered() %>%
+    #dplyr::filter(
+    #  season >= 2021 & season <= 2024
+    #) %>%
+
     dplyr::filter(
       if(isTruthy(input$selectPositions))
         sapply(seq_along(pos), function(i) {
           any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
         })
-      else
+    else
         TRUE
     ) %>%
     #filter(pos == "QB") %>%

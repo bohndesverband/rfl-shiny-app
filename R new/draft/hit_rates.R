@@ -329,6 +329,7 @@ source("R new/players/fantasy_finishes_output.R", local = TRUE)
 
 output$hit_rates_fantasy_finishes <- gt::render_gt({
   rfl_fantasy_finishes %>%
+    summarize_fantasy_finishes() %>%
     dplyr::left_join(
       nflreadr::load_ff_playerids() %>%
         dplyr::select(mfl_id, gsis_id),
