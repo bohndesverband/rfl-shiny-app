@@ -33,6 +33,9 @@ shiny::observeEvent(active_tab(), {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2025, value = c(2025, 2025))
   } else if(active_tab() == "#section-fantasy-finishes") {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_march - 1, value = c(new_season_march - 3, new_season_march - 1))
+  } else if (active_tab() == "#section-strength-of-schedule") {
+    # sos
+    shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2025, value = c(2025, 2025))
   } else {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   }
@@ -56,12 +59,12 @@ shiny::observeEvent(active_tab(), {
       "selectPositions",
       selected = ""
     )
-  } else if(active_tab() == "#section-fantasy-finishes") {
+  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe") {
     shinyWidgets::updatePickerInput(
       session,
       "selectPositions",
-      choices = positions,
-      selected = positions,
+      choices = positions_grouped,
+      selected = positions_grouped,
     )
   } else {
     shinyWidgets::updatePickerInput(
@@ -111,5 +114,43 @@ shiny::observe({
     session,
     "selectRflTeams",
     selected = setNames(div_teams$franchise_id, div_teams$franchise_name)
+  )
+})
+
+# zeige alte teamnamen in auswahl an, wenn checkbox ausgewählt
+observeEvent(input$showHistoricTeamNames, {
+  # Wähle Datenquelle basierend auf Checkbox
+  if (input$showHistoricTeamNames) {
+    historic_rfl_names <- rfl_draft_orders %>%
+      dplyr::mutate(
+        type = ifelse(season == max(season), "Aktuelle Teamnamen", "Ehemalige Teamnamen")
+      ) %>%
+      dplyr::select(franchise_id, historic_name, type) %>%
+      dplyr::distinct() %>%
+      dplyr::group_by(historic_name) %>%
+      # filter aktuelle namen aus ehemaligen heraus
+      dplyr::arrange(type) %>%
+      dplyr::filter(dplyr::row_number() == 1) %>%
+      dplyr::ungroup()
+
+    team_choices <- setNames(
+      historic_rfl_names$franchise_id[order(historic_rfl_names$historic_name)],
+      historic_rfl_names$historic_name[order(historic_rfl_names$historic_name)]
+    )
+
+    # TODO: in kategorien einteilen
+  } else {
+    team_choices <- setNames(
+      rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)],
+      rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]
+    )
+  }
+
+  # Update Picker Input
+  shinyWidgets::updatePickerInput(
+    session,
+    inputId = "selectRflTeams",
+    choices = team_choices,
+    selected = NULL  # Optional: leere Auswahl setzen
   )
 })

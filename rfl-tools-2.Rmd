@@ -37,7 +37,6 @@ library(nflreadr)
 library(ffscrapr)
 library(DT)
 library(ggplot2)
-#library(scales)
 library(ggbump)
 library(gt)
 #library(formattable)
@@ -102,13 +101,15 @@ shiny::sliderInput(
   sep = ""
 )
 
+shiny::checkboxInput("showHistoricTeamNames", "Zeige alte RFL Teamnamen", value = FALSE)
+
 shinyWidgets::pickerInput(
   "selectRflTeams",
   "RFL Teams",
   choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
   #selected = franchises$franchise_id,
   #selected = "0007",
-  options = list("actions-box" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
   multiple = TRUE
 )
 
@@ -174,7 +175,7 @@ shiny::observe({
 shinyWidgets::pickerInput(
   "selectPosition",
   "Position",
-  choices = positions,
+  choices = positions_grouped,
   selected = NULL,
   options = list("actions-box" = TRUE, "none-selected-text" = "Position wählen"),
   multiple = FALSE
@@ -232,6 +233,8 @@ shiny::selectizeInput(
 > Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler); mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
 Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)<br><br>
 Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
+
+> Es gab einen Datenverlust, so dass Trades aus der 2016er Saison z.T. fehlen
 
 # Conference Ranking {data-navmenu="Liga"}
 
@@ -755,6 +758,31 @@ shiny::fluidPage(
 )
 ```
 
+# Strength of Schedule {data-navmenu="Matchups"}
+
+##
+
+```{r sos, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/matchups/sos.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
+      width = 12
+    ),
+    style = "height: 800px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
+      width = 12
+    ),
+    style = "height: 800px"
+  )
+)
+```
+
 # Basics {data-navmenu="Draft"}
 
 ```{r draft-basics, echo=FALSE, message=FALSE, warning=FALSE}
@@ -786,6 +814,7 @@ draft_classes_data_loaded <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
   if (active_tab() == "#section-draftklassen" & !draft_classes_data_loaded()) {
+    #source("R new/draft/hit_rates.R", local = TRUE)
     source("R new/draft/classes.R", local = TRUE)
     
     draft_classes_data_loaded(TRUE)
@@ -793,13 +822,7 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_classes_overview")),
-      width = 12
-    ),
-    style = "height: 800px"
-  ),
+  shiny::uiOutput("draft_overview"),
   shiny::uiOutput("team_draft_classes"),
   shiny::uiOutput("team_draft_class")
 )
@@ -859,6 +882,7 @@ loaded_data_draft_order <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
   if (active_tab() == "#section-draft-reihenfolge" & !loaded_data_draft_order()) {
+    source("R new/rankings/ranking_tables.R", local = TRUE)
     source("R new/rankings/draft_order.R", local = TRUE)
 
     loaded_data_draft_order(TRUE)
@@ -878,7 +902,13 @@ shiny::fluidPage(
       shinycssloaders::withSpinner(gt::gt_output("draft_order_table")),
       width = 12
     ),
-    style = "height: 1030px"
+    style = "height: 1650px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_order_history")),
+      width = 12
+    )
   )
 )
 ```

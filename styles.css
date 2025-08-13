@@ -31,7 +31,7 @@
 .sidebar:has(~ #dashboard-container #section-conference-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
 .sidebar:has(~ #dashboard-container #section-power-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
-.sidebar:has(~ #dashboard-container #section-draft-reihenfolge.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+.sidebar:has(~ #dashboard-container #section-draft-reihenfolge.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)):not(:has(#showHistoricTeamNames)) {
   display: none;
 }
 
@@ -55,7 +55,7 @@
 
 /* Roster Depth */
 /* IR Analyse */
-.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)),
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)),
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
   display: none;
 }
@@ -84,7 +84,7 @@
 }
 
 /* Player Fantasy Finishes */
-.sidebar:has(~ #dashboard-container #section-fantasy-finishes.active) .form-group:not(:has(#selectPositions-label)) {
+.sidebar:has(~ #dashboard-container #section-fantasy-finishes.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectPositions-label)) {
   display: none;
 }
 
@@ -142,8 +142,17 @@
 
 #section-trade-history [class*="col-"] { background: white; }
 
+.sidebar:has(~ #dashboard-container #section-trade-history.active) blockquote:nth-of-type(6) {
+  display: block;
+}
+
+/* SoS*/
+.sidebar:has(~ #dashboard-container #section-strength-of-schedule.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+    display: none;
+}
+
 /* Draft Basics */
-#section-draftklassen.active .chart-stage,
+#section-draftklassen.active .chart-wrapper,
 #section-basics.active .chart-wrapper {
   height: calc(100vh - 73px) !important;
   overflow-y: scroll !important;
