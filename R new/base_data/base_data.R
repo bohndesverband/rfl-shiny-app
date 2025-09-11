@@ -6,7 +6,7 @@ source("R new/base_data/elo.R", local = TRUE)
 
 rfl_player_scores <- feather::read_feather("data/rfl_player_scores.feather")
 
-rfl_fantasy_finishes <- feather::read_feather("data/rfl_fantasy_finishes.feather")
+source("R new/base_data/fantasy_finishes.R", local = TRUE)
 
 source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes
 

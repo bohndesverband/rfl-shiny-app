@@ -2,7 +2,7 @@ source("R new/rankings/standing.R", local = TRUE)
 source("R new/rankings/ranking_tables.R", local = TRUE)
 
 running_elo <- team_elo %>%
-  dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_postgame) %>%
+  dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_pregame, franchise_elo_postgame) %>%
   dplyr::distinct() %>%
   dplyr::group_by(franchise_id) %>%
   dplyr::arrange(season, week) %>%
@@ -23,7 +23,7 @@ elo_change <- running_elo %>%
   dplyr::mutate(
   #  xmax = max(game),
   #  xmin = min(game),
-      elo_start = ifelse(week == min(week), franchise_elo_postgame, dplyr::lag(franchise_elo_postgame)),
+      elo_start = ifelse(week == min(week), franchise_elo_pregame, dplyr::lag(franchise_elo_postgame)),
       elo_end = ifelse(week == max(week), franchise_elo_postgame, dplyr::lead(franchise_elo_postgame)),
       elo_shift = elo_end - elo_start,
       elo_shift_label = sprintf("%+d", elo_shift)
@@ -31,7 +31,7 @@ elo_change <- running_elo %>%
   dplyr::filter(dplyr::row_number() == 1) %>%
   dplyr::ungroup()
 
-output$running_elo <- renderPlot({
+output$running_elo <- shiny::renderPlot({
   ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
     ggplot2::geom_hex(bins = 70) +
 

@@ -8,18 +8,14 @@ if (current_week > 13) {
     dplyr::select(-week)
 
   postseason_results <- readr::read_csv(paste0("https://github.com/bohndesverband/rfl-data/releases/download/postseason_data/rfl_postseason_", new_season_sept, ".csv"), col_types = "icciccdcii") %>%
-    dplyr::filter(bowl == "SB" & (match_result == "L" | title == 1) & bracket != "Spiel um Platz drei") %>%
+    dplyr::filter(bowl == "SB" & (week < 16 | week == 17) & (match_result == "L" | title == 1) | bracket == "Spiel um Platz drei") %>%
     dplyr::left_join(postseason_teams, by = "franchise_id") %>%
     dplyr::group_by(week) %>%
     dplyr::arrange(pick) %>%
     dplyr::ungroup() %>%
     dplyr::arrange(week) %>%
     dplyr::mutate(
-      pick = dplyr::case_when(
-        week == 17 & title == 0 ~ 35,
-        week == 17 & title == 1 ~ 36,
-        TRUE ~ row_number() + 24
-      ),
+      pick = ifelse(week == 17, 37 - po_finish, row_number() + 24),
       week = 14
     ) %>%
     dplyr::arrange(pick) %>%

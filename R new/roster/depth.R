@@ -1,25 +1,39 @@
-roster_depth_weekly <- rfl_standing_data %>%
-  dplyr::select(week, franchise_id, pf, pp) %>%
-  dplyr::rename(pppg = pp) %>%
-  dplyr::mutate(points_back = pf - pppg) %>%
-  dplyr::left_join(
-    rfl_franchise_data %>%
-      dplyr::select(franchise_id, franchise_name),
-    by = "franchise_id"
-  )
+roster_depth_weekly <- shiny::reactive({
+  roster_depth_weekly <- rfl_starter_data %>%
+    dplyr::filter(season == season_before_wk_2) %>%
+    #dplyr::filter(season == 2024) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        pos_grouped %in% input$selectPositions
+      else
+        TRUE
+    ) %>%
+    dplyr::group_by(franchise_id, week, starter_status) %>%
+    dplyr::mutate(pf = round(sum(player_score, na.rm = TRUE), 2)) %>%
+    dplyr::group_by(franchise_id, week, should_start) %>%
+    dplyr::mutate(pp = round(sum(player_score, na.rm = TRUE), 2)) %>%
+    dplyr::filter(starter_status == "starter" & should_start == 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::select(week, franchise_id, pf, pp) %>%
+    dplyr::distinct() %>%
+    dplyr::rename(pppg = pp) %>%
+    dplyr::mutate(points_back = pf - pppg) %>%
+    dplyr::left_join(
+      rfl_franchise_data %>%
+        dplyr::select(franchise_id, franchise_name),
+      by = "franchise_id"
+    )
+})
 
-roster_depth_season <- rfl_weekly_standing %>%
-  dplyr::filter(season == season_before_wk_2 & week == max(week)) %>%
-  dplyr::select(week, franchise_id, pf_total, pp_total) %>%
-  dplyr::mutate(
-    pppg = pp_total / week,
-    points_back = round((pf_total - pp_total) / week, 2)
-  ) %>%
-  dplyr::left_join(
-    rfl_franchise_data %>%
-      dplyr::select(franchise_id, franchise_name),
-    by = "franchise_id"
+roster_depth_season <- shiny::reactive({
+  roster_depth_season <- roster_depth_weekly() %>%
+  dplyr::group_by(franchise_id, franchise_name) %>%
+  dplyr::summarise(
+    pppg = round(mean(pppg, na.rm = TRUE), 2),
+    points_back = round(mean(points_back, na.rm = TRUE), 2),
+    .groups = "drop"
   )
+})
 
 roster_depth_plot <- function(df) {
   list(
@@ -106,17 +120,20 @@ roster_depth_plot <- function(df) {
     plot_defaults,
     plot_clean,
     ggplot2::theme(
-      legend.position = "right"
+      legend.position = "top"
+    ),
+    ggplot2::labs(
+      subtitle = paste("Alle", paste(input$selectPositions, collapse = ", "), "im Roster")
     )
   )
 }
 
 output$roster_depth_season <- shiny::renderPlot({
-  ggplot2::ggplot(roster_depth_season, ggplot2::aes(x = points_back, y = pppg)) +
-    roster_depth_plot(roster_depth_season) +
+  ggplot2::ggplot(roster_depth_season(), ggplot2::aes(x = points_back, y = pppg)) +
+    roster_depth_plot(roster_depth_season()) +
 
     ggplot2::geom_point(size = 5, alpha = 0.5, color = color_grey_mid) +
-    ggplot2::geom_point(data = subset(roster_depth_season, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name), size = 7) +
+    ggplot2::geom_point(data = subset(roster_depth_season(), franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name), size = 7) +
     ggplot2::scale_color_discrete(type = colors) +
 
     ggplot2::labs(
@@ -132,15 +149,15 @@ output$roster_depth_weekly <- shiny::renderPlot({
     shiny::need(input$selectRflTeams != "", "Wähle mindestens ein Team, um diese Grafik anzuzeigen.")
   )
 
-  ggplot2::ggplot(roster_depth_weekly, ggplot2::aes(x = points_back, y = pppg)) +
-    roster_depth_plot(roster_depth_weekly) +
+  ggplot2::ggplot(roster_depth_weekly(), ggplot2::aes(x = points_back, y = pppg)) +
+    roster_depth_plot(roster_depth_weekly()) +
 
-    ggplot2::geom_point(data = subset(roster_depth_weekly, franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name, alpha = week), size = 5) +
+    ggplot2::geom_point(data = subset(roster_depth_weekly(), franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name, alpha = week), size = 5) +
     ggplot2::scale_color_discrete(type = colors) +
     ggplot2::scale_alpha_continuous(range = c(0.5, 1), guide = "none") +
 
     ggplot2::labs(
-      title = paste0("Rosterstärke Wochen ", min(roster_depth_weekly$week), "-", max(roster_depth_weekly$week), " ", season_before_wk_2),
+      title = paste0("Rosterstärke Wochen ", min(roster_depth_weekly()$week), "-", max(roster_depth_weekly()$week), " ", season_before_wk_2),
       x = "PF - PP",
       y = "PP",
       color = "RFL Teams"

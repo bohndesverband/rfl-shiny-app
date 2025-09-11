@@ -7,18 +7,18 @@ roster_war <- rfl_roster_data %>%
   ) %>%
   dplyr::left_join(
     rfl_starter_data %>%
-      dplyr::filter(starter_status == "starter") %>%
+      dplyr::filter(starter_status == "starter" & season == max(season)) %>%
       dplyr::mutate(player_id = as.character(player_id)) %>%
       dplyr::group_by(franchise_id, player_id) %>%
       dplyr::summarise(starts = dplyr::n(), .groups = "drop"),
     by = c("player_id", "franchise_id")
   )
 
-roster_War_filtered <- shiny::reactive({
-  roster_war %>%
+roster_war_filtered <- shiny::reactive({
+  roster_war_filtered <- roster_war %>%
     dplyr::filter(
       starts >= input$selectRflGames[1]
-      #starts >= 8
+      #starts >= 2
     ) %>%
     dplyr::group_by(franchise_id, pos) %>%
     dplyr::summarise(
@@ -38,7 +38,7 @@ roster_War_filtered <- shiny::reactive({
 })
 
 output$roster_war <- gt::render_gt({
-  roster_War_filtered() %>%
+  roster_war_filtered() %>%
     gt::gt() %>%
       gt::tab_header(
         title = paste("RFL Team WAR nach Positionen"),
