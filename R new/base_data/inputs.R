@@ -19,6 +19,7 @@ output$active_tab <- renderText({
 # set inputs based on active tab ----
 shiny::observeEvent(active_tab(), {
 
+  # years
   if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
     # draft klasse
     shiny::updateSliderInput(session, "selectYears", min = 2017, max = 2025, value = c(2017, new_season_march - 3))
@@ -40,6 +41,17 @@ shiny::observeEvent(active_tab(), {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   }
 
+  # year
+  if (active_tab() == "#section-draftboards") {
+    if (current_week > 1) {
+      shiny::updateSliderInput(session, "selectYear", min = 2017, max = new_season_sept, value = new_season_sept - 1)
+    } else {
+      shiny::updateSliderInput(session, "selectYear", min = 2017, max = new_season_sept - 1, value = new_season_sept - 1)
+    }
+  } else {
+    shiny::updateSliderInput(session, "selectYear", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
+  }
+
   if (active_tab() == "#section-elo") {
     # player elo
 
@@ -52,6 +64,7 @@ shiny::observeEvent(active_tab(), {
     shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
   }
 
+  # positions
   if (active_tab() == "#section-trade-history") {
     # trade history
     shinyWidgets::updatePickerInput(
@@ -59,7 +72,7 @@ shiny::observeEvent(active_tab(), {
       "selectPositions",
       selected = ""
     )
-  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe") {
+  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe" | active_tab() == "#section-draftboards") {
     shinyWidgets::updatePickerInput(
       session,
       "selectPositions",

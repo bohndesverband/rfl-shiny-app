@@ -21,7 +21,7 @@ mfl_connection <- ffscrapr::mfl_connect(season = new_season_march, league_id = l
 
 # base data----
 position_order <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP")
-positions <- c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")
+positions_grouped <- c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")
 positions_full <- c("QB", "RB", "WR", "TE", "PK", "DT", "DE", "DL", "LB", "CB", "S", "DB")
 
 # color ----
@@ -51,8 +51,8 @@ colors_position <- c(
   "DT" = "#48dbfb",
   "DE" = "#ffa801",
   "LB" = "#ff9ff3",
-  "DB" = "#00d2d3",
-  "CB" = "#00d2d3",
+  "DB" = "#00c0c1",
+  "CB" = "#00c0c1",
   "S" = "#3c40c6"
 )
 
@@ -64,7 +64,7 @@ colors_positions_grouped <- c(
   "PK" = "#c8d6e5",
   "DL" = "#48dbfb",
   "LB" = "#ff9ff3",
-  "DB" = "#3c40c6"
+  "DB" = "#00c0c1"
 )
 
 color_text <- color_black

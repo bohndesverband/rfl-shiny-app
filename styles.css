@@ -166,6 +166,12 @@
   overflow-y: scroll !important;
 }
 
+/* Draft Boards */
+.sidebar:has(~ #dashboard-container #section-draftboards.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflDivisions-label)):not(:has(#showOnlyRookies)):not(:has(#sortForFpts)) {
+  display: none;
+}
+
+
 /* Draft Classes*/
 #section-draftklassen.active .chart-wrapper-flex .chart-stage {
   overflow: unset !important;
