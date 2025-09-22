@@ -38,7 +38,7 @@ matchup_table <- function(df) {
       opponent_elo_pregame = "Pregame ELO",
       opponent_name = "Name",
     ) %>%
-    gt::cols_hide(upset, franchise_id, opponent_id) %>%
+    gt::cols_hide(c(upset, franchise_id, opponent_id)) %>%
     gtDefaults()
 }
 
@@ -50,17 +50,20 @@ output$rfl_matchup_history_table <- gt::render_gt({
 
 # upsets ----
 
-plotly::ggplotly(
-  ggplot2::ggplot(data = subset(rfl_matchups_history, upset == 1 & elo_diff < -100 & franchise_elo_pregame < 1600), ggplot2::aes(x = opponent_elo_pregame, y = franchise_elo_pregame, text = label, alpha = season)) +
-    geom_point(color = color_grey_light, size = 3) +
-    geom_point(data = subset(rfl_matchups_history, upset == 1 & elo_diff < -100 & franchise_elo_pregame < 1600 & (franchise_id %in% c("0007") | opponent_id %in% c("0007"))), ggplot2::aes(color = franchise_name), size = 5, alpha = 1) +
-    plot_defaults +
-    ggplot2::labs(
-      x = "Gegner Pregame ELO",
-      y = "Team Pregame ELO"
-    ),
-  tooltip = c("text")
-)
+#plotly::ggplotly(
+#  ggplot2::ggplot(data = subset(rfl_matchups_history, upset == 1 & elo_diff < -100 & franchise_elo_pregame < 1600), ggplot2::aes(x = opponent_elo_pregame, y = franchise_elo_pregame, text = label, alpha = season)) +
+#    geom_point(color = color_grey_light, size = 3) +
+#    geom_point(data = subset(rfl_matchups_history, upset == 1 & elo_diff < -100 & franchise_elo_pregame < 1600 & (franchise_id %in% c("0007") | opponent_id %in% c("0007"))), color = color_red, size = 5, alpha = 1) +
+#
+#    plot_defaults +
+#    ggplot2::labs(
+#      x = "Gegner Pregame ELO",
+#      y = "Team Pregame ELO"
+#    ),
+#  tooltip = c("text")
+#)
+
+# TODO: Add plotly version
 
 output$rfl_matchup_upsets_table <- gt::render_gt({
   rfl_matchups_history %>%
