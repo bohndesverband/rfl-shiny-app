@@ -16,11 +16,15 @@
 }
 
 /* Seiten ohne Sidebar */
-.sidebar:has(~ #dashboard-container #section-alle-matchups.active) /* Matchup History */{
+.sidebar:has(~ #dashboard-container #section-alle-matchups.active), /* Matchup History */
+.sidebar:has(~ #dashboard-container #section-upsets.active), /* Matchup Upsets */
+.sidebar:has(~ #dashboard-container #section-übersicht.active) /* Matchup Overview */ {
   display: none;
 }
 
-#dashboard-container:has(#section-alle-matchups.active) /* Matchup History */ {
+#dashboard-container:has(#section-alle-matchups.active), /* Matchup History */
+#dashboard-container:has(#section-upsets.active), /* Matchup Upsets */
+#dashboard-container:has(#section-übersicht.active) /* Matchup Overview */ {
   padding-left: 0 !important;
 }
 

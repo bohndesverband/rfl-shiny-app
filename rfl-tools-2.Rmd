@@ -34,12 +34,13 @@ library(flexdashboard)
 library(tidyverse)
 library(feather)
 library(nflreadr)
+#library(nflplotR)
 library(ffscrapr)
 library(DT)
 library(ggplot2)
 library(ggbump)
 library(gt)
-#library(formattable)
+library(formattable)
 library(gtExtras)
 library(svglite)
 #library(webshot2)
@@ -53,12 +54,14 @@ library(waffle)
 library(shinycssloaders)
 library(ggforce)
 library(ggchicklet) # runde Ecken bei Balken
+library(hexbin)
 #library(shinyjs)
 ```
 
 ```{r global, message=TRUE, warning=TRUE, include=FALSE}
 #profvis({
 source("R new/base_data/base_data.R", local = TRUE)
+loaded_data_rfl_matchup_data <- shiny::reactiveVal(FALSE)
 #})
 
 options(spinner.color = color_grey_dark)
@@ -206,7 +209,7 @@ shiny::sliderInput(
   "Anzahl Spiele",
   min = 0,
   max = 13,
-  value = ifelse(current_week >= 13, 8, round(current_week * 0.75)),
+  value = ifelse(current_week >= 13, 8, floor(current_week * 0.75)),
   step = 1,
   ticks = FALSE,
   sep = ""
@@ -416,12 +419,19 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_season")),
+      shinycssloaders::withSpinner(plotly::plotlyOutput("roster_depth_season", height = "600px")),
       width = 6
     ),
     shiny::column(
       shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_weekly")),
       width = 6
+    ),
+    style = "height: 600px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("fptsByAge")),
+      width = 12
     )
   )
 )
@@ -707,12 +717,46 @@ shiny::fluidPage(
 )
 ```
 
+# Übersicht {data-navmenu="Matchups"}
+
+##
+
+```{r matchup-overview, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_overview <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-übersicht" & !loaded_data_matchup_overview()) {
+    source("R new/matchups/overview.R", local = TRUE)
+
+    loaded_data_matchup_overview(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("matchupOverview")),
+      width = 12
+    ),
+    style = "height: 900px"
+  )
+)
+```
+
 # Projections {data-navmenu="Matchups"}
 
 ##
 
-```{r matchup-projections, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-source("R new/matchups/projections.R", local = TRUE)
+```{r matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_projections <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-projections" & !loaded_data_matchup_projections()) {
+    source("R new/matchups/projections.R", local = TRUE)
+
+    loaded_data_matchup_projections(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -732,8 +776,16 @@ shiny::fluidPage(
 
 ##
 
-```{r matchup-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-source("R new/matchups/history.R", local = TRUE)
+```{r matchup-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-alle-matchups" & !loaded_data_matchup_history()) {
+    source("R new/matchups/history.R", local = TRUE)
+
+    loaded_data_matchup_history(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -749,8 +801,16 @@ shiny::fluidPage(
 
 ##
 
-```{r upsets, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
-source("R new/matchups/history.R", local = TRUE)
+```{r upsets, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_upsets <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-upsets" & !loaded_data_matchup_upsets()) {
+    source("R new/matchups/history.R", local = TRUE)
+
+    loaded_data_matchup_upsets(TRUE)
+  }
+})
 
 shiny::fluidPage(
   shiny::fluidRow(
@@ -831,8 +891,7 @@ shiny::fluidPage(
     shiny::column(
       shinycssloaders::withSpinner(shiny::plotOutput("draft_board")),
       width = 12
-    ),
-    style = "height: 900px"
+    )
   )
 )
 ```
