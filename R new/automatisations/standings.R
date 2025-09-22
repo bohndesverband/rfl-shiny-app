@@ -6,10 +6,10 @@ library(feather)
 new_season_sept <- nflreadr::get_current_season()
 
 # load base data ----
-rfl_standing_data <- vroom::vroom(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_", season_before_wk_2, ".csv"), col_types = "icccdddiiiddiiiiiiiiicii")
+rfl_standing_data <- vroom::vroom(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_", new_season_sept, ".csv"), col_types = "icccdddiiiddiiiiiiiiicii")
 
 ## write to feather ----
-feather::write_feather(standing_data, "data/rfl_standing_data.feather")
+feather::write_feather(rfl_standing_data, "data/rfl_standing_data.feather")
 
 # create weekly rankings ----
 rfl_weekly_standing <- feather::read_feather("data/rfl_team_elo.feather") %>%

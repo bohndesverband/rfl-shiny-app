@@ -33,7 +33,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
     min_pick = min(overall),
     max_pick = max(overall),
     avg_pick = round(mean(overall)),
-    value = avg_pick - overall,
+    pick_value = overall - second_pick,
   ) %>%
   dplyr::group_by(season, pos) %>%
   dplyr::arrange(first_pick) %>%
@@ -44,13 +44,16 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   # add player elo
   dplyr::left_join(
     feather::read_feather("data/rfl_player_elo.feather") %>%
+      dplyr::group_by(season, mfl_id) %>%
+      dplyr::mutate(ppg = round(mean(score, na.rm = TRUE), 2)) %>%
       dplyr::group_by(mfl_id) %>%
       dplyr::mutate(elo_peak = max(player_elo_post)) %>%
       dplyr::arrange(season, week) %>%
       dplyr::filter(row_number() == max(row_number())) %>%
-      dplyr::select(mfl_id, player_elo_post, elo_peak) %>%
       dplyr::mutate(elo_shift = player_elo_post - 1500) %>%
-      dplyr::rename(current_player_elo = player_elo_post),
+      dplyr::rename(current_player_elo = player_elo_post) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(mfl_id, current_player_elo, elo_peak, elo_shift, ppg),
     by = "mfl_id"
   ) %>%
 
@@ -63,7 +66,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
 
 feather::write_feather(rfl_drafts_data, "data/rfl_drafts_data.feather")
 
-rfl_draft_orders <- purrr::map_df(2018:var_season, function(x) {
+rfl_draft_orders <- purrr::map_df(2017:var_season, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/rfl_draft-order_{x}.csv"),
     col_types = "ici"

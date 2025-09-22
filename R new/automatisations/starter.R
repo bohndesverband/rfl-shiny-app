@@ -12,6 +12,13 @@ rfl_starter_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/starter_data/rfl_starter_{x}.csv"),
     col_types = "iiccdcccni"
   )
-})
+}) %>%
+  dplyr::mutate(
+    pos_grouped = dplyr::case_when(
+      pos %in% c("DT", "DE") ~ "DL",
+      pos %in% c("CB", "S") ~ "DB",
+      TRUE ~ pos
+    )
+  )
 
 feather::write_feather(rfl_starter_data, "data/rfl_starter_data.feather")

@@ -1,10 +1,9 @@
 source("R new/base_data/variables.R")
-source("R new/base_data/standings.R")
-source("R new/base_data/league.R")
+source("R new/base_data/standing.R")
 source("R new/base_data/elo.R")
 
 # create base data ----
-true_standing_data <- true_standing %>%
+true_standing_data <- vroom::vroom(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_true-standing_", new_season_sept, ".csv"), col_types = "iciddiiii") %>%
   dplyr::left_join(
     franchises %>%
       dplyr::select(franchise_id, franchise_name, division_name),
@@ -13,7 +12,7 @@ true_standing_data <- true_standing %>%
   dplyr::arrange(week)
 
 # create data for current week ----
-current_standing <- elo %>%
+rfl_current_standing <- team_elo %>%
   dplyr::filter(season == max(season)) %>%
   dplyr::mutate(
     winloss = ifelse(score_diff > 0, 1, 0)
@@ -37,26 +36,26 @@ current_standing <- elo %>%
       dplyr::arrange(week) %>%
       dplyr::summarise(
         pp_dist = list(unique(pp / 2) / week),
-        dplyr::across(win:all_play_wins, \(x) sum(x, na.rm = TRUE)),
+        dplyr::across(wins:all_play_wins, \(x) sum(x, na.rm = TRUE)),
         .groups = "drop"
       ) %>%
       dplyr::mutate(
         pf_rank = dplyr::dense_rank(dplyr::desc(pf)),
         pp_rank = dplyr::dense_rank(dplyr::desc(pp)),
-        record_rank = dplyr::dense_rank(dplyr::desc(win)),
+        record_rank = dplyr::dense_rank(dplyr::desc(wins)),
         all_play_rank = dplyr::dense_rank(dplyr::desc(all_play_wins)),
-        coach_rank = dplyr::dense_rank(dplyr::desc(coach)),
-        true_standing = pf_rank + pp_rank + record_rank + all_play_rank + coach_rank
+        #coach_rank = dplyr::dense_rank(dplyr::desc(coach)),
+        true_standing = pf_rank + pp_rank + record_rank + all_play_rank
       ) %>%
-      dplyr::arrange(true_standing, win, pf_rank) %>%
+      dplyr::arrange(true_standing, wins, pf_rank) %>%
       dplyr::mutate(true_rank = dplyr::row_number()),
     by = "franchise_id"
   ) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(
     week = nflreadr::get_current_week() - 1,
     place = row_number(),
-    loss = (2 * week) - win,
+    loss = (2 * week) - wins,
     pf = pf,
     pp = pp,
     #dplyr::across(pf_rank:coach_rank, ~ 37 - .x),
@@ -71,17 +70,17 @@ current_standing <- elo %>%
     subline = paste(division_name, conference_name, sep = ", ")
   ) %>%
   dplyr::group_by(division_name) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(rank_div = row_number()) %>%
   dplyr::group_by(conference_name, rank_div) %>%
-  dplyr::arrange(desc(win), desc(pf)) %>%
+  dplyr::arrange(desc(wins), desc(pf)) %>%
   dplyr::mutate(
     seed = case_when(
       rank_div == 1 ~ row_number()
     )
   ) %>%
   dplyr::group_by(conference_name) %>%
-  dplyr::arrange(seed, desc(win), desc(pf)) %>%
+  dplyr::arrange(seed, desc(wins), desc(pf)) %>%
   dplyr::mutate(
     seed = ifelse(is.na(seed), row_number(), seed),
     bowl = case_when(
@@ -94,20 +93,20 @@ current_standing <- elo %>%
   ) %>%
   dplyr::ungroup() %>%
   dplyr::group_by(conference_name) %>%
-  dplyr::select(franchise_name, win, loss, winloss, pf_sparkline, pp_dist, pf_rank:true_rank, elo_shift, franchise_elo_postgame, subline, seed, bowl, conference_name, -true_standing)
+  dplyr::select(franchise_name, wins, loss, winloss, pf_sparkline, pp_dist, pf_rank:true_rank, elo_shift, franchise_elo_postgame, subline, seed, bowl, conference_name, -true_standing)
 
-saveRDS(current_standing, "data/current-standing.rds")
-piggyback::pb_upload("data/current-standing.rds", "bohndesverband/rfl-data", "app_data")
+saveRDS(rfl_current_standing, "data/current-standing.rds")
+#piggyback::pb_upload("data/current-standing.rds", "bohndesverband/rfl-data", "app_data")
 
 # power ranking ----
-power_ranking <- true_standing_data %>%
+rfl_power_ranking <- true_standing_data %>%
   dplyr::group_by(franchise_id, franchise_name) %>%
   dplyr::arrange(week) %>%
   dplyr::mutate(
     running_pf = cumsum(pf),
     running_pp = cumsum(pp),
-    running_coach = cumsum(coach),
-    running_wins = cumsum(win),
+    #running_coach = cumsum(coach),
+    running_wins = cumsum(wins),
     running_all_play_wins = cumsum(all_play_wins)
   ) %>%
   dplyr::group_by(week) %>%
@@ -116,12 +115,12 @@ power_ranking <- true_standing_data %>%
     pp_rank = dplyr::dense_rank(dplyr::desc(running_pp)),
     record_rank = dplyr::dense_rank(dplyr::desc(running_wins)),
     all_play_rank = dplyr::dense_rank(dplyr::desc(running_all_play_wins)),
-    coach_rank = dplyr::dense_rank(dplyr::desc(running_coach)),
-    true_standing = pf_rank + pp_rank + record_rank + all_play_rank + coach_rank
+    #coach_rank = dplyr::dense_rank(dplyr::desc(running_coach)),
+    true_standing = pf_rank + pp_rank + record_rank + all_play_rank
   ) %>%
   dplyr::arrange(true_standing, running_wins, dplyr::desc(running_pf)) %>%
   dplyr::mutate(true_rank = dplyr::row_number()) %>%
   dplyr::ungroup() %>%
   dplyr::select(week, franchise_id, franchise_name, true_rank, division_name)
 
-
+feather::write_feather(rfl_power_ranking, "data/rfl_power_ranking.feather")
