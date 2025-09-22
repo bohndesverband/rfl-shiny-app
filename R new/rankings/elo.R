@@ -17,7 +17,8 @@ running_elo_vlines <- running_elo %>%
   dplyr::mutate(vline = ifelse(dplyr::row_number() == 1 & season != 2016, 1, 0))
 
 elo_change <- running_elo %>%
-  dplyr::filter(season == max(season) & (week == min(week) | week == max(week))) %>%
+  dplyr::filter(season == max(season)) %>%
+  dplyr::filter(week == min(week) | week == max(week)) %>%
   dplyr::group_by(franchise_id) %>%
   dplyr::arrange(week) %>%
   dplyr::mutate(
