@@ -302,6 +302,7 @@ output$draft_order_table <- gt::render_gt({
         dplyr::select(franchise_id, season, div_rank, league_rank, divider, division_name, pp_total, power_rank, seed, bowl, bowl_emoji, seed_emoji),
       by = "franchise_id"
     ) %>%
+    dplyr::arrange(pick) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Draft Reihenfolge"),

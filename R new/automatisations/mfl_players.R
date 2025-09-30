@@ -20,9 +20,14 @@ mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=play
     feather::read_feather("data/rfl_player_elo.feather") %>%
       dplyr::group_by(mfl_id) %>%
       dplyr::slice_tail(n = 1) %>%
-      dplyr::select(mfl_id, player_elo_post, season),
+      dplyr::select(mfl_id, player_elo_post, season, gsis_id),
     by = c("player_id" = "mfl_id")
   ) %>%
-  dplyr::filter(!is.na(player_elo_post))
+  dplyr::filter(!is.na(player_elo_post)) %>%
+  dplyr::left_join(
+    nflreadr::load_players() %>%
+      dplyr::select(gsis_id, headshot),
+    by = "gsis_id"
+  )
 
 feather::write_feather(mfl_players, "data/mfl_players.feather")

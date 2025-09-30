@@ -1,7 +1,7 @@
 # teams ----
-team_elo <- feather::read_feather("data/rfl_team_elo.feather")
+rfl_team_elo <- feather::read_feather("data/rfl_team_elo.feather")
 
-rfl_matchups_history <- team_elo %>%
+rfl_matchups_history <- rfl_team_elo %>%
   mutate(
     elo_diff = franchise_elo_pregame - opponent_elo_pregame,
     upset = ifelse(elo_diff < 0 & score_diff > 0, 1, 0),

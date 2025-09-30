@@ -1,3 +1,5 @@
+source("R new/roster/depth_chart_data.R", local = TRUE)
+
 roster_depth_weekly <- shiny::reactive({
   roster_depth_weekly <- rfl_starter_data %>%
     dplyr::filter(season == season_before_wk_2) %>%
@@ -187,6 +189,45 @@ output$roster_depth_weekly <- shiny::renderPlot({
 
 }, height = 600)
 
+# depth chart ----
+#rfl_depth_charts
+
+#rfl_roster_data %>%
+#  filter(franchise_id == "0007") %>%
+#  dplyr::filter(week == max(week)) %>%
+#  dplyr::left_join(
+#    rfl_fantasy_finishes %>%
+#      dplyr::select(season, player_id, player_name, pos, pos_rank),
+#    by = c("player_id", "season")
+#  ) %>%
+#  dplyr::group_by(pos) %>%
+#  dplyr::arrange(pos_rank) %>%
+#  dplyr::mutate(
+#    pos_rank_new = dplyr::case_when(
+#      pos_rank <= 12 ~ "1",
+#      pos_rank <= 24 ~ "2",
+#      pos %in% c("RB", "WR", "DL", "LB", "DB") & pos_rank <= 24 ~ "3",
+#      pos %in% c("RB", "WR", "LB", "DB") & pos_rank <= 36 ~ "4",
+#      pos == "LB" & pos_rank <= 48 ~ "5",
+#      pos == "PK" & pos_rank > 12 ~ "Cut",
+#      pos %in% c("QB", "TE") & pos_rank > 24 ~ "Cut",
+#      roster_status == "INJURED_RESERVE" ~ "IR",
+#      TRUE ~ "Cut"
+#    )
+#  ) %>%
+#  dplyr::filter(!is.na(player_name)) %>%
+#  dplyr::select(franchise_id, player_name, pos, pos_rank_new) %>%
+#  tidyr::pivot_wider(
+#    names_from = pos,
+#    values_from = player_name,
+#    values_fn = list
+#  ) %>%
+#  dplyr::group_by(franchise_id) %>%
+#  tidyr::separate_rows(LB:TE, sep = ",\\s*") %>%
+#  gt::gt()
+
+# TODO : depth chart
+
 # punkte nach alter ----
 fpts_by_age <- rfl_roster_data %>%
   dplyr::left_join(
@@ -255,3 +296,73 @@ output$fptsByAge <- shiny::renderPlot({
     )
 }, height = 1200)
 
+# depth ----
+war_max <- max(rfl_depth_chart_data$war, na.rm = TRUE)
+war_min <- min(rfl_depth_chart_data$war, na.rm = TRUE)
+elo_max <- max(rfl_depth_chart_data$player_elo_post, na.rm = TRUE)
+elo_min <- min(rfl_depth_chart_data$player_elo_post, na.rm = TRUE)
+
+output$depthChart <- gt::render_gt({
+  shiny::validate(
+    shiny::need(input$selectRflTeams != "", "Wähle ein Team, um diese Grafik anzuzeigen.")
+    #shiny::need(length(input$selectRflTeams) == 1, "Wähle genau ein Team, um diese Grafik anzuzeigen.")
+  )
+
+  selected_team <- rfl_franchise_data %>%
+    dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
+    dplyr::pull(franchise_name)
+
+  rfl_depth_chart_data %>%
+    dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        pos %in% input$selectPositions
+      else
+        TRUE
+    ) %>%
+    dplyr::group_by(franchise_name, pos) %>%
+    dplyr::arrange(factor(pos, levels = positions_grouped), dplyr::desc(war)) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = paste(paste(selected_team, collapse = ", "), "Depth Chart")
+    ) %>%
+    gt::cols_hide(c(franchise_id, transaction)) %>%
+    gtExtras::gt_merge_stack(
+      player_name,
+      subline,
+      small_cap = FALSE,
+      palette = c(color_text, color_grey_mid),
+      font_weight = c("normal", "normal")
+    ) %>%
+    gt::data_color(
+      war,
+      palette = c(color_red, color_yellow, color_green, color_blue),
+      domain = c(war_min, war_max)
+    ) %>%
+    gt::data_color(
+      player_elo_post,
+      palette = c(color_red, color_yellow, color_green, color_blue),
+      domain = c(elo_min, elo_max)
+    ) %>%
+    gt::data_color(
+      age,
+      palette = c(color_bg, color_red),
+      domain = c(20, 40)
+    ) %>%
+    gt::cols_label(
+      player_name = "Spieler",
+      age = "Alter",
+      war = "WAR",
+      player_elo_post = "ELO",
+      emoji = ""
+    ) %>%
+    gtDefaults() %>%
+    gt::cols_align(
+      align = "center",
+      columns = gt::everything()
+    ) %>%
+    gt::cols_align(
+      align = "left",
+      columns = c(player_name)
+    )
+})

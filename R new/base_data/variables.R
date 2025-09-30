@@ -2,6 +2,7 @@ league_id <- 63018
 new_season_sept <- nflreadr::get_current_season()
 new_season_march <- nflreadr::get_current_season(TRUE)
 current_week <- nflreadr::get_current_week()
+current_week_thu <- nflreadr::get_current_week(TRUE)
 
 season_before_wk_1 <- new_season_sept
 season_before_wk_2 <- new_season_sept

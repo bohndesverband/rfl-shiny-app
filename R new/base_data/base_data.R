@@ -16,7 +16,7 @@ source("R new/base_data/standing.R", local = TRUE)
 
 rfl_starter_data <- feather::read_feather("data/rfl_starter_data.feather")
 
-rfl_trades_data <- feather::read_feather("data/rfl_trades_data.feather")
+source("R new/base_data/transactions.R", local = TRUE)
 
 rfl_war_data <- feather::read_feather("data/rfl_war_data.feather")
 

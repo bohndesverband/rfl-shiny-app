@@ -18,7 +18,7 @@ if (nflreadr::get_current_week(TRUE) < 2) {
 }
 
 # teams ----
-team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
+rfl_team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_team-elo_{x}.csv"),
     col_types = "iiccnnnnnnn"
@@ -27,7 +27,7 @@ team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   dplyr::left_join(feather::read_feather("data/rfl_franchises.feather") %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
   dplyr::left_join(feather::read_feather("data/rfl_franchises.feather") %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
 
-feather::write_feather(team_elo, "data/rfl_team_elo.feather")
+feather::write_feather(rfl_team_elo, "data/rfl_team_elo.feather")
 
 # spieler ----
 player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {

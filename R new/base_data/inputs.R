@@ -33,7 +33,7 @@ shiny::observeEvent(active_tab(), {
   } else if(active_tab() == "#section-trade-history") {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2025, value = c(2025, 2025))
   } else if(active_tab() == "#section-fantasy-finishes") {
-    shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_march - 1, value = c(new_season_march - 3, new_season_march - 1))
+    shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   } else if (active_tab() == "#section-strength-of-schedule") {
     # sos
     shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2025, value = c(2025, 2025))
@@ -72,7 +72,7 @@ shiny::observeEvent(active_tab(), {
       "selectPositions",
       selected = ""
     )
-  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe" | active_tab() == "#section-draftboards") {
+  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe" | active_tab() == "#section-draftboards" | active_tab() == "#section-big-play-punkte") {
     shinyWidgets::updatePickerInput(
       session,
       "selectPositions",

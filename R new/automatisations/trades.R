@@ -27,6 +27,23 @@ rfl_trades_data <- purrr::map_df(2016:2025, function(x) {
     trade_asset_name = ifelse(grepl("FP_", asset_id), paste(asset_name, franchise_name), asset_name),
     trade_asset_id = ifelse(grepl("DP_", asset_id) | grepl("FP_", asset_id), paste0("DP_", draft_round), asset_id)
   ) %>%
-  dplyr::select(-franchise_name, -team)
+  dplyr::select(-franchise_name, -team) %>%
+  dplyr::group_by(trade_id) %>%
+  dplyr::arrange(trade_side) %>%
+  dplyr::mutate(
+    trade_partner = ifelse(trade_side == "franchise_2", first(franchise_id), last(franchise_id)),
+  ) %>%
+  dplyr::arrange(trade_id) %>%
+  dplyr::ungroup()
 
 feather::write_feather(rfl_trades_data, "data/rfl_trades_data.feather")
+
+# transactions
+rfl_transactions_data <- purrr::map_df(2017:2025, function(x) {
+  vroom::vroom(
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/transactions_data/rfl_transactions_{x}.csv"),
+    col_types = "dicccc"
+  )
+})
+
+feather::write_feather(rfl_transactions_data, "data/rfl_transactions_data.feather")

@@ -1,7 +1,7 @@
 source("R new/rankings/standing.R", local = TRUE)
 source("R new/rankings/ranking_tables.R", local = TRUE)
 
-running_elo <- team_elo %>%
+running_elo <- rfl_team_elo %>%
   dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_pregame, franchise_elo_postgame) %>%
   dplyr::distinct() %>%
   dplyr::group_by(franchise_id) %>%
@@ -52,7 +52,6 @@ output$running_elo <- shiny::renderPlot({
       #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
     )
 }, height = 800)
-
 
 output$elo_change <- shiny::renderPlot({
   ggplot2::ggplot(elo_change, ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +

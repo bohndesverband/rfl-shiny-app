@@ -7,7 +7,14 @@ running_player_elo <- player_elo %>%
     game = dplyr::row_number(),
     active = ifelse(max(season) == season_before_wk_1, 1, 0)
   ) %>%
-  dplyr::ungroup()
+  dplyr::ungroup() %>%
+  dplyr::left_join(
+    mfl_players %>%
+      dplyr::select(player_id, season) %>%
+      dplyr::rename(last_season = season),
+    by = c("mfl_id" = "player_id")
+  ) %>%
+  dplyr::filter(last_season >= new_season_sept - 2)
 
 ## output ----
 output$running_player_elo <- renderPlot({
@@ -97,7 +104,17 @@ output$player_elo_ranking_table <- gt::render_gt({
 
     gt::tab_options(
       ihtml.use_filters = FALSE
+    ) %>%
+    gt::opt_interactive(
+      page_size_default = 24,
+      use_compact_mode = TRUE,
+      selection_mode = "multiple"
     )
+})
+
+observeEvent(input$player_elo_ranking_table, {
+  selected_players <- player_elo_standing()$mfl_id[input$player_elo_ranking_table]
+  updateSelectizeInput(session, "selectPlayers", selected = selected_players)
 })
 
 # elo peaks ----

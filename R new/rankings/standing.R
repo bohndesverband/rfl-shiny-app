@@ -1,6 +1,6 @@
 # draft order----
 draft_order <- rfl_weekly_standing %>%
-  dplyr::select(week, franchise_id, franchise_name, pick)
+  dplyr::select(week, franchise_id, franchise_name, pick, division)
 
 if (current_week > 13) {
   postseason_teams <- draft_order %>%

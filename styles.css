@@ -18,13 +18,15 @@
 /* Seiten ohne Sidebar */
 .sidebar:has(~ #dashboard-container #section-alle-matchups.active), /* Matchup History */
 .sidebar:has(~ #dashboard-container #section-upsets.active), /* Matchup Upsets */
-.sidebar:has(~ #dashboard-container #section-übersicht.active) /* Matchup Overview */ {
+.sidebar:has(~ #dashboard-container #section-übersicht.active), /* Matchup Overview */
+.sidebar:has(~ #dashboard-container #section-wochenbericht.active), /* Wochenbericht */ {
   display: none;
 }
 
 #dashboard-container:has(#section-alle-matchups.active), /* Matchup History */
 #dashboard-container:has(#section-upsets.active), /* Matchup Upsets */
-#dashboard-container:has(#section-übersicht.active) /* Matchup Overview */ {
+#dashboard-container:has(#section-übersicht.active), /* Matchup Overview */
+#dashboard-container:has(#section-wochenbericht.active) /* Wochenbericht */ {
   padding-left: 0 !important;
 }
 
@@ -85,6 +87,18 @@
 
 .sidebar:has(~ #dashboard-container #section-elo.active) blockquote:nth-of-type(3) {
   display: block;
+}
+
+/* Player Big Play Points */
+.sidebar:has(~ #dashboard-container #section-big-play-punkte.active) .form-group:not(:has(#selectRflTeam-label)):not(:has(#selectPositions-label)):not(:has(#selectPlayers-label)) {
+  display: none;
+}
+
+#section-big-play-punkte [class*="col-"] { background: white; }
+
+/* Player Advance Rates */
+.sidebar:has(~ #dashboard-container #section-advance-rates.active) .form-group:not(:has(#selectYears-label)) {
+  display: none;
 }
 
 /* Player Fantasy Finishes */
