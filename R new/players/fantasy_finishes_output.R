@@ -63,7 +63,7 @@ gt_fantasy_finishes <- function(df) {
     )
 }
 
-output$fantasy_finishes_weekly <- gt::render_gt({
+rfl_fantasy_finishes_weekly_filtered <- shiny::reactive({
   rfl_fantasy_finishes_weekly %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]
@@ -81,17 +81,38 @@ output$fantasy_finishes_weekly <- gt::render_gt({
         })
       else
         TRUE
-    ) %>%
+    )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+output$fantasy_finishes_weekly <- gt::render_gt({
+  rfl_fantasy_finishes_weekly_filtered() %>%
     #filter(pos == "QB") %>%
     gt_fantasy_finishes() %>%
     gt::tab_header(
-      title = paste("Wöchentliche Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
+      title = paste(
+        "Wöchentliche Fantasy Finishes",
+        if (input$selectYears[1] == input$selectYears[2]) {
+          input$selectYears[1]
+        } else {
+          paste0(input$selectYears[1], "-", input$selectYears[2])
+        }
+      ),
       subtitle = "Nur RFL Regular Season"
     )
-})
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-output$fantasy_finishes_yearly <- gt::render_gt({
+rfl_fantasy_finishes_season_filtered <- shiny::reactive({
   rfl_fantasy_finishes_season %>%
+    dplyr::filter(
+      if (isTruthy(input$onlyRflRegSeason))
+        season == 2016 & week <= 13 |
+        season > 2016 & week <= 12 |
+        season > 2021 & week <= 14
+      else
+        TRUE
+    ) %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]
       #season >= 2025 & season <= 2025
@@ -111,12 +132,26 @@ output$fantasy_finishes_yearly <- gt::render_gt({
           any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
         })
       else
-      TRUE
-    ) %>%
+        TRUE
+    )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+output$fantasy_finishes_yearly <- gt::render_gt({
+  rfl_fantasy_finishes_season_filtered() %>%
     #filter(pos == "QB") %>%
     gt_fantasy_finishes() %>%
     gt::tab_header(
-      title = paste("Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
+      title = paste(
+        "Fantasy Finishes",
+        if (input$selectYears[1] == input$selectYears[2]) {
+          input$selectYears[1]
+        } else {
+          paste0(input$selectYears[1], "-", input$selectYears[2])
+        }
+      ),
       subtitle = "Nur RFL Regular Season"
     )
-})
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+

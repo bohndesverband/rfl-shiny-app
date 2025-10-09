@@ -187,7 +187,7 @@ output$matchupOverview <- shiny::renderPlot({
     plot_defaults +
     plot_clean +
     ggplot2::labs(
-      title = paste("RFL Matchup Übersicht - Week", current_week_thu),
+      title = paste("RFL Matchup Übersicht - Week", input$selectWeek),
       subtitle = "Angezeigt werden die Teams mit ihren derzeitigen Punkten (fett) und den Projected Points. Der grüne Balken zeigt die Gewinnwahrscheinlichkeit des linken Teams an.\nDie Berechnung erfolgt dabei auf Grundlage der Projected Points und der tatsächlich erzielten Punkte der noch spielenden NFL Spieler in der Vergangenheit.",
       x = "",
       y = ""
@@ -233,7 +233,7 @@ output$matchupPreview <- gt::render_gt({
     dplyr::group_by(matchup, elo_sum) %>%
     gt::gt() %>%
     gt::tab_header(
-      title = paste("RFL Matchups Woche", current_week_thu)
+      title = paste("RFL Matchups Woche", input$selectWeek)
     ) %>%
     ranking_table_base() %>%
     ranking_table_standing() %>%

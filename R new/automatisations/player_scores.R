@@ -46,6 +46,11 @@ create_ranks <- function(df, group, colname) {
 }
 
 rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.feather") %>%
+  dplyr::filter(
+    season == 2016 & week <= 13 |
+    season > 2016 & week <= 12 |
+    season > 2021 & week <= 13
+  ) %>%
   dplyr::mutate(
     pos = dplyr::case_when(
       pos %in% c("DT", "DE") ~ "DL",
@@ -57,14 +62,9 @@ rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.fea
 
 feather::write_feather(rfl_fantasy_finishes_weekly, "data/rfl_fantasy_finishes_weekly.feather")
 
-rfl_fantasy_finishes_season <- feather::read_feather("data/rfl_player_scores.feather") %>%
-  dplyr::mutate(
-    pos = dplyr::case_when(
-      pos %in% c("DT", "DE") ~ "DL",
-      pos %in% c("CB", "S") ~ "DB",
-      TRUE ~ pos
-    )
-  ) %>%
+rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
+  dplyr::select(season:points) %>%
+  #filter(player_id == "14842") %>%
   dplyr::group_by(season, player_id) %>%
   dplyr::summarise(
     player_id = dplyr::first(player_id),

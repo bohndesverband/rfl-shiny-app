@@ -46,4 +46,6 @@ rfl_transactions_data <- purrr::map_df(2017:2025, function(x) {
   )
 })
 
+problems(rfl_transactions_data)
+
 feather::write_feather(rfl_transactions_data, "data/rfl_transactions_data.feather")

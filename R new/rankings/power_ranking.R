@@ -9,8 +9,8 @@ power_ranking_plot <- shiny::reactive({
     ggplot2::geom_text(data = subset(rfl_weekly_standing, week == 1), ggplot2::aes(label = franchise_name), x = 0.9, hjust = 1, vjust = 0.35, color = color_text) +
     ggplot2::geom_text(data = subset(rfl_weekly_standing, week == max(week)), ggplot2::aes(label = franchise_name, x = max(week) + 0.1), hjust = 0, vjust = 0.35, color = color_text) +
 
-    ggbump::geom_bump(data = subset(rfl_weekly_standing, division %in% c(input$selectRflDivisions) | franchise_id %in% c(input$selectRflTeams) | franchise_id == input$selectRflTeam), linewidth = 1.8) +
-    ggplot2::geom_point(data = subset(rfl_weekly_standing, division %in% c(input$selectRflDivisions) | franchise_id %in% c(input$selectRflTeams) | franchise_id == input$selectRflTeam), size = 5) +
+    ggbump::geom_bump(data = subset(rfl_weekly_standing, division %in% input$selectRflDivisions | franchise_id %in% input$selectRflTeams), linewidth = 1.8) +
+    ggplot2::geom_point(data = subset(rfl_weekly_standing, division %in% input$selectRflDivisions | franchise_id %in% input$selectRflTeams), size = 5) +
 
     ggplot2::scale_x_continuous(limits = c(-0.4, max(rfl_weekly_standing$week) + 1.3), labels = c(1:max(rfl_weekly_standing$week)), breaks = c(1:max(rfl_weekly_standing$week))) +
     ggplot2::scale_y_reverse(limits = c(36, 1), labels = c(36:1), breaks = c(36:1), sec.axis = ggplot2::sec_axis(transform = ~., name="Power Rank", labels = c(36:1), breaks = c(36:1))) +
