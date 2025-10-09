@@ -18,6 +18,8 @@ rfl_starter_data <- feather::read_feather("data/rfl_starter_data.feather")
 
 source("R new/base_data/transactions.R", local = TRUE)
 
-rfl_war_data <- feather::read_feather("data/rfl_war_data.feather")
+source("R new/base_data/war.R", local = TRUE)
 
 source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
+
+rfl_postseason_data <- feather::read_feather("data/rfl_postseason_data.feather")

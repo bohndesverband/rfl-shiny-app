@@ -1,26 +1,10 @@
 source("R new/roster/depth_chart_data.R", local = TRUE)
 
-roster_war <- rfl_roster_data %>%
-  dplyr::filter(week == max(week)) %>%
-  dplyr::left_join(
-    rfl_war_data %>%
-      dplyr::filter(season == max(season)),
-    by = c("player_id", "season")
-  ) %>%
-  dplyr::left_join(
-    rfl_starter_data %>%
-      dplyr::filter(starter_status == "starter" & season == max(season)) %>%
-      dplyr::mutate(player_id = as.character(player_id)) %>%
-      dplyr::group_by(franchise_id, player_id) %>%
-      dplyr::summarise(starts = dplyr::n(), .groups = "drop"),
-    by = c("player_id", "franchise_id")
-  )
-
 roster_war_filtered <- shiny::reactive({
   roster_war_filtered <- roster_war %>%
     dplyr::filter(
       starts >= input$selectRflGames[1]
-      #starts >= 2
+    #  starts >= 2
     ) %>%
     dplyr::group_by(franchise_id, pos) %>%
     dplyr::summarise(
@@ -35,12 +19,13 @@ roster_war_filtered <- shiny::reactive({
         dplyr::select(franchise_id, franchise_name),
       by = "franchise_id"
     ) %>%
-    dplyr::select(franchise_name, total, "QB", "RB", "WR", "TE", "DL", "LB", "DB", "PK") %>%
+    dplyr::select(franchise_id, franchise_name, total, "QB", "RB", "WR", "TE", "DL", "LB", "DB", "PK") %>%
     dplyr::arrange(dplyr::desc(total))
 })
 
 output$roster_war <- gt::render_gt({
   roster_war_filtered() %>%
+    dplyr::select(-franchise_id) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Team WAR nach Positionen"),
@@ -63,11 +48,6 @@ output$roster_war <- gt::render_gt({
       columns = c(franchise_name)
     ) %>%
 
-    gt::cols_label(
-      franchise_name = "Team",
-      total = "WAR"
-    ) %>%
-
     gtDefaults() %>%
     gt::tab_options(
       ihtml.active = TRUE,
@@ -75,6 +55,10 @@ output$roster_war <- gt::render_gt({
       ihtml.use_highlight = TRUE,
       ihtml.use_sorting = TRUE,
       ihtml.use_filters = TRUE
+    ) %>%
+    gt::cols_label(
+      franchise_name = "Team",
+      total = "WAR"
     )
 })
 

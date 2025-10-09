@@ -48,6 +48,7 @@ library(emoji)
 library(ggrepel)
 library(plotly)
 library(ggiraph)
+library(ggraph)
 library(ggalt)
 library(shinyWidgets)
 library(waffle)
@@ -98,6 +99,16 @@ shiny::sliderInput(
 )
 
 shiny::sliderInput(
+  "selectWeek",
+  "Woche",
+  min = 1,
+  max = current_week_thu,
+  value = current_week_thu,
+  step = 1,
+  sep = ""
+)
+
+shiny::sliderInput(
   "selectDraftRounds",
   "Draft Runden",
   min = 1,
@@ -119,24 +130,13 @@ shinyWidgets::pickerInput(
   multiple = TRUE
 )
 
-shiny::selectizeInput(
+shinyWidgets::pickerInput(
   "selectRflTeam",
   "RFL Team",
   choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
   multiple = FALSE,
-  #selected = "0007"
-  options = list(
-    placeholder = "Team wählen",
-    onInitialize = I('function() { this.setValue(""); }')
-  )
-)
-
-shinyWidgets::pickerInput(
-  "selectRflDivisions",
-  "RFL Divisions",
-  choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
-  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
-  multiple = TRUE,
+  selected = NULL,  
+  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "RFL Team wählen"),
 )
 
 shiny::selectizeInput(
@@ -150,33 +150,41 @@ shiny::selectizeInput(
   multiple = FALSE,
 )
 
-# TODO: genutzt in magic number - evtl löschen, dafür selectRflTeams dynamisch setzen
 shinyWidgets::pickerInput(
-  "selectRflConferenceTeams",
-  "RFL Teams",
-  choices = NULL,
-  #selected = franchises$franchise_id,
-  #selected = "0007",
-  options = list("actions-box" = TRUE, "none-selected-text" = "Team wählen"),
-  multiple = TRUE
+  "selectRflDivisions",
+  "RFL Divisions",
+  choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
+  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
+  multiple = TRUE,
 )
 
-mfl_teams_preselection_conf <- shiny::reactive({
-  rfl_franchise_data %>% 
-    dplyr::filter(conference_name == input$selectRflConference)
-})
+# TODO: genutzt in magic number - evtl löschen, dafür selectRflTeams dynamisch setzen
+#shinyWidgets::pickerInput(
+#  "selectRflConferenceTeams",
+#  "RFL Teams",
+#  choices = NULL,
+#  #selected = franchises$franchise_id,
+#  #selected = "0007",
+#  options = list("actions-box" = TRUE, "none-selected-text" = "Team wählen"),
+#  multiple = TRUE
+#)
 
-shiny::observe({
-  req(mfl_players_preselection())
-  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
+#mfl_teams_preselection_conf <- shiny::reactive({
+#  rfl_franchise_data %>% 
+#    dplyr::filter(conference_name == input$selectRflConference)
+#})
 
-  shinyWidgets::updatePickerInput(
-    session,
-    "selectRflConferenceTeams",
-    choices = mfl_teams_preselection_conf()$franchise_name[order(mfl_teams_preselection_conf()$franchise_name)],
-    selected = mfl_teams_preselection_conf()$franchise_name
-  )
-})
+#shiny::observe({
+#  req(mfl_players_preselection())
+#  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
+
+#  shinyWidgets::updatePickerInput(
+#    session,
+#    "selectRflConferenceTeams",
+#    choices = mfl_teams_preselection_conf()$franchise_name[order(mfl_teams_preselection_conf()$franchise_name)],
+#    selected = mfl_teams_preselection_conf()$franchise_name
+#  )
+#})
 
 shinyWidgets::pickerInput(
   "selectPosition",
@@ -210,21 +218,19 @@ shiny::sliderInput(
   "selectRflGames",
   "Anzahl Spiele",
   min = 0,
-  max = 13,
-  value = ifelse(current_week >= 13, 8, floor(current_week * 0.75)),
+  max = current_week - 1,
+  value = ifelse(current_week >= 13, 8, floor(current_week * 0.5)),
   step = 1,
   ticks = FALSE,
   sep = ""
 )
 
-shiny::selectizeInput(
+shinyWidgets::pickerInput(
   "selectRflMatchup",
   "RFL Team",
   choices = NULL,
-  multiple = FALSE,
-  options = list(
-    placeholder = "Matchup wählen"
-  )
+  multiple = TRUE,
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options-text" = "Es können nicht mehr Matches gewählt werden", "none-selected-text" = "Matchup wählen"),
 )
 
 shinyWidgets::prettySwitch("showOnlyRookies", "Nur Rookies anzeigen", value = TRUE, fill = TRUE, status = "primary")
@@ -353,6 +359,7 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
+      #shiny::tableOutput("test"),
       shinycssloaders::withSpinner(shiny::plotOutput("weeklyReportTeams")),
       width = 12
     ),
@@ -360,8 +367,14 @@ shiny::fluidPage(
   ),
   shiny::fluidRow(
     shiny::column(
-      shiny::tags$h5("Spieler Rückblick"),
-      shinycssloaders::withSpinner(DT::DTOutput("weeklyReportPlayers")),
+      shinycssloaders::withSpinner(shiny::plotOutput("weeklyReportPlayers")),
+      width = 12
+    ),
+    style = "height: 1200px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(DT::DTOutput("weeklyReportPlayersTable")),
       width = 12
     )
   )
@@ -475,7 +488,27 @@ shiny::fluidPage(
       width = 3
     ),
     shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("fptsByAge")),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("elo_vs_war")),
+          width = 12
+        ),
+        style = "height: 600px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("fptsByAge")),
+          width = 12
+        ),
+        style = "height: 1200px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          tags$h4("Roster nach Alter"),
+          shinycssloaders::withSpinner(gt::gt_output("rosterByAge")),
+          width = 12
+        )
+      ),
       width = 9
     )
   )
@@ -626,18 +659,18 @@ shiny::fluidPage(
 ```
 
 
-# Big Play Punkte {data-navmenu="Spieler"}
+# FPts Zusammensetzung {data-navmenu="Spieler"}
 
 ## 
 
-```{r player-big-play-points, echo=FALSE, message=FALSE, warning=FALSE}
-loaded_data_player_big_play_points <- shiny::reactiveVal(FALSE)
+```{r player-fpts-zusammensetzung, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_fpts_zusammensetzung <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
-  if (active_tab() == "#section-big-play-punkte" & !loaded_data_player_big_play_points()) {
-    source("R new/players/big_play_fpts.R", local = TRUE)
+  if (active_tab() == "#section-fpts-zusammensetzung" & !loaded_data_fpts_zusammensetzung()) {
+    source("R new/players/ftps_zusammensetzung.R", local = TRUE)
     
-    loaded_data_player_big_play_points(TRUE)
+    loaded_data_fpts_zusammensetzung(TRUE)
   }
 })
 
@@ -680,7 +713,13 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes")),
+      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes_weekly")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes_yearly")),
       width = 12
     )
   )
@@ -841,10 +880,16 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("matchupPreview")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
       shinycssloaders::withSpinner(shiny::plotOutput("matchupOverview")),
       width = 12
     ),
-    style = "height: 900px"
+    style = "height: 2600px"
   )
 )
 ```

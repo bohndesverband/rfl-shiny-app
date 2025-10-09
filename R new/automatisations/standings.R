@@ -6,7 +6,15 @@ library(feather)
 new_season_sept <- nflreadr::get_current_season()
 
 # load base data ----
-rfl_standing_data <- vroom::vroom(paste0("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_", new_season_sept, ".csv"), col_types = "icccdddiiiddiiiiiiiiicii")
+rfl_standing_data <- purrr::map_df(2020:season_before_wk_2, function(x) {
+  vroom::vroom(
+    glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_{x}.csv"),
+    col_types = "icccdddiiiddiiiiiiiiicii"
+  ) %>%
+    dplyr::mutate(season = x)
+})
+
+# TODO: before 2020
 
 ## write to feather ----
 feather::write_feather(rfl_standing_data, "data/rfl_standing_data.feather")

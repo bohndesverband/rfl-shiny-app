@@ -1,3 +1,4 @@
+source("R new/roster/war.R", local = TRUE)
 source("R new/roster/depth_chart_data.R", local = TRUE)
 
 roster_depth_weekly <- shiny::reactive({
@@ -134,7 +135,7 @@ output$roster_depth_season <- plotly::renderPlotly({
     ggplot2::scale_color_discrete(type = colors) +
 
     ggplot2::labs(
-      title = paste("RFL Rosterstärke Woche", max(rfl_standing_data$week), season_before_wk_2),
+      title = paste("RFL Rosterstärke Woche", current_week_thu, season_before_wk_2),
       x = "PF - PP pro Spiel",
       y = "PP pro Spiel",
       color = ""
@@ -158,12 +159,15 @@ output$roster_depth_season <- plotly::renderPlotly({
 observeEvent(event_data("plotly_click", source = "roster_depth_season"), {
   click_data <- event_data("plotly_click", source = "roster_depth_season")
 
-  print(click_data)
-
   if (!is.null(click_data)) {
     selected_team <- roster_depth_season()$franchise_id[click_data$pointNumber + 1]
 
-    updateSelectInput(session, "selectRflTeams", selected = unique(c(input$selectRflTeams, selected_team)))
+    print(selected_team)
+
+    shinyWidgets::updatePickerInput(
+      session, "selectRflTeams", selected = unique(c(input$selectRflTeams, selected_team)),
+      options = list("max-options" = 6)
+    )
   }
 })
 
@@ -189,47 +193,9 @@ output$roster_depth_weekly <- shiny::renderPlot({
 
 }, height = 600)
 
-# depth chart ----
-#rfl_depth_charts
-
-#rfl_roster_data %>%
-#  filter(franchise_id == "0007") %>%
-#  dplyr::filter(week == max(week)) %>%
-#  dplyr::left_join(
-#    rfl_fantasy_finishes %>%
-#      dplyr::select(season, player_id, player_name, pos, pos_rank),
-#    by = c("player_id", "season")
-#  ) %>%
-#  dplyr::group_by(pos) %>%
-#  dplyr::arrange(pos_rank) %>%
-#  dplyr::mutate(
-#    pos_rank_new = dplyr::case_when(
-#      pos_rank <= 12 ~ "1",
-#      pos_rank <= 24 ~ "2",
-#      pos %in% c("RB", "WR", "DL", "LB", "DB") & pos_rank <= 24 ~ "3",
-#      pos %in% c("RB", "WR", "LB", "DB") & pos_rank <= 36 ~ "4",
-#      pos == "LB" & pos_rank <= 48 ~ "5",
-#      pos == "PK" & pos_rank > 12 ~ "Cut",
-#      pos %in% c("QB", "TE") & pos_rank > 24 ~ "Cut",
-#      roster_status == "INJURED_RESERVE" ~ "IR",
-#      TRUE ~ "Cut"
-#    )
-#  ) %>%
-#  dplyr::filter(!is.na(player_name)) %>%
-#  dplyr::select(franchise_id, player_name, pos, pos_rank_new) %>%
-#  tidyr::pivot_wider(
-#    names_from = pos,
-#    values_from = player_name,
-#    values_fn = list
-#  ) %>%
-#  dplyr::group_by(franchise_id) %>%
-#  tidyr::separate_rows(LB:TE, sep = ",\\s*") %>%
-#  gt::gt()
-
-# TODO : depth chart
-
 # punkte nach alter ----
 fpts_by_age <- rfl_roster_data %>%
+  dplyr::filter(week == max(week)) %>%
   dplyr::left_join(
     rfl_player_scores %>%
       dplyr::filter(season == new_season_sept) %>%
@@ -295,6 +261,62 @@ output$fptsByAge <- shiny::renderPlot({
       color = ""
     )
 }, height = 1200)
+
+output$rosterByAge <- gt::render_gt({
+  roster_by_age <- fpts_by_age %>%
+    dplyr::group_by(franchise_id, franchise_name, pos) %>%
+    dplyr::summarise(
+      age_avg = round(mean(age, na.rm = TRUE), 1),
+      .groups = "drop"
+    ) %>%
+    dplyr::group_by(franchise_id, franchise_name) %>%
+    dplyr::mutate(avg = round(mean(age_avg, na.rm = TRUE), 1)) %>%
+    dplyr::ungroup() %>%
+    tidyr::spread(pos, age_avg) %>%
+    dplyr::arrange(avg)
+
+  roster_by_age %>%
+    dplyr::filter(
+      if(isTruthy(input$selectRflTeams))
+        franchise_id %in% input$selectRflTeams
+      else
+        TRUE
+    ) %>%
+    dplyr::select(-franchise_id) %>%
+    gt::gt() %>%
+    gt::data_color(
+      avg,
+      palette = c(color_blue, color_green, color_yellow, color_red),
+      domain = c(min(roster_by_age$avg, na.rm = TRUE), max(roster_by_age$avg, na.rm = TRUE))
+    ) %>%
+    purrr::reduce(
+      c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB"),
+      function(gt_tbl, pos) {
+      gt::data_color(
+        gt_tbl,
+        columns = pos,
+        palette = c(color_blue, color_green, color_yellow, color_red),
+        domain = c(min(roster_by_age[[pos]], na.rm = TRUE), max(roster_by_age[[pos]], na.rm = TRUE))
+      )
+      },
+      .init = .
+    ) %>%
+    gt::tab_options(
+      ihtml.active = TRUE,
+      ihtml.use_pagination = FALSE,
+      ihtml.use_highlight = TRUE
+    ) %>%
+    gt::cols_width(
+      franchise_name ~ px(250),
+      c(avg:DB) ~ px(70),
+    ) %>%
+    gt::cols_label(
+      franchise_name = "Team",
+      avg = "Avg"
+    ) %>%
+    gtDefaults()
+})
+
 
 # depth ----
 war_max <- max(rfl_depth_chart_data$war, na.rm = TRUE)
@@ -366,3 +388,54 @@ output$depthChart <- gt::render_gt({
       columns = c(player_name)
     )
 })
+
+elo_vs_war <- shiny::reactive({
+  rfl_team_elo %>%
+    dplyr::filter(season == max(season)) %>%
+    dplyr::filter(week == max(week)) %>%
+    dplyr::select(franchise_id, franchise_elo_postgame) %>%
+    dplyr::left_join(
+      roster_war_filtered() %>%
+        dplyr::select(franchise_id, franchise_name, total),
+      by = "franchise_id"
+    )
+})
+
+output$elo_vs_war <- shiny::renderPlot({
+  ggplot2::ggplot(elo_vs_war(), ggplot2::aes(x = franchise_elo_postgame, y = total)) +
+    plot_quadrants(
+      min(elo_vs_war()$franchise_elo_postgame),
+      mean(elo_vs_war()$franchise_elo_postgame),
+      max(elo_vs_war()$franchise_elo_postgame),
+      min(elo_vs_war()$total),
+      mean(elo_vs_war()$total),
+      max(elo_vs_war()$total),
+      "Auf dem Weg nach oben",
+      "Sieht langfristig gut aus",
+      "Auf dem Weg nach unten",
+      "Rebuild"
+    ) +
+
+    # trendline
+    ggplot2::geom_smooth(method = "lm", formula = y ~ x, color = color_grey_dark, linetype = "dashed", se = FALSE, linewidth = 0.5) +
+
+    # alle punkte
+    ggplot2::geom_point(size = 8, alpha = 0.25, color = color_grey_mid) +
+
+    # ausgewählte punkte
+    ggplot2::geom_point(data = subset(elo_vs_war(), franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 8) +
+    ggplot2::scale_color_discrete(type = colors) +
+
+    ggplot2::scale_x_continuous(limits = c(min(elo_vs_war()$franchise_elo_postgame) - 25, max(elo_vs_war()$franchise_elo_postgame) + 25), expand = c(0, 0)) +
+    ggplot2::scale_y_continuous(limits = c(min(elo_vs_war()$total) - 1, max(elo_vs_war()$total) + 1), expand = c(0, 0)) +
+
+    plot_defaults +
+
+    ggplot2::labs(
+      title = c("RFL ELO vs WAR Woche", current_week_thu),
+      subtitle = "Die Grafik zeigt den aktuellen ELO-Wert (langfristiger Trend) eines Teams im Vergleich zu dessen Starter-WAR (kurzfristiger Trend).",
+      x = "ELO",
+      y = "WAR",
+      color = ""
+    )
+}, height = 600)

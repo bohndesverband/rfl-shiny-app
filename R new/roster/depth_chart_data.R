@@ -1,4 +1,5 @@
 rfl_transactions_history <- rfl_transactions_data %>%
+  dplyr::mutate(player_id = as.character(player_id)) %>%
   dplyr::bind_rows(
     rfl_trades_data %>%
       dplyr::mutate(

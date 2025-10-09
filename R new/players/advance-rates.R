@@ -1,5 +1,5 @@
 advance_rates <- shiny::reactive({
-  advance_rates <- rfl_fantasy_finishes %>%
+  advance_rates <- rfl_fantasy_finishes_season %>%
     dplyr::select(-dplyr::starts_with("top")) %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::left_join(

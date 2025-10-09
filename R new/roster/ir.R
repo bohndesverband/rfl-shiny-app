@@ -30,19 +30,23 @@ ir_players <- rfl_roster_data %>%
 
 # create data for weekly IR analysis ----
 team_ir_weekly <- rfl_roster_data %>%
+  #filter(franchise_id == "0007" & week == 5) %>%
   dplyr::left_join(
     ir_players,
     by = "player_id"
   ) %>%
+  #dplyr::filter(!is.na(gsis_id)) %>%
   dplyr::left_join(
     rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%
+
   dplyr::left_join(
     nflreadr::load_rosters_weekly(season_before_wk_2) %>%
       dplyr::filter(status == "RES") %>%
-      dplyr::select(gsis_id, week, status),
+      dplyr::select(gsis_id, week, status) %>%
+      dplyr::filter(!is.na(gsis_id)),
     by = c("gsis_id", "week")
   ) %>%
   dplyr::mutate(
@@ -116,12 +120,12 @@ output$ir_weekly <- shiny::renderPlot({
 team_ir_players <- team_ir_weekly %>%
   dplyr::filter(status == "RES") %>%
   dplyr::select(franchise_id, franchise_name, player_id, player_name, games_on_ir, ppg) %>%
-  dplyr::distinct()
+  dplyr::distinct() %>%
+  dplyr::filter(!is.na(player_name))
 
 all_ir_players <- team_ir_players %>%
   dplyr::select(-franchise_id, -franchise_name) %>%
-  dplyr::distinct() %>%
-  dplyr::filter(!is.na(player_name))
+  dplyr::distinct()
 
 ## plot data ----
 output$ir_player <- shiny::renderPlot({

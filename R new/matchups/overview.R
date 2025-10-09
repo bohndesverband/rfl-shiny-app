@@ -1,13 +1,30 @@
 source("R new/matchups/matchup-data.R", local = TRUE)
+source("R new/rankings/ranking_tables.R", local = TRUE)
+
+shiny::observe({
+  req(rfl_matchups())
+  req(nrow(rfl_matchups()) > 0) # Prüfen, ob Daten vorhanden sind
+
+  shinyWidgets::updatePickerInput(
+    session,
+    "selectRflMatchup",
+    choices = rfl_matchups()$matchup,
+    selected = NULL,
+    options = list("max-options" = 36)
+  )
+})
 
 rfl_matchup_overview <- shiny::reactive({
-  rfl_matchup_overview <- rfl_matchups %>%
-    dplyr::select(-matchup) %>%
+  req(rfl_matchups())
+  req(matchup_projection_table_data())
+
+  rfl_matchup_overview <- rfl_matchups() %>%
+    #dplyr::select(-matchup) %>%
     dplyr::rename(franchise_id = home, franchise_name = home_name, opponent_id = away, opponent_name = away_name) %>%
 
     # dupliziere jede zeile und tausche team und opponent
     dplyr::bind_rows(
-      rfl_matchups %>%
+      rfl_matchups() %>%
         dplyr::select(-matchup) %>%
         dplyr::rename(franchise_id = away, franchise_name = away_name, opponent_id = home, opponent_name = home_name)
     ) %>%
@@ -74,7 +91,10 @@ rfl_matchup_overview <- shiny::reactive({
     ) %>%
     dplyr::left_join(
       rfl_standing_data %>%
-        dplyr::filter(week == max(week)) %>%
+        dplyr::filter(season == max(season)) %>%
+        dplyr::filter(
+          week == ifelse(input$selectWeek > max(week), max(week), input$selectWeek)
+        ) %>%
         dplyr::mutate(loss_total = (week * 2) - wins_total) %>%
         dplyr::select(franchise_id, div_rank, wins_total, loss_total),
       by = "franchise_id"
@@ -90,6 +110,8 @@ rfl_matchup_overview <- shiny::reactive({
 })
 
 output$matchupOverview <- shiny::renderPlot({
+  req(rfl_matchup_overview())
+
   ggplot2::ggplot(rfl_matchup_overview(), ggplot2::aes(x = 1, y = matchup_rank)) +
     ggplot2::facet_wrap(~ division_name, ncol = 2) +
     ggplot2::geom_tile(fill = color_grey_light, color = color_bg, linewidth = 0.5, width = 1) +
@@ -174,3 +196,50 @@ output$matchupOverview <- shiny::renderPlot({
       axis.text = ggplot2::element_blank()
     )
 }, height = 2600)
+
+# preview ----
+output$matchupPreview <- gt::render_gt({
+  dplyr::bind_rows(
+    rfl_matchups(),
+    rfl_matchups() %>%
+      dplyr::rename(
+        home = away,
+        home_name = away_name,
+        away = home,
+        away_name = home_name
+      )
+  ) %>%
+    dplyr::filter(
+      if (isTruthy(input$selectRflMatchup))
+        matchup %in% input$selectRflMatchup
+      else
+        TRUE
+    ) %>%
+    dplyr::select(-dplyr::starts_with("away")) %>%
+    dplyr::rename(franchise_id = home, franchise_name = home_name) %>%
+    dplyr::left_join(
+      rfl_current_standing %>%
+        dplyr::select(-week, -franchise_name),
+      by = "franchise_id"
+    ) %>%
+    dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
+    dplyr::select(-conference_name) %>%
+    dplyr::group_by(matchup) %>%
+    dplyr::mutate(
+      elo_sum = paste("Total ELO:", sum(franchise_elo_postgame))
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(dplyr::desc(elo_sum)) %>%
+    dplyr::group_by(matchup, elo_sum) %>%
+    gt::gt() %>%
+    gt::tab_header(
+      title = paste("RFL Matchups Woche", current_week_thu)
+    ) %>%
+    ranking_table_base() %>%
+    ranking_table_standing() %>%
+    ranking_table_elo() %>%
+    ranking_table_power_rank() %>%
+    ranking_table_bowl() %>%
+    gtDefaults()
+})
+

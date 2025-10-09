@@ -18,14 +18,12 @@
 /* Seiten ohne Sidebar */
 .sidebar:has(~ #dashboard-container #section-alle-matchups.active), /* Matchup History */
 .sidebar:has(~ #dashboard-container #section-upsets.active), /* Matchup Upsets */
-.sidebar:has(~ #dashboard-container #section-übersicht.active), /* Matchup Overview */
 .sidebar:has(~ #dashboard-container #section-wochenbericht.active), /* Wochenbericht */ {
   display: none;
 }
 
 #dashboard-container:has(#section-alle-matchups.active), /* Matchup History */
 #dashboard-container:has(#section-upsets.active), /* Matchup Upsets */
-#dashboard-container:has(#section-übersicht.active), /* Matchup Overview */
 #dashboard-container:has(#section-wochenbericht.active) /* Wochenbericht */ {
   padding-left: 0 !important;
 }
@@ -46,7 +44,7 @@
 }
 
 /* Magic Number */
-.sidebar:has(~ #dashboard-container #section-magic-number.active) .form-group:not(:has(#selectRflConference-label)):not(:has(#selectRflConferenceTeams-label)) {
+.sidebar:has(~ #dashboard-container #section-magic-number.active) .form-group:not(:has(#selectRflConference-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
   display: none;
 }
 
@@ -61,10 +59,12 @@
 
 /* Roster Depth */
 /* IR Analyse */
-.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)),
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflGames-label)),
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
   display: none;
 }
+
+#section-roster-tiefe [class*="col-"] { background: white; }
 
 /* Team Punktehistorie */
 .sidebar:has(~ #dashboard-container #section-punktehistorie.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
@@ -81,7 +81,7 @@
 }
 
 /* Player ELO */
-.sidebar:has(~ #dashboard-container #section-elo.active) .form-group:not(:has(#selectPosition-label)):not(:has(#selectPlayers-label)):not(:has(#selectRflTeam-label)) {
+.sidebar:has(~ #dashboard-container #section-elo.active) .form-group:not(:has(#selectPosition-label)):not(:has(#selectPlayers-label)):not(:has(#selectRflTeams-label)) {
   display: none;
 }
 
@@ -89,8 +89,8 @@
   display: block;
 }
 
-/* Player Big Play Points */
-.sidebar:has(~ #dashboard-container #section-big-play-punkte.active) .form-group:not(:has(#selectRflTeam-label)):not(:has(#selectPositions-label)):not(:has(#selectPlayers-label)) {
+/* Player FPts zusammensetzung */
+.sidebar:has(~ #dashboard-container #section-fpts-zusammensetzung.active) .form-group:not(:has(#selectRflTeam-label)):not(:has(#selectPositions-label)):not(:has(#selectPlayers-label)) {
   display: none;
 }
 
@@ -111,8 +111,15 @@
   display: none;
 }
 
+/* Matchup Übersicht */
+.sidebar:has(~ #dashboard-container #section-übersicht.active) .form-group:not(:has(#selectWeek-label)):not(:has(#selectRflMatchup-label)) {
+  display: none;
+}
+
+#section-übersicht [class*="col-"] { background: white; }
+
 /* Matchup Projections */
-.sidebar:has(~ #dashboard-container #section-projections.active) .form-group:not(:has(#selectRflMatchup-label)) {
+.sidebar:has(~ #dashboard-container #section-projections.active) .form-group:not(:has(#selectRflMatchup-label)):not(:has(#selectWeek-label)) {
   display: none;
 }
 

@@ -37,7 +37,7 @@ ranking_table_base <- function(df) {
 
     gtExtras::gt_highlight_rows(
       rows = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions),
-      fill = color_grey_dark
+      fill = color_grey_light
     )
 }
 
@@ -69,7 +69,7 @@ ranking_table_standing <- function(df) {
       pp_total,
       target = pf_total,
       width = 30,
-      palette = c(color_grey_light, color_green)
+      palette = c(color_grey_mid, color_grey_dark)
     ) %>%
 
     gt::cols_label(

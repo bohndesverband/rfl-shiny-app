@@ -13,8 +13,7 @@ running_player_elo <- player_elo %>%
       dplyr::select(player_id, season) %>%
       dplyr::rename(last_season = season),
     by = c("mfl_id" = "player_id")
-  ) %>%
-  dplyr::filter(last_season >= new_season_sept - 2)
+  )
 
 ## output ----
 output$running_player_elo <- renderPlot({
@@ -47,7 +46,9 @@ player_elo_standing <- shiny::reactive({
     ) %>%
     dplyr::filter(game == max(game)) %>%
     dplyr::ungroup() %>%
-    dplyr::arrange(dplyr::desc(player_elo_post))
+    dplyr::arrange(dplyr::desc(player_elo_post)) %>%
+    dplyr::filter(last_season >= new_season_sept - 2) %>%
+    dplyr::select(-last_season)
 })
 
 ## output ----
@@ -109,17 +110,29 @@ output$player_elo_ranking_table <- gt::render_gt({
       page_size_default = 24,
       use_compact_mode = TRUE,
       selection_mode = "multiple"
+    ) %>%
+    gt::cols_width(
+      display_name ~ px(150),
+      c(position, team) ~ px(70),
+      c(elo_shift:game) ~ px(100)
     )
 })
 
 observeEvent(input$player_elo_ranking_table, {
+  shinyWidgets::updatePickerInput(
+    session, "selectRflTeams",
+    choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
+    selected = NULL
+  )
+
   selected_players <- player_elo_standing()$mfl_id[input$player_elo_ranking_table]
-  updateSelectizeInput(session, "selectPlayers", selected = selected_players)
+  shiny::updateSelectizeInput(session, "selectPlayers", selected = selected_players)
 })
 
 # elo peaks ----
 player_elo_peaks <- running_player_elo %>%
   dplyr::filter(active == 1) %>%
+  dplyr::filter(last_season >= new_season_sept - 2) %>%
   dplyr::group_by(mfl_id) %>%
   dplyr::filter(player_elo_post == max(player_elo_post)) %>%
   dplyr::filter(game == max(game)) %>% # falls es mehrere wochen mit selber elo gibt
@@ -150,5 +163,10 @@ output$player_elo_peaks_table <- gt::render_gt({
       game = "Spiele",
       player_elo_post = "ELO Peak"
     ) %>%
-    gt_player()
+    gt_player() %>%
+    gt::cols_width(
+      display_name ~ px(150),
+      c(position, team) ~ px(70),
+      c(week, game) ~ px(100)
+    )
 })

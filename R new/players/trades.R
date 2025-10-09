@@ -226,3 +226,28 @@ output$trades_by_franchise <- DT::renderDataTable({
   ) %>%
     formattable::as.datatable(escape = FALSE, rownames = FALSE, options = list(dom = "Bfrtip", pageLength = 12, order = list(1, 'asc')))
 })
+
+
+#d1 <- data.frame(from = "origin", to = unique(rfl_franchise_data$division))
+#d2 <- data.frame(from = rfl_franchise_data$division, to = rfl_franchise_data$franchise_id)
+#hierarchy <- rbind(d1, d2)
+
+# create a vertices data.frame. One line per object of our hierarchy, giving features of nodes.
+#vertices <- data.frame(name = unique(c(as.character(hierarchy$from), as.character(hierarchy$to))) )
+#mygraph <- igraph::graph_from_data_frame( hierarchy, vertices=vertices )
+
+#all_trades <- rfl_trades_data %>%
+#  dplyr::group_by(franchise_id, trade_partner) %>%
+#  dplyr::summarise(count = n(), .groups = "drop") %>%
+#  dplyr::rename(from = franchise_id, to = trade_partner)
+
+#from <- match(all_trades$from, vertices$name)
+#to <- match(all_trades$to, vertices$name)
+#count <- all_trades$count
+
+#ggraph::ggraph(mygraph, layout = 'dendrogram', circular = TRUE) +
+#  geom_conn_bundle(data = get_con(from = from, to = to, edge_width = count), alpha=0.2, colour="skyblue", tension = 0.9) +
+#  geom_node_point(aes(filter = leaf, x = x*1.05, y=y*1.05)) +
+  # add a label to each node point
+  #geom_node_text(aes(filter = leaf, x = x*1.1, y=y*1.1, label=name), size=2, alpha=0.6) +
+#  theme_void()

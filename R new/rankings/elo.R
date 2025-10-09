@@ -53,8 +53,15 @@ output$running_elo <- shiny::renderPlot({
     )
 }, height = 800)
 
+top_pctl <- elo_change %>%
+  dplyr::filter(elo_shift > 0) %>%
+  dplyr::summarise(top_pctl = quantile(elo_end, 0.8)) %>%
+  dplyr::pull(top_pctl)
+
 output$elo_change <- shiny::renderPlot({
   ggplot2::ggplot(elo_change, ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +
+    ggplot2::geom_vline(xintercept = top_pctl, color = color_grey_mid) +
+    ggplot2::geom_text(label = "Contender", x = top_pctl + 5, y = 1, color = color_grey_mid, hjust = 0) +
     ggforce::geom_link(aes(x = elo_start, xend = elo_end, yend = franchise_name, linewidth = ggplot2::after_stat(index))) +
     ggplot2::scale_size_continuous(guide = "none") +
     ggplot2::geom_point(ggplot2::aes(x = elo_end), size = 4.7) +
@@ -62,6 +69,7 @@ output$elo_change <- shiny::renderPlot({
     ggplot2::geom_text(ggplot2::aes(label = ifelse(elo_shift > 0, paste(elo_shift_label, franchise_name), paste(franchise_name, elo_shift_label)), x = ifelse(elo_shift > 0, elo_end + 10, elo_end - 10), hjust = ifelse(elo_shift > 0, 0, 1))) +
 
     ggplot2::scale_color_discrete(type = c(color_grey_mid, color_red), guide = "none") +
+    ggplot2::scale_linewidth_continuous(guide = "none") +
 
     ggplot2::scale_x_continuous(limits = c(min(elo_change$elo_end) - 100, max(elo_change$elo_end) + 100)) +
 

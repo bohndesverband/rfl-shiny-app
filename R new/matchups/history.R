@@ -3,10 +3,11 @@ matchup_table <- function(df) {
     gt::gt() %>%
     gt::tab_spanner(
       "Team",
-      c(dplyr::starts_with("franchise"), elo_shift),
+      c(dplyr::starts_with("franchise"), eff, elo_shift),
     ) %>%
 
     gt::cols_move(elo_shift, franchise_elo_pregame) %>%
+    gt::cols_move(eff, franchise_score) %>%
 
     gt::tab_spanner(
       "Gegner",
@@ -32,18 +33,25 @@ matchup_table <- function(df) {
       franchise_name = "Name",
       franchise_elo_pregame = "Pregame ELO",
       franchise_score = "Punkte",
+      eff  = "Eff %",
       elo_shift = "ELO Veränderung",
       elo_diff = "ELO Diff",
       opponent_score = "Punkte",
       opponent_elo_pregame = "Pregame ELO",
       opponent_name = "Name",
     ) %>%
-    gt::cols_hide(c(upset, franchise_id, opponent_id)) %>%
+    gt::cols_hide(c(upset, franchise_id, opponent_id, pp)) %>%
     gtDefaults()
 }
 
 output$rfl_matchup_history_table <- gt::render_gt({
   rfl_matchups_history %>%
+    dplyr::left_join(
+      rfl_standing_data %>%
+        dplyr::select(franchise_id, pp, season, week),
+      by = c("franchise_id", "season", "week")
+    ) %>%
+    dplyr::mutate(eff = round(franchise_score / pp, 3) * 100) %>%
     dplyr::arrange(dplyr::desc(season), dplyr::desc(week)) %>%
     matchup_table()
 })

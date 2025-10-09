@@ -1,7 +1,10 @@
 # manipulate & filter data ----
 # TODO: https://www.rotoballer.com/dynasty-primer-1-how-to-value-dynasty-draft-picks/1343067
 rfl_hit_rates <- shiny::reactive({
-  #rfl_hit_rates <-
+  # verhindere fehler beim ersten laden wenn der input noch auf der aktuellen saison steht, es dafür aber noch keine daten gibt
+  req(input$selectYears[1] != new_season_march)
+
+  rfl_hit_rates <-
 
   rfl_drafts_data %>%
     #filter(mfl_id == "15329") %>%
@@ -42,7 +45,7 @@ rfl_hit_rates <- shiny::reactive({
 })
 
 hit_rates_average <- shiny::reactive({
-  #hit_rates_average <-
+  hit_rates_average <-
 
   rfl_hit_rates() %>%
     dplyr::group_by(round) %>%
@@ -61,7 +64,7 @@ hit_rates_average <- shiny::reactive({
 })
 
 hit_rates_per_team <- shiny::reactive({
-  #hit_rates_per_team <-
+  hit_rates_per_team <-
 
   rfl_hit_rates() %>%
     dplyr::group_by(franchise_id, franchise_name, round) %>%
@@ -89,6 +92,10 @@ hit_rates_per_team <- shiny::reactive({
 })
 
 output$draft_hit_rates_plot <- shiny::renderPlot({
+  shiny::validate(
+    shiny::need(input$selectYears[1] != new_season_march, "Für diesen Zeitraum gibt es noch keine Daten, bitte wähle eine größere Zeitspanne.")
+  )
+
   ggplot2::ggplot(hit_rates_per_team(), ggplot2::aes(x = round, y = pct, group = category, color = franchise_name)) +
     ggplot2::facet_wrap(~ category, ncol = 1) +
 
@@ -160,7 +167,7 @@ output$team_hit_rates_table <- gt::render_gt({
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Draft Hit Rates"),
-      #subtitle = paste0(input$selectYears[1], "-", input$selectYears[2], " Runden ", input$selectDraftRounds[1], "-", input$selectDraftRounds[2])
+      subtitle = paste0(input$selectYears[1], "-", input$selectYears[2], " Runden ", input$selectDraftRounds[1], "-", input$selectDraftRounds[2])
     ) %>%
 
     gt::tab_spanner(
@@ -328,7 +335,8 @@ output$draft_hit_rates_by_round <- shiny::renderPlot({
 source("R new/players/fantasy_finishes_output.R", local = TRUE)
 
 output$hit_rates_fantasy_finishes <- gt::render_gt({
-  rfl_fantasy_finishes %>%
+  rfl_fantasy_finishes_season %>%
+    dplyr::rename_with(~ gsub("_season", "", .x)) %>%
     summarize_fantasy_finishes() %>%
     dplyr::left_join(
       nflreadr::load_ff_playerids() %>%

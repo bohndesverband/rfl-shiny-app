@@ -1,14 +1,10 @@
 gt_fantasy_finishes <- function(df) {
   df %>%
-    dplyr::arrange(dplyr::desc(top5)) %>%
-    dplyr::select(-last_season) %>%
+    dplyr::arrange(dplyr::desc(top5), dplyr::desc(points)) %>%
+    #dplyr::select(-last_season) %>%
     dplyr::rename(display_name = player_name, position = pos) %>%
     gt::gt() %>%
-    gt::tab_header(
-      title = paste("Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
-      subtitle = "Nur RFL Regular Season"
-    ) %>%
-    gt::cols_hide(c(player_id)) %>%
+    gt::cols_hide(c(player_id, last_season)) %>%
     gt::tab_spanner(
       label = "Elite",
       columns = c(top3, top5)
@@ -45,6 +41,8 @@ gt_fantasy_finishes <- function(df) {
       palette = c(color_red, color_yellow, color_green, color_blue)
     ) %>%
     gt::cols_label(
+      seasons = "Saisons",
+      points = "FPts",
       top3 = "Top 3",
       top5 = "Top 5",
       top8 = "Top 8",
@@ -57,19 +55,52 @@ gt_fantasy_finishes <- function(df) {
 
     gtDefaults() %>%
 
-    gt_player()
+    gt_player() %>%
+    gt::cols_width(
+      display_name ~ px(150),
+      c(position, team) ~ px(70),
+      c(seasons, points) ~ px(100)
+    )
 }
 
-rfl_fantasy_finishes_filtered <- shiny::reactive({
-  rfl_fantasy_finishes %>%
+output$fantasy_finishes_weekly <- gt::render_gt({
+  rfl_fantasy_finishes_weekly %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]
+      #season >= 2025 & season <= 2025
     ) %>%
-    summarize_fantasy_finishes()
+    dplyr::select(-dplyr::ends_with("_season")) %>%
+    dplyr::rename_with(~ gsub("_weekly", "", .x)) %>%
+
+    summarize_fantasy_finishes() %>%
+
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        sapply(seq_along(pos), function(i) {
+          any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
+        })
+      else
+        TRUE
+    ) %>%
+    #filter(pos == "QB") %>%
+    gt_fantasy_finishes() %>%
+    gt::tab_header(
+      title = paste("Wöchentliche Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
+      subtitle = "Nur RFL Regular Season"
+    )
 })
 
-output$fantasy_finishes <- gt::render_gt({
-  rfl_fantasy_finishes_filtered() %>%
+output$fantasy_finishes_yearly <- gt::render_gt({
+  rfl_fantasy_finishes_season %>%
+    dplyr::filter(
+      season >= input$selectYears[1] & season <= input$selectYears[2]
+      #season >= 2025 & season <= 2025
+    ) %>%
+    dplyr::select(-dplyr::ends_with("_weekly")) %>%
+    dplyr::rename_with(~ gsub("_season", "", .x)) %>%
+
+    summarize_fantasy_finishes() %>%
+
     #dplyr::filter(
     #  season >= 2021 & season <= 2024
     #) %>%
@@ -79,9 +110,13 @@ output$fantasy_finishes <- gt::render_gt({
         sapply(seq_along(pos), function(i) {
           any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
         })
-    else
-        TRUE
+      else
+      TRUE
     ) %>%
     #filter(pos == "QB") %>%
-    gt_fantasy_finishes()
+    gt_fantasy_finishes() %>%
+    gt::tab_header(
+      title = paste("Fantasy Finishes", paste0(input$selectYears[1], "-", input$selectYears[2])),
+      subtitle = "Nur RFL Regular Season"
+    )
 })
