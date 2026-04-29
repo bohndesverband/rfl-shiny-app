@@ -129,20 +129,6 @@ output$draft_classes_overview <- shiny::renderPlot({
 #    )
 #}, height = function() { draft_classes_value_height() })
 
-
-
-team_draft_class_elo_height <- shiny::reactiveVal(800)
-
-shiny::observeEvent(input$selectYears, {
-  if (input$selectYears[2] - input$selectYears[1] == 0) {
-    # wenn nur eine klasse ausgewählt ist
-    team_draft_class_elo_height(800)
-  } else {
-    height_val <- ceiling((input$selectYears[2] - input$selectYears[1] + 1) / 2) * 450
-    team_draft_class_elo_height(height_val)
-  }
-})
-
 ## output ----
 
 
@@ -739,19 +725,6 @@ output$draft_overview <- shiny::renderUI({
       width = 12
     ),
     style = "height: 800px"
-  )
-})
-
-output$team_draft_classes <- shiny::renderUI({
-  shiny::validate(
-    shiny::need(length(input$selectRflTeams) == 1, "Bitte wähle exakt ein Team, um dir dessen Draftklassen anzuschauen.")
-  )
-
-  shiny::fluidRow(
-    shiny::column(
-      width = 12,
-      shinycssloaders::withSpinner(shiny::plotOutput("team_draft_class_elo"))
-    )
   )
 })
 
