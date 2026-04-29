@@ -551,73 +551,6 @@ draft_team <- shiny::reactive({
     )
 })
 
-## atkuelle draft klasse ----
-output$team_current_draft_class <- shiny::renderPlot({
-  #shiny::validate(
-  #  shiny::need(input$selectYears[2] - input$selectYears[1] == 0, "Bitte wähle exakt ein Jahr, um dir die ADP Daten einer einzelnen Draftklasse anzuschauen. Das machst du, indem du beide Saison-Regler auf das selbe Jahr stellst.")
-  #)
-
-  shiny::validate(
-    shiny::need(input$selectYears[1] >= 2020, "ADP Daten gibt es erst seit dem Draft 2020. Stelle den Linken Saison-Regler auf mindestens 2020, um dir die ADP Daten anzeigen zu lassen.")
-  )
-
-  ggplot2::ggplot(draft(), ggplot2::aes(x = overall, y = adp, color = factor(pos_grouped, positions_grouped))) +
-    ggplot2::geom_ribbon(
-      formula = 'y ~ x',
-      stat = "smooth",
-      method = "loess",
-      se = TRUE,
-      fill = color_grey_light,
-      color = color_grey_light,
-      alpha = 0.3,
-      linetype = 0
-    ) +
-    ggplot2::geom_smooth(formula = 'y ~ x', method = 'loess', se = FALSE, linewidth = 0.5, color = color_grey_mid, linetype = "dashed", show.legend = FALSE) +
-
-    ggplot2::geom_point(color = color_grey_light, alpha = 1, size = 3) +
-
-    ggforce::geom_link(data = draft_team(), ggplot2::aes(x = xstart, xend = overall, yend = adp, linewidth = ggplot2::after_stat(index))) +
-    ggplot2::scale_linewidth_continuous(guide = "none") +
-    ggplot2::geom_point(data = draft_team(), size = 5) +
-
-    ggplot2::annotate("segment", x = max(draft()$overall) * 0.21, xend = max(draft()$overall) * 0.13, y = max(draft()$adp) * 0.6, yend = max(draft()$adp) * 0.6, arrow = ggplot2::arrow(), color = color_grey_dark) +
-    ggplot2::annotate("segment", x = max(draft()$overall) * 0.2, xend = max(draft()$overall) * 0.2, y = max(draft()$adp) * 0.58, yend = max(draft()$adp) * 0.75, arrow = ggplot2::arrow(), color = color_grey_dark) +
-    ggplot2::annotate("text", x = max(draft()$overall) * 0.18, y = max(draft()$adp) * 0.6, label = "Reaches", hjust = 0.5, vjust = -1) +
-
-    ggplot2::annotate("segment", x = max(draft()$overall) * 0.8, xend = max(draft()$overall) * 0.88, y = max(draft()$adp) * 0.1, yend = max(draft()$adp) * 0.1, arrow = ggplot2::arrow(), color = color_grey_dark) +
-    ggplot2::annotate("segment", x = max(draft()$overall) * 0.81, xend = max(draft()$overall) * 0.81, y = max(draft()$adp) * 0.12, yend = max(draft()$adp) * -0.05, arrow = ggplot2::arrow(), color = color_grey_dark) +
-    ggplot2::annotate("text", x = max(draft()$overall) * 0.83, y = max(draft()$adp) * 0.1, label = "Steals", hjust = 0.5, vjust = 2) +
-
-    ggrepel::geom_label_repel(
-      data = draft_team(),
-      ggplot2::aes(label = paste(player_name, paste0("(", pos, ", ", team, ")"))),
-      point.padding = 10,
-      size = 6,
-      alpha = 1,
-      show.legend = FALSE,
-      nudge_y = 12,
-    ) +
-
-    # genutzte positionen werden aus palette gefiltert, damit nur die nötigen farben genutzt werden und kein grau
-    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(draft()$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
-    ggplot2::scale_x_continuous(breaks = seq(1, max(draft()$overall, na.rm = TRUE), by = 36), labels = seq(1, max(draft()$overall, na.rm = TRUE), by = 36), minor_breaks = seq(1, max(draft()$overall, na.rm = TRUE), by = 36/3), limits = c(0, max(draft()$overall, na.rm = TRUE) + 0.5), expand = c(0, 0)) +
-    ggplot2::scale_y_continuous(breaks = seq(1, max(draft()$adp, na.rm = TRUE), by = 36), labels = seq(1, max(draft()$adp, na.rm = TRUE), by = 36)) +
-    plot_defaults +
-    ggplot2::theme(
-      legend.position = "none",
-      panel.grid.major.x = ggplot2::element_line(color = color_grey_mid, linewidth = 0.35),
-      panel.grid.minor.y = ggplot2::element_blank()
-    ) +
-    ggplot2::labs(
-      title = paste(rfl_franchise_data$franchise_name[rfl_franchise_data$franchise_id == input$selectRflTeams], "RFL Draftklasse", input$selectYears[1], "nach ADP"),
-      subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem Overall Pick und ihrer zugehörigen ADP.\nDer Schweif zeigt den Abstand zur 2. Copy des Spielers an."),
-      x = "Overall Pick im RFL Draft",
-      y = "Average Draft Position",
-      color = "Position"
-    )
-}, height = 800)
-
-
 ## output übersicht ----
 output$single_draft_class <- gt::render_gt({
   req(input$selectRflTeams)
@@ -817,7 +750,6 @@ output$team_draft_classes <- shiny::renderUI({
   shiny::fluidRow(
     shiny::column(
       width = 12,
-      shinycssloaders::withSpinner(shiny::plotOutput("team_current_draft_class")),
       shinycssloaders::withSpinner(shiny::plotOutput("team_draft_class_elo"))
     )
   )
