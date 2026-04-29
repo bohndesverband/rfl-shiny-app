@@ -1,5 +1,4 @@
-# überblick über alle draftklassen ----
-## daten ----
+# daten ----
 rfl_draft_classes <- shiny::reactive({
   rfl_draft_classes <- rfl_drafts_data %>%
     dplyr::filter(season > 2016 & season < new_season_march) %>%
@@ -7,68 +6,131 @@ rfl_draft_classes <- shiny::reactive({
     #filter(franchise_id == "0001") %>%
     #dplyr::filter(season == 2025) %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2]) %>%
-    #dplyr::mutate(
-    #label = paste(season, paste0(round, ".", pick, " (", overall, ")"), player_name, paste0("(", team, ", ", pos, ")"))
-    #  elo_peak = elo_peak - 1500,
-    #  elo_shift = elo_shift - 1500,
-    #) %>%
-    dplyr::group_by(season, franchise_id) %>%
-    dplyr::arrange(overall) %>%
-    dplyr::summarise(
-      franchise_name = first(franchise_name),
-      picks = n(),
-      #label = paste(label, collapse = "\n"),
-      elo_shift_per_pick = sum(elo_shift, na.rm = TRUE) / picks,
-      elo_per_pick = sum(current_player_elo, na.rm = TRUE) / picks,
-      ppg_per_pick = round(sum(ppg, na.rm = TRUE) / picks, 2),
-      .groups = "drop"
-    )
-})
+    dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-## output ----
+rfl_draft_classes_sum <- rfl_drafts_data %>%
+  dplyr::filter(season > 2016) %>%
+  group_by(season, franchise_id, franchise_name, class) %>%
+  dplyr::summarise(
+    picks = n(),
+    value = sum(value),
+    .groups = "drop"
+  ) %>%
+  dplyr::mutate(
+    value_pctl = dplyr::percent_rank(value)
+  ) %>%
+  dplyr::group_by(season) %>%
+  dplyr::arrange(dplyr::desc(value)) %>%
+  dplyr::mutate(
+    rank = dplyr::row_number(),
+    season_date = as.Date(paste0(season, "-01-01"))
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(season, season_date, franchise_id, franchise_name, class, picks, rank, value, value_pctl)
+
+rfl_draft_classes_sum_filtered <- shiny::reactive({
+  rfl_draft_classes_sum %>%
+    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectRflTeams))
+        franchise_id %in% input$selectRflTeams
+      else
+        TRUE
+    ) %>%
+    head(2)
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# ranking aller draftklassen ----
+## overview ----
 output$draft_classes_overview <- shiny::renderPlot({
-  req(input$selectYears[1] < new_season_march)
-
-  ggplot2::ggplot(subset(rfl_draft_classes(), !franchise_id %in% input$selectRflTeams), ggplot2::aes(x = elo_shift_per_pick, y = ppg_per_pick)) +
-
-    plot_quadrants(
-      xmin = min(rfl_draft_classes()$elo_shift_per_pick),
-      xmean = mean(rfl_draft_classes()$elo_shift_per_pick),
-      xmax = max(rfl_draft_classes()$elo_shift_per_pick),
-      ymin = min(rfl_draft_classes()$ppg_per_pick),
-      ymean = mean(rfl_draft_classes()$ppg_per_pick),
-      ymax = max(rfl_draft_classes()$ppg_per_pick),
-      ltl = "Höherer Einfluss, schlechterer Trend",
-      ltr = "Höherere Einfluss, besserer Trend",
-      lbr = "Weniger Einfluss, besserer Trend",
-      lbl = "Weniger Einfluss, schlechterer Trend"
+  ggplot2::ggplot(rfl_draft_classes_sum, ggplot2::aes(x = season_date, y = reorder(franchise_name, dplyr::desc(franchise_name)), fill = rank)) +
+    ggplot2::geom_tile(color = color_bg) +
+    ggplot2::geom_text(
+      ggplot2::aes(
+        label = rank,
+        fontface = "bold",
+        size = 10
+      )
     ) +
-
-    ggplot2::geom_vline(xintercept = 0, color = color_red, alpha = 0.5) +
-    #ggplot2::geom_text(ggplot2::aes(x = 0, y = 0), color = color_red, vjust = 1, hjust = -0.5, label = "Default ELO", show.legend = FALSE) +
-
-    ggplot2::geom_point(ggplot2::aes(size = picks, alpha = season), color = color_grey_mid) +
-
-    ggplot2::geom_point(data = subset(rfl_draft_classes(), franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name, size = picks, alpha = season)) +
-
-    ggplot2::scale_color_discrete(type = colors) +
-    ggplot2::scale_size_continuous(range = c(min(rfl_draft_classes()$picks), max(rfl_draft_classes()$picks)), guide = "none") +
-    ggplot2::scale_alpha_continuous(guide = "none") +
+    ggplot2::scale_fill_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 18, guide = "none") +
+    ggplot2::scale_size_continuous(guide = "none") +
+    ggplot2::scale_x_date(date_breaks = "1 year", date_labels = "'%y", expand = c(0, 0)) +
     plot_defaults +
     ggplot2::labs(
-      title = paste("RFL Draftklassen"),
-      subtitle = paste("Angezeigt werden alle", paste(input$selectPositions, collapse = ", "), "Draftpicks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "von", input$selectYears[1], "bis", input$selectYears[2], "\nDie Größe der Punkte stellt die Anzahl der Spieler in der Draftklasse dar, die Transparenz die Aktualität (aktuellest = dunkelste)."),
-      x = "ELO-Veränderung pro Pick im Vergleich zum Draftjahr",
-      y = "Fantasy Points per Game pro Pick",
-      color = "RFL Team",
+      title = "RFL Draftklassen Überblick",
+      x = "Saison"
     ) +
-    plot_clean
+    ggplot2::theme(
+      axis.title.y = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank()
+    )
 
-  #TODO: girafe(ggobj = plot)
 }, height = 800)
 
 # überblick über alle draftklassen eines teams ----
+#output$team_draft_classes <- reactable::renderReactable({
+#  selected_teams <- rfl_draft_classes_sum_filtered() %>%
+#    dplyr::filter(franchise_id %in% input$selectRflTeams)
+
+#  reactable::reactable(
+#    selected_teams
+#  )
+#})
+
+
+
+
+
+## value ----
+#draft_classes_value_height <- shiny::reactiveVal(250)
+
+#shiny::observeEvent(input$selectRflTeams, {
+#  n_selected <- if (is.null(input$selectRflTeams)) 0 else length(input$selectRflTeams)
+
+#  if (n_selected != 0) {
+#    draft_classes_value_height(n_selected * 250)
+#  } else {
+#    draft_classes_value_height(250)
+#  }
+#})
+
+#output$draft_classes_value <- shiny::renderPlot({
+#  ggplot2::ggplot(data = subset(rfl_draft_classes_sum, franchise_id %in% input$selectRflTeams), ggplot2::aes(x = as.Date(paste0(season, "-01-01")), y = value)) +
+#    ggplot2::facet_wrap(~ franchise_name, ncol = 1) +
+#    ggplot2::geom_col(ggplot2::aes(fill = rank)) +
+#    ggplot2::geom_text(
+#      ggplot2::aes(
+#        y = min(value) - 0.7,
+#        label = paste0("#", rank),
+#        color = rank
+#      ),
+#      fontface = "bold",
+#      size = 5
+#    ) +
+#    ggplot2::scale_x_date(date_breaks = "1 year", date_labels = "'%y", expand = c(0, 0)) +
+#    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.1))) +
+#    ggplot2::scale_fill_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 16, guide = "none") +
+#    ggplot2::scale_color_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 16, guide = "none") +
+#    ggplot2::scale_size_continuous(guide = "none") +
+#    plot_defaults +
+#    ggplot2::labs(
+#      title = "Ranking der Draftklassen"
+#    ) +
+#    ggplot2::theme(
+#      axis.title.x = ggplot2::element_blank(),
+#      axis.title.y = ggplot2::element_blank(),
+#      axis.text.y = ggplot2::element_blank(),
+#      panel.grid.major = ggplot2::element_blank(),
+#      panel.grid.minor = ggplot2::element_blank()
+#    )
+#}, height = function() { draft_classes_value_height() })
+
+
+
 team_draft_class_elo_height <- shiny::reactiveVal(800)
 
 shiny::observeEvent(input$selectYears, {
@@ -82,73 +144,7 @@ shiny::observeEvent(input$selectYears, {
 })
 
 ## output ----
-output$team_draft_class_elo <- shiny::renderPlot({
-  req(input$selectRflTeams)
 
-  shiny::validate(
-    shiny::need(input$selectYears[2] < new_season_march, "Für die aktuelle Draftklasse gibt es noch keine ELO-Daten. Wähle mit dem zweiten Saison-Regler eine frühere Saison.")
-  )
-
-  team_draft_classes <- player_elo %>%
-    dplyr::group_by(mfl_id, season) %>%
-    dplyr::filter(week == max(week)) %>%
-    dplyr::select(season, mfl_id, week, player_elo_post) %>%
-    dplyr::left_join(
-      rfl_drafts_data %>%
-        dplyr::filter(season > 2016) %>%
-        dplyr::mutate(draft_class = season) %>%
-        dplyr::select(draft_class, mfl_id, overall, franchise_id, franchise_name, player_name, pos_grouped, pos, team),
-      by = "mfl_id",
-      relationship = "many-to-many"
-    ) %>%
-    dplyr::filter(!is.na(overall)) %>%
-    dplyr::group_by(mfl_id) %>%
-    dplyr::mutate(
-      max_season = ifelse(season == max(season), 1, 0),
-      elo_peak = max(player_elo_post)
-    ) %>%
-    dplyr::ungroup() %>%
-    #dplyr::filter(draft_class >= 2025 & draft_class <= 2025)
-    dplyr::filter(draft_class >= input$selectYears[1] & draft_class <= input$selectYears[2])
-
-  ggplot2::ggplot(subset(team_draft_classes, franchise_id == input$selectRflTeams & max_season == 1), ggplot2::aes(x = overall, y = player_elo_post, color = factor(pos_grouped, positions_grouped), alpha = season)) +
-    ggplot2::facet_wrap(~draft_class, ncol = 2) +
-    ggplot2::geom_hline(yintercept = 1500, color = color_red, alpha = 0.5) +
-    ggplot2::geom_point(
-      data = team_draft_classes %>%
-        dplyr::group_by(mfl_id) %>%
-        dplyr::filter(player_elo_post == max(player_elo_post)) %>%
-        dplyr::filter(franchise_id != input$selectRflTeams),
-      fill = color_grey_light,
-      color = color_grey_light,
-      alpha = 1,
-      size = 3
-    ) +
-    ggplot2::geom_point(size = 10) +
-    ggplot2::geom_point(data = subset(team_draft_classes, franchise_id == input$selectRflTeams & max_season == 0), size = 5) +
-    ggplot2::scale_alpha_continuous(guide = "none") +
-    ggrepel::geom_label_repel(
-      ggplot2::aes(label = paste(player_name, paste0("(", pos, ", ", team, ")"))),
-      size = 4,
-      alpha = 1,
-      show.legend = FALSE
-    ) +
-
-    # genutzte positionen werden aus palette gefiltert, damit nur die nötigen farben genutzt werden und kein grau
-    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(team_draft_classes$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
-
-    plot_defaults +
-    ggplot2::labs(
-      title = paste(rfl_franchise_data$franchise_name[rfl_franchise_data$franchise_id == input$selectRflTeams], "RFL Draftklassen nach ELO"),
-      subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem höchsten Karriere ELO-Wert am Ende einer Saison.\nDie Picks des gewählten Teams werden farbig hervorgehoben und zeigen die ELO-Werte am Ende jeder RFL Regular Season.\nJe heller der Punkt, desto länger ist die Saison her. Der große Punkt ist immer die letzte Saison des Spielers."),
-      x = "Overall Pick im RFL Draft",
-      y = "Maximale ELO am Ende jeder RFL Regular Season",
-      color = "Position"
-    ) +
-    ggplot2::theme(
-      legend.position = "none"
-    )
-}, height = function() { team_draft_class_elo_height() })
 
 #observeEvent(event_data("plotly_click", source = "A"), {
 #  click <- event_data("plotly_click", source = "A")
@@ -168,6 +164,257 @@ output$team_draft_class_elo <- shiny::renderPlot({
 #})
 
 # einzelne draft klasse eines teams ----
+## reactable ----
+output$team_draft_class <- reactable::renderReactable({
+  data <- rfl_drafts_data %>%
+    dplyr::select(-elo_season_end) %>%
+    dplyr::left_join(
+      player_elo %>%
+        dplyr::select(mfl_id, elo_season = season, elo_season_end) %>%
+        dplyr::distinct(),
+      by = c("mfl_id"),
+      relationship = "many-to-many"
+    ) %>%
+    dplyr::group_by(mfl_id) %>%
+    dplyr::mutate(last_season = ifelse(elo_season == max(elo_season), 1, 0)) %>%
+    dplyr::ungroup()
+
+  row_details <- function(index) {
+    selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
+
+    data_filtered <- data %>%
+      dplyr::filter(.data$class == selected_class)
+
+    ### picks ----
+    output[[paste0("team_draft_class_picks_", index)]] <- reactable::renderReactable({
+      draft_class_data <- data_filtered %>%
+        dplyr::mutate(
+          info = paste0(round, ".", pick, " (#", overall, ")"),
+          player = paste0(player_name, " (", team, ", ", pos_grouped, ")")
+        ) %>%
+        dplyr::select(info, player, subline, pos_rank) %>%
+        dplyr::distinct()
+
+      reactable::reactable(
+        draft_class_data,
+        columns = list(
+          player = reactable::colDef(
+            name = "Spieler",
+            html = TRUE,
+            cell = function(value, index) {
+              tagList <- tagList(
+                div(
+                  div(draft_class_data$player[index]),
+                  div(htmltools::HTML(draft_class_data$subline[index]), style = list(fontSize = "0.6rem"))
+                )
+              )
+
+              as.character(tagList)
+            }
+          ),
+          subline = reactable::colDef(show = FALSE)
+        ),
+        defaultColDef = colDef(vAlign = "center", headerVAlign = "bottom"),
+        sortable = FALSE,
+        searchable = TRUE,
+        striped = TRUE,
+        outlined = TRUE,
+        theme = reactableTheme(
+          borderColor = color_grey_dark,
+          stripedColor = color_bg
+        )
+      )
+    })
+
+    ### value ----
+    output[[paste0("team_draft_class_value_", index)]] <- shiny::renderPlot({
+      ggplot2::ggplot(subset(data_filtered, last_season == 1), ggplot2::aes(x = overall, y = value, color = factor(pos_grouped, positions_grouped))) +
+        ggplot2::geom_hline(yintercept = 0, color = color_red, alpha = 0.5) +
+        ggplot2::geom_point(
+          data = rfl_drafts_data %>%
+            dplyr::group_by(mfl_id) %>%
+            dplyr::filter(season == data_filtered$season[1]) %>%
+            dplyr::filter(franchise_id != data_filtered$franchise_id[1]),
+          fill = color_grey_light,
+          color = color_grey_light,
+          alpha = 1,
+          size = 3
+        ) +
+        ggplot2::geom_point(size = 5, alpha = 1) +
+        ggrepel::geom_label_repel(
+          ggplot2::aes(label = paste(player_name, paste0("(", pos_grouped, ", ", team, ")"))),
+          size = 4,
+          alpha = 1,
+          show.legend = FALSE
+        ) +
+        ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
+        plot_defaults +
+        ggplot2::labs(
+          title = paste(selected_class, "Draftvalue"),
+          subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem derzeitigen Wert."),
+          x = "Overall Pick im RFL Draft",
+          y = "⌀WAR"
+        ) +
+        ggplot2::theme(
+          legend.position = "none",
+          plot.title = ggplot2::element_text(size = 16),
+          plot.subtitle = ggplot2::element_text(size = 11),
+          axis.title = ggplot2::element_text(size = 11)
+        )
+
+    }, height = 700)
+
+    ### elo ----
+    output[[paste0("team_draft_class_elo", index)]] <- shiny::renderPlot({
+      shiny::validate(
+        shiny::need(input$selectYears[2] < new_season_march, "Für die aktuelle Draftklasse gibt es noch keine ELO-Daten. Wähle mit dem zweiten Saison-Regler eine frühere Saison.")
+      )
+
+      ggplot2::ggplot(subset(data_filtered, last_season == 1), ggplot2::aes(x = overall, y = elo_season_end, color = factor(pos_grouped, positions_grouped), alpha = season)) +
+        ggplot2::geom_hline(yintercept = 1500, color = color_red, alpha = 0.5) +
+        ggplot2::geom_point(
+          data = rfl_drafts_data %>%
+            dplyr::group_by(mfl_id) %>%
+            dplyr::filter(season == data_filtered$season[1]) %>%
+            dplyr::filter(elo_season_end == max(elo_season_end)) %>%
+            dplyr::filter(franchise_id != data_filtered$franchise_id[1]),
+          fill = color_grey_light,
+          color = color_grey_light,
+          alpha = 1,
+          size = 3
+        ) +
+        ggplot2::geom_point(size = 10, alpha = 1) +
+        ggplot2::geom_point(data = subset(data_filtered, last_season == 0), size = 5) +
+        ggplot2::scale_alpha_continuous(guide = "none") +
+        ggrepel::geom_label_repel(
+          ggplot2::aes(label = paste(player_name, paste0("(", pos_grouped, ", ", team, ")"))),
+          size = 4,
+          alpha = 1,
+          show.legend = FALSE
+        ) +
+
+        ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
+
+        plot_defaults +
+        ggplot2::labs(
+          title = paste(selected_class, "Draft - ELO Entwicklung"),
+          subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem ELO-Wert am Ende einer Saison.\nDie Picks des Teams werden farbig hervorgehoben und zeigen die ELO-Werte am Ende jeder RFL Regular Season.\nJe heller der Punkt, desto länger ist die Saison her. Der große Punkt ist immer die letzte Saison des Spielers."),
+          x = "Overall Pick im RFL Draft",
+          y = "ELO am Ende jeder RFL Regular Season"
+        ) +
+        ggplot2::theme(
+          legend.position = "none",
+          plot.title = ggplot2::element_text(size = 16),
+          plot.subtitle = ggplot2::element_text(size = 11),
+          axis.title = ggplot2::element_text(size = 11)
+        )
+    }, height = 700)
+
+    ### output ----
+    detail <- shiny::fluidPage(
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(reactable::reactableOutput(paste0("team_draft_class_picks_", index))),
+          width = 12
+        ),
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput(paste0("team_draft_class_value_", index))),
+          width = 6
+        ),
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput(paste0("team_draft_class_elo", index))),
+          width = 6
+        )
+      )
+    )
+
+    detail
+  }
+
+  reactable::reactable(
+    rfl_draft_classes_sum_filtered(),
+    columns = list(
+      class = reactable::colDef(name = "", sticky = "left"),
+      picks = reactable::colDef(
+        name = "Picks",
+      ),
+      rank = reactable::colDef(
+        name = "Platzierung im Draftjahr",
+        style = function(value) {
+          value <- as.numeric(value)
+
+          if (value > 6) {
+            color <- color_cyan
+          } else if (value > 12) {
+            color <- color_green
+          } else if (value > 18) {
+            color <- color_yellow
+          } else if (value > 24) {
+            color <- color_orange
+          } else if (value > 30) {
+            color <- color_red
+          } else {
+            color <- color_blue
+          }
+
+          list(color = color)
+        }
+      ),
+      value = reactable::colDef(
+        name = "Value",
+        sortable = TRUE
+      ),
+      value_pctl = reactable::colDef(
+        name = "Perzentil seit 2017",
+        cell = JS('function(cellInfo) {
+          // Format as percentage
+          const pct = (cellInfo.value * 100).toFixed(1) + "%"
+          // Pad single-digit numbers
+          let value = pct.padStart(5)
+          // Show % on first row only
+          if (cellInfo.viewIndex > 0) {
+            value = value.replace("%", " ")
+          }
+          // Render bar chart
+          return `
+            <div class="bar-cell">
+              <span class="number">${value}</span>
+              <div class="bar-chart" style="background-color: #e1e1e1">
+                <div class="bar" style="width: ${pct}; background-color: #fc5185"></div>
+              </div>
+            </div>
+          `
+        }'),
+        html = TRUE
+      ),
+      season = reactable::colDef(show = FALSE),
+      season_date = reactable::colDef(show = FALSE),
+      franchise_id = reactable::colDef(show = FALSE),
+      franchise_name = reactable::colDef(show = FALSE)
+    ),
+    defaultSorted = "value",
+    defaultSortOrder = "desc",
+    sortable = FALSE,
+    showSortable = TRUE,
+    defaultPageSize = 12,
+    showPageSizeOptions = TRUE,
+    pageSizeOptions = c(25, 50, 100),
+    onClick = "expand",
+    resizable = TRUE,
+    details = row_details,
+    wrap = FALSE,
+    compact = TRUE,
+    highlight = TRUE,
+    theme = reactableTheme(
+      borderColor = color_grey_light,
+    ),
+    #virtual = TRUE,
+    height = 800,
+    searchable = TRUE
+  )
+})
+
+
 ## trades ----
 draft_class_trades <- shiny::reactive({
   draft_class_trades <- rfl_trades_data %>%
@@ -260,7 +507,7 @@ draft_class_trades <- shiny::reactive({
 
 draft <- shiny::reactive({
   draft <- rfl_drafts_data %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    #dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     #dplyr::filter(season == 2025) %>%
     dplyr::left_join(
       mfl_adp_data %>%
@@ -517,9 +764,41 @@ output$single_draft_class_trades <- DT::renderDataTable({
   )
 })
 
+draft_elo <- rfl_drafts_data %>%
+  dplyr::filter(season > 2016 & is_rookie == 1 & !is.na(elo_peak)) %>%
+  dplyr::group_by(season, franchise_id) %>%
+  dplyr::summarise(elo_total = sum(elo_peak), .groups = "drop") %>%
+  dplyr::mutate(pctl_total = round(dplyr::percent_rank(elo_total), 2)) %>%
+  dplyr::group_by(season) %>%
+  dplyr::mutate(season_pctl = round(dplyr::percent_rank(elo_total), 2))
+
 # ui output ----
+output$draft_classes_selected_team <- shiny::renderUI({
+  req(input$selectRflTeams)
+
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_classes")),
+      width = 12
+    ),
+    style = "height: 800px"
+  )
+})
+
+
+output$draft_class_selected_team <- shiny::renderUI({
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class")),
+      width = 12
+    ),
+    style = "height: 800px"
+  )
+})
+
 output$draft_overview <- shiny::renderUI({
   req(input$selectYears[1] < new_season_march)
+  #req(!input$selectRflTeams)
 
   shiny::fluidRow(
     shiny::column(
@@ -544,7 +823,7 @@ output$team_draft_classes <- shiny::renderUI({
   )
 })
 
-output$team_draft_class <- shiny::renderUI({
+output$team_draft_class_ui <- shiny::renderUI({
   shiny::validate(
     shiny::need(input$selectYears[2] - input$selectYears[1] == 0, "Bitte wähle exakt ein Jahr, um dir eine einzelne Draftklasse anzuschauen. Das machst du, indem du beide Saison-Regler auf das selbe Jahr stellst.")
   )
