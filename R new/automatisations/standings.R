@@ -11,7 +11,12 @@ rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_{x}.csv"),
     col_types = "icccdddiiiddiiiiiiiiicii"
   ) %>%
-    dplyr::mutate(season = x)
+    dplyr::rename(eff_total = eff) %>%
+    dplyr::mutate(
+      eff = pf / pp,
+      season = x
+    ) %>%
+    dplyr::select(week:pp, eff, eff_total, dplyr::everything())
 })
 
 ## write to feather ----
@@ -95,8 +100,45 @@ rfl_current_standing <- rfl_weekly_standing %>%
   dplyr::mutate(
     divider = ifelse(dplyr::row_number() == 6, 1, 0),
   ) %>%
+  #filter(division_name == "Barry Sanders Division") %>%
+  dplyr::group_by(division_name) %>%
+  dplyr::arrange(div_rank) %>%
+  dplyr::mutate(
+    status_div = dplyr::case_when(
+      wins_total - dplyr::nth(wins_total, 2) > 26 - week * 2 ~ "D",
+      dplyr::nth(wins_total, 1) - wins_total > 26 - week * 2 ~ "<s>D</s>",
+      TRUE ~ ""
+    )
+  ) %>%
+  #filter(conference_name == "RFC") %>%
+  dplyr::group_by(conference_name) %>%
+  dplyr::arrange(
+    factor(bowl, levels = c("SB", "PB", "TB")),
+    seed
+  ) %>%
+  dplyr::mutate(
+    seed_total = dplyr::row_number(),
+    # check if wins_total is less than wins_total in nth row of group
+    status_pb = dplyr::case_when(
+      dplyr::nth(wins_total, 12) - wins_total > 26 - week * 2 ~ "<s>PB</s>",
+      wins_total - dplyr::nth(wins_total, 13) > 26 - week * 2 ~ "PB",
+      TRUE ~ ""
+    ),
+    status_sb = dplyr::case_when(
+      dplyr::nth(wins_total, 12) - wins_total > 26 - week * 2 ~ "<s>SB</s>",
+      wins_total - dplyr::nth(wins_total, 7) > 26 - week * 2 ~ "SB",
+      TRUE ~ ""
+    ),
+    status_sb_bye = dplyr::case_when(
+      dplyr::nth(wins_total, 2) - wins_total > 26 - week * 2 | status_div == "<s>D</s>" ~ "<s>zZ</s>",
+      status_div == "D" & wins_total - dplyr::nth(wins_total, 3) > 26 - week * 2 ~ "zZ",
+      TRUE ~ ""
+    ),
+    status_bowl = ifelse(status_sb == "SB", status_sb, status_pb),
+    franchise_name_status = paste(franchise_name, "<sup>", status_div, status_bowl, status_sb_bye, "</sup>")
+  ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider) %>%
+  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider, franchise_name_status, seed_total) %>%
   dplyr::arrange(league_rank)
 
 ## write to feather ----

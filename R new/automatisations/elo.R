@@ -36,6 +36,9 @@ player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
     col_types = "iicccccnniiiii"
   )
 }) %>%
-  dplyr::left_join(nflreadr::load_players() %>% select(display_name, gsis_id), by = "gsis_id")
+  dplyr::left_join(nflreadr::load_players() %>% select(display_name, gsis_id), by = "gsis_id") %>%
+  dplyr::group_by(mfl_id, season) %>%
+  dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
+  dplyr::ungroup()
 
 feather::write_feather(player_elo, "data/rfl_player_elo.feather")

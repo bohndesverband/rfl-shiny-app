@@ -20,7 +20,12 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/playerscores_data/rfl_playerscores_{x}.csv"), col_types = "iiccccn"
   )
-})
+}) %>%
+  dplyr::group_by(season, player_id) %>%
+  dplyr::mutate(
+    ppg = round(mean(points, na.rm = TRUE), 2),
+    points_ppg_diff = round(points - ppg, 2)
+  )
 
 feather::write_feather(rfl_player_scores, "data/rfl_player_scores.feather")
 
@@ -46,16 +51,18 @@ create_ranks <- function(df, group, colname) {
 }
 
 rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.feather") %>%
-  dplyr::filter(
-    season == 2016 & week <= 13 |
-    season > 2016 & week <= 12 |
-    season > 2021 & week <= 13
-  ) %>%
+  dplyr::distinct() %>%
   dplyr::mutate(
     pos = dplyr::case_when(
       pos %in% c("DT", "DE") ~ "DL",
       pos %in% c("CB", "S") ~ "DB",
       TRUE ~ pos
+    ),
+    reg_season = dplyr::case_when(
+      season == 2016 & week <= 13 |
+      season > 2016 & week <= 12 |
+      season > 2021 & week <= 13 ~ 1,
+      TRUE ~ 0
     )
   ) %>%
   create_ranks(c("season", "pos", "week"), "weekly")
@@ -63,6 +70,7 @@ rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.fea
 feather::write_feather(rfl_fantasy_finishes_weekly, "data/rfl_fantasy_finishes_weekly.feather")
 
 rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
+  #dplyr::filter(reg_season == 1) %>%
   dplyr::select(season:points) %>%
   #filter(player_id == "14842") %>%
   dplyr::group_by(season, player_id) %>%
@@ -72,6 +80,7 @@ rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
     player_name = dplyr::last(player_name),
     team = dplyr::last(team),
     points = sum(as.numeric(points), na.rm = TRUE),
+    games = n(),
     .groups = "drop"
   ) %>%
   create_ranks(c("season", "pos"), "season")

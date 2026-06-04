@@ -33,7 +33,7 @@ nfl_player_stats <- nflreadr::load_player_stats(summary_level = "reg") %>%
   ) %>%
   dplyr::select(player_id, dplyr::starts_with("fpts"))
 
-fpts_zusammensetzung <- rfl_fantasy_finishes %>%
+fpts_zusammensetzung <- rfl_fantasy_finishes_season %>%
   dplyr::filter(pos != "PK") %>%
   dplyr::filter(season == new_season_sept) %>%
   dplyr::select(season:pos_rank) %>%

@@ -1,4 +1,4 @@
-rfl_trades_data <- purrr::map_df(2016:2025, function(x) {
+rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/trade_data/rfl_trades_{x}.csv"),
     col_types = "dddTdcccc"
@@ -34,7 +34,8 @@ rfl_trades_data <- purrr::map_df(2016:2025, function(x) {
     trade_partner = ifelse(trade_side == "franchise_2", first(franchise_id), last(franchise_id)),
   ) %>%
   dplyr::arrange(trade_id) %>%
-  dplyr::ungroup()
+  dplyr::ungroup() %>%
+  dplyr::distinct()
 
 feather::write_feather(rfl_trades_data, "data/rfl_trades_data.feather")
 
@@ -46,6 +47,9 @@ rfl_transactions_data <- purrr::map_df(2017:2025, function(x) {
   )
 })
 
-problems(rfl_transactions_data)
-
 feather::write_feather(rfl_transactions_data, "data/rfl_transactions_data.feather")
+
+# draft transactions
+rfl_transactions_draft <- readr::read_csv("https://github.com/bohndesverband/rfl-data/releases/download/trade_data/rfl_draftclass-trades.csv", col_types = "ciTccccccc")
+
+feather::write_feather(rfl_transactions_draft, "data/rfl_transactions_draft_data.feather")

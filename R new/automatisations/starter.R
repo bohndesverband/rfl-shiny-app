@@ -19,6 +19,12 @@ rfl_starter_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
       pos %in% c("CB", "S") ~ "DB",
       TRUE ~ pos
     )
+  ) %>%
+  dplyr::left_join(
+    rfl_player_scores %>%
+      dplyr::mutate(player_id = as.numeric(player_id)) %>%
+      dplyr::select(season, week, player_id, ppg, points_ppg_diff),
+    by = c("season", "week", "player_id")
   )
 
 feather::write_feather(rfl_starter_data, "data/rfl_starter_data.feather")

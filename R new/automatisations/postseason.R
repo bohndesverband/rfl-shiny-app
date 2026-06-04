@@ -1,4 +1,4 @@
-var_season <- 2024
+var_season <- 2025
 
 rfl_postseason_data <- purrr::map_df(2017:var_season, function(x) {
   vroom::vroom(
