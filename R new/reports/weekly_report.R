@@ -17,13 +17,6 @@ report_players <- shiny::reactive({
       by = "player_id"
     ) %>%
     dplyr::left_join(
-      rfl_war_data %>%
-        dplyr::filter(season == max(season)) %>%
-        dplyr::mutate(ppg = points / games_played) %>%
-        dplyr::select(player_id, ppg),
-      by = "player_id"
-    ) %>%
-    dplyr::left_join(
       projected_points(),
       by = c("player_id" = "id")
     ) %>%
@@ -37,7 +30,7 @@ report_players <- shiny::reactive({
 
 ## highest scoring players ----
 high_scorers <- shiny::reactive({
-  report_players() %>%
+  high_scorers <- report_players() %>%
     dplyr::filter(starter_status == "starter") %>%
     dplyr::group_by(player_id) %>%
     dplyr::mutate(
@@ -58,7 +51,7 @@ high_scorers <- shiny::reactive({
 
 ## benchwarmers ----
 benchwarmers <- shiny::reactive({
-  report_players() %>%
+  benchwarmers <- report_players() %>%
     dplyr::filter(starter_status == "nonstarter") %>%
     dplyr::group_by(player_id) %>%
     dplyr::mutate(
@@ -79,7 +72,7 @@ benchwarmers <- shiny::reactive({
 
 ## biggest player elo risers ----
 biggest_player_elo_risers <- shiny::reactive({
-  player_elo %>%
+  biggest_player_elo_risers <- player_elo %>%
     dplyr::filter(season == max(season)) %>%
     dplyr::filter(week == max(week)) %>%
     dplyr::group_by(position) %>%
@@ -102,7 +95,7 @@ biggest_player_elo_risers <- shiny::reactive({
 
 ## biggest player elo drops ----
 biggest_player_elo_drops <- shiny::reactive({
-  player_elo %>%
+  biggest_player_elo_drops <- player_elo %>%
     dplyr::filter(season == max(season)) %>%
     dplyr::filter(week == max(week)) %>%
     dplyr::group_by(position) %>%
@@ -124,19 +117,12 @@ biggest_player_elo_drops <- shiny::reactive({
 })
 
 weekly_report_players <- shiny::reactive({
-  rbind(high_scorers(), benchwarmers())
+  weekly_report_players <- rbind(high_scorers(), benchwarmers())
 })
 
 # manager ----
 report_manager <- shiny::reactive({
-  rfl_standing_data %>%
-    dplyr::filter(season == max(season)) %>%
-    dplyr::filter(
-      week == max(week),
-    ) %>%
-    dplyr::mutate(
-      weekly_eff = pf / pp,
-    ) %>%
+  report_manager <- rfl_standing_data %>%
     dplyr::left_join(
       rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name, icon),
@@ -153,17 +139,44 @@ report_manager <- shiny::reactive({
       by = "franchise_id"
     ) %>%
     dplyr::mutate(
+      weekly_eff = pf / pp,
       projected_diff = pf - projected_points,
-      projected_diff_pct = ifelse(projected_points > 0, scales::percent(projected_diff / projected_points, 0.01), NA)
+      projected_diff_pct = ifelse(projected_points > 0, scales::percent(projected_diff / projected_points, 0.01), NA),
+      # pctl
+      weekly_eff_pctl = dplyr::percent_rank(weekly_eff)
+    ) %>%
+    dplyr::filter(season == max(season)) %>%
+    dplyr::filter(
+      week == max(week),
     )
 })
 
+#report_manager %>%
+#  dplyr::select(weekly_eff, weekly_eff_pctl) %>%
+#  gt::gt() %>%
+#  nflplotR::gt_pct_bar(
+#    "weekly_eff", "weekly_eff_pctl",
+#    hide_col_pct = TRUE,
+#    value_position = "above",
+    # with value_position = "above", we need an absolute value of bar heights!
+#    background_fill.height = "5px",
+#    background_fill.color = "LightGray",
+#    value_scale = 100
+#  ) %>%
+#  gt::cols_width(weekly_eff ~ gt::px(100)) %>%
+#  fmt_percent(
+#    columns = "weekly_eff",
+#    decimals = 1,
+#    scale_values = TRUE
+#  ) %>%
+#  gt::cols_align("center", "weekly_eff")
+
 ## best manager ----
 best_manager <- shiny::reactive({
-  report_manager() %>%
+  best_manager <- report_manager() %>%
     dplyr::filter(weekly_eff == max(weekly_eff)) %>%
     dplyr::mutate(
-      value = scales::percent(weekly_eff),
+      value = scales::percent(weekly_eff, accuracy = 0.01),
       title = "Bester Manager",
       subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche satte \n", pf, "der möglichen", pp, "FPts\n erzielt."),
       image = icon
@@ -173,10 +186,10 @@ best_manager <- shiny::reactive({
 
 ## worst manager ----
 worst_manager <- shiny::reactive({
-  report_manager() %>%
+  worst_manager <- report_manager() %>%
     dplyr::filter(weekly_eff == min(weekly_eff)) %>%
     dplyr::mutate(
-      value = scales::percent(weekly_eff),
+      value = scales::percent(weekly_eff, accuracy = 0.01),
       title = "Schlechtester Manager",
       subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche nur\n", pf, "der möglichen", pp, "FPts\n erzielt."),
       image = icon
@@ -186,7 +199,7 @@ worst_manager <- shiny::reactive({
 
 ## luckiest manager ----
 luckiest_manager <- shiny::reactive({
-  report_manager() %>%
+  luckiest_manager <- report_manager() %>%
     dplyr::filter(wins > 0) %>%
     dplyr::filter(all_play_wins == min(all_play_wins)) %>%
     dplyr::mutate(
@@ -201,7 +214,7 @@ luckiest_manager <- shiny::reactive({
 
 ## unluckiest manager ----
 unluckiest_manager <- shiny::reactive({
-  report_manager() %>%
+  unluckiest_manager <- report_manager() %>%
     dplyr::filter(wins == 0) %>%
     dplyr::filter(all_play_wins == max(all_play_wins)) %>%
     dplyr::mutate(
@@ -215,7 +228,7 @@ unluckiest_manager <- shiny::reactive({
 
 ## biggest overachiever ----
 biggest_overachiever <- shiny::reactive({
-  report_manager() %>%
+  biggest_overachiever <- report_manager() %>%
     dplyr::filter(projected_diff == max(projected_diff)) %>%
     dplyr::mutate(
       value = projected_diff_pct,
@@ -228,7 +241,7 @@ biggest_overachiever <- shiny::reactive({
 
 ## biggest underachiever ----
 biggest_underachiever <- shiny::reactive({
-  report_manager() %>%
+  biggest_underachiever <- report_manager() %>%
     dplyr::filter(projected_diff == min(projected_diff)) %>%
     dplyr::mutate(
       value = projected_diff_pct,
@@ -241,7 +254,7 @@ biggest_underachiever <- shiny::reactive({
 
 # matches ----
 report_matchups <- shiny::reactive({
-  rfl_matchups_history %>%
+  report_matchups <- rfl_matchups_history %>%
     dplyr::filter(season == max(season)) %>%
     dplyr::filter(week == max(week)) %>%
     dplyr::mutate(
@@ -258,7 +271,7 @@ report_matchups <- shiny::reactive({
 
 ## biggest blowout ----
 biggest_blowout <- shiny::reactive({
-  report_matchups() %>%
+  biggest_blowout <- report_matchups() %>%
     dplyr::filter(score_diff == max(score_diff)) %>%
     dplyr::mutate(
       value = paste(franchise_score, "vs", opponent_score),
@@ -271,7 +284,7 @@ biggest_blowout <- shiny::reactive({
 
 ## narrowest win ----
 narrowest_win <- shiny::reactive({
-  report_matchups() %>%
+  narrowest_win <- report_matchups() %>%
     dplyr::filter(score_diff > 0) %>%
     dplyr::filter(score_diff == min(score_diff)) %>%
     dplyr::mutate(
@@ -285,7 +298,7 @@ narrowest_win <- shiny::reactive({
 
 ## biggest upset ----
 biggest_upset <- shiny::reactive({
-  report_matchups() %>%
+  biggest_upset <- report_matchups() %>%
     dplyr::filter(upset == 1) %>%
     dplyr::filter(elo_diff == min(elo_diff)) %>%
     dplyr::mutate(
@@ -299,7 +312,7 @@ biggest_upset <- shiny::reactive({
 
 ## highest scoring game ----
 highest_scoring_game <- shiny::reactive({
-  report_matchups() %>%
+  highest_scoring_game <- report_matchups() %>%
     dplyr::filter(total_points == max(total_points)) %>%
     dplyr::slice(1) %>%
     dplyr::mutate(
@@ -313,7 +326,7 @@ highest_scoring_game <- shiny::reactive({
 
 ## lowest scoring game ----
 lowest_scoring_game <- shiny::reactive({
-  report_matchups() %>%
+  lowest_scoring_game <- report_matchups() %>%
     dplyr::filter(total_points == min(total_points)) %>%
     dplyr::slice(1) %>%
     dplyr::mutate(
@@ -327,7 +340,7 @@ lowest_scoring_game <- shiny::reactive({
 
 ## highest combined ELO ----
 top_game <- shiny::reactive({
-  report_matchups() %>%
+  top_game <- report_matchups() %>%
     dplyr::mutate(combined_elo = franchise_elo_pregame + opponent_elo_pregame) %>%
     dplyr::filter(combined_elo == max(combined_elo)) %>%
     dplyr::slice(1) %>%
@@ -342,7 +355,7 @@ top_game <- shiny::reactive({
 
 ## high scorer ----
 high_scorer <- shiny::reactive({
-  report_matchups() %>%
+  high_scorer <- report_matchups() %>%
     dplyr::filter(franchise_score == max(franchise_score)) %>%
     dplyr::slice(1) %>%
     dplyr::mutate(
@@ -356,7 +369,7 @@ high_scorer <- shiny::reactive({
 
 ## low scorer ----
 low_scorer <- shiny::reactive({
-  report_matchups() %>%
+  low_scorer <- report_matchups() %>%
     dplyr::filter(franchise_score == min(franchise_score)) %>%
     dplyr::slice(1) %>%
     dplyr::mutate(
@@ -370,12 +383,21 @@ low_scorer <- shiny::reactive({
 
 ## highest ELO jump ----
 highest_elo_jump <- shiny::reactive({
-  rfl_current_standing %>%
+  highest_elo_jump <- rfl_current_standing %>%
     dplyr::filter(elo_shift == max(elo_shift)) %>%
+    dplyr::group_by(season, week) %>%
+    dplyr::summarise(
+      count = n(),
+      elo_shift = dplyr::first(elo_shift),
+      franchises = paste(unique(franchise_name), collapse = ",\n") %>% sub(",\n([^,]*)$", " &\n\\1", .),
+      start = ifelse(count > 1, "Die Teams\n", "Das Team\n"),
+      second = ifelse(count > 1, "\nhaben", "\nhat"),
+      .groups = "drop"
+    ) %>%
     dplyr::mutate(
       value = elo_shift,
       title = "Größter ELO Gewinn",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nmeiste ELO gewonnen."),
+      subtitle = paste(start, franchises, second, "diese Woche die\nmeiste ELO gewonnen."),
       image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
     ) %>%
     dplyr::select(title, subtitle, value, image)
@@ -383,7 +405,7 @@ highest_elo_jump <- shiny::reactive({
 
 ## biggest ELO drop ----
 biggest_elo_drop <- shiny::reactive({
-  rfl_current_standing %>%
+  biggest_elo_drop <- rfl_current_standing %>%
     dplyr::filter(elo_shift == min(elo_shift)) %>%
     dplyr::mutate(
       value = elo_shift,
@@ -396,7 +418,7 @@ biggest_elo_drop <- shiny::reactive({
 
 ## output ----
 weekly_report_teams <- shiny::reactive({
-  rbind(best_manager(), worst_manager(), high_scorer(), low_scorer(), top_game(), highest_scoring_game(), lowest_scoring_game(), biggest_blowout(), narrowest_win(), biggest_upset(), luckiest_manager(), unluckiest_manager(), biggest_overachiever(), biggest_underachiever(), highest_elo_jump(), biggest_elo_drop())
+  weekly_report_teams <- rbind(best_manager(), worst_manager(), high_scorer(), low_scorer(), top_game(), highest_scoring_game(), lowest_scoring_game(), biggest_blowout(), narrowest_win(), biggest_upset(), luckiest_manager(), unluckiest_manager(), biggest_overachiever(), biggest_underachiever(), highest_elo_jump(), biggest_elo_drop())
 })
 
 # output ----

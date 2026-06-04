@@ -20,23 +20,19 @@ output$active_tab <- renderText({
 shiny::observeEvent(active_tab(), {
 
   # years
-  if (active_tab() == "#section-draftklassen" || active_tab() == "#section-hit-rates") {
+  if (active_tab() == "#section-hit-rates") {
     # draft klasse
     shiny::updateSliderInput(session, "selectYears", min = 2017, max = 2025, value = c(2017, new_season_march - 3))
   } else if (active_tab() == "#section-hit-rates") {
     # draft hit rates
     shiny::updateSliderInput(session, "selectYears", min = 2017, value = c(2017, new_season_march - 3))
-  } else if(active_tab() == "#section-basics") {
-    # draft basics
-    shiny::updateSliderInput(session, "selectYears", min = 2017, max = season_before_wk_2, value = c(2017, season_before_wk_2))
-    # season_before_wk_2 weil nach gsis_id gesynct wird und die erst nach den ersten spielen vorhanden ist
   } else if(active_tab() == "#section-trade-history") {
-    shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2025, value = c(2025, 2025))
+    shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2026, value = c(2026, 2026))
   } else if(active_tab() == "#section-fantasy-finishes") {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   } else if (active_tab() == "#section-strength-of-schedule") {
     # sos
-    shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2025, value = c(2025, 2025))
+    #shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2025, value = c(2025, 2025))
   } else if (active_tab() == "#section-wochenbericht") {
     shiny::updateSliderInput(session, "selectWeek", value = current_week - 1)
   } else {
@@ -44,11 +40,13 @@ shiny::observeEvent(active_tab(), {
   }
 
   # year
-  if (active_tab() == "#section-draftboards") {
-    if (current_week > 1) {
-      shiny::updateSliderInput(session, "selectYear", min = 2017, max = new_season_sept, value = new_season_sept - 1)
-    } else {
-      shiny::updateSliderInput(session, "selectYear", min = 2017, max = new_season_sept - 1, value = new_season_sept - 1)
+  if (active_tab() == "#section-draftklassen") {
+    if (current_week > 1 & !draft_classes_data_loaded()) {
+
+      shiny::updateSliderInput(session, "selectYear", min = 2017, max = max(rfl_drafts_data$season), value = new_season_sept - 2)
+    } else if (!draft_classes_data_loaded()) {
+
+      shiny::updateSliderInput(session, "selectYear", min = 2017, max = new_season_sept - 1, value = new_season_sept - 2)
     }
   } else {
     shiny::updateSliderInput(session, "selectYear", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
@@ -73,7 +71,7 @@ shiny::observeEvent(active_tab(), {
       "selectPositions",
       selected = ""
     )
-  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe" | active_tab() == "#section-draftboards" | active_tab() == "#section-big-play-punkte") {
+  } else if(active_tab() == "#section-fantasy-finishes" | active_tab() == "#section-roster-tiefe" | active_tab() == "#section-draftboards" | active_tab() == "#section-draftklassen" | active_tab() == "#section-big-play-punkte") {
     shinyWidgets::updatePickerInput(
       session,
       "selectPositions",
@@ -90,22 +88,22 @@ shiny::observeEvent(active_tab(), {
 
   # rfl teams
   if (active_tab() == "#section-magic-number") {
-    conf_teams <- rfl_franchise_data %>%
-      dplyr::filter(conference_name == input$selectRflConference)
+    #conf_teams <- rfl_franchise_data %>%
+    #  dplyr::filter(conference_name == input$selectRflConference)
 
-    shinyWidgets::updatePickerInput(
-      session,
-      "selectRflTeams",
-      choices = setNames(conf_teams$franchise_id[order(conf_teams$franchise_name)], conf_teams$franchise_name[order(conf_teams$franchise_name)]),
-      selected = NULL
-    )
+    #shinyWidgets::updatePickerInput(
+    #  session,
+    #  "selectRflTeams",
+    #  choices = setNames(conf_teams$franchise_id[order(conf_teams$franchise_name)], conf_teams$franchise_name[order(conf_teams$franchise_name)]),
+    #  selected = NULL
+    #)
   } else {
     shinyWidgets::updatePickerInput(
       session,
       "selectRflTeams",
       choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
       selected = NULL,
-      options = list("actions-box" = TRUE, "max-options" = 6, "none-selected-text" = "RFL Team wählen")
+      options = list("actions-box" = TRUE, "none-selected-text" = "RFL Team wählen")
     )
   }
 })

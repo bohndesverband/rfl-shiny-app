@@ -1,748 +1,515 @@
+# TODO: seite für neueste draftklasse aufräumen (Dinge ausblenden)
+# TODO: plot für die density der gedrafteten position, ähnlich wie auf history seite ganz unten
 # daten ----
-rfl_draft_classes <- shiny::reactive({
-  rfl_draft_classes <- rfl_drafts_data %>%
-    dplyr::filter(season > 2016 & season < new_season_march) %>%
+## fitere draft daten ----
+rfl_draft_classes_filtered <- shiny::reactive({
+  rfl_draft_classes_filtered <- rfl_drafts_data %>%
+    dplyr::filter(season > 2016) %>%
 
     #filter(franchise_id == "0001") %>%
-    #dplyr::filter(season == 2025) %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])
-}) %>%
-  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
-
-rfl_draft_classes_sum <- rfl_drafts_data %>%
-  dplyr::filter(season > 2016) %>%
-  group_by(season, franchise_id, franchise_name, class) %>%
-  dplyr::summarise(
-    picks = n(),
-    value = sum(value),
-    .groups = "drop"
-  ) %>%
-  dplyr::mutate(
-    value_pctl = dplyr::percent_rank(value)
-  ) %>%
-  dplyr::group_by(season) %>%
-  dplyr::arrange(dplyr::desc(value)) %>%
-  dplyr::mutate(
-    rank = dplyr::row_number(),
-    season_date = as.Date(paste0(season, "-01-01"))
-  ) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(season, season_date, franchise_id, franchise_name, class, picks, rank, value, value_pctl)
-
-rfl_draft_classes_sum_filtered <- shiny::reactive({
-  rfl_draft_classes_sum %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    #dplyr::filter(season == 2024)
+    dplyr::filter(season == input$selectYear) %>%
+    dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2]) %>%
     dplyr::filter(
-      if(isTruthy(input$selectRflTeams))
-        franchise_id %in% input$selectRflTeams
+      if(isTruthy(input$showOnlyRookies))
+        is_rookie == 1
       else
         TRUE
     ) %>%
-    head(2)
-}) %>%
-  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        pos_grouped %in% input$selectPositions
+      else
+        TRUE
+    )
+})
 
-# ranking aller draftklassen ----
-## overview ----
-output$draft_classes_overview <- shiny::renderPlot({
-  ggplot2::ggplot(rfl_draft_classes_sum, ggplot2::aes(x = season_date, y = reorder(franchise_name, dplyr::desc(franchise_name)), fill = rank)) +
-    ggplot2::geom_tile(color = color_bg) +
-    ggplot2::geom_text(
-      ggplot2::aes(
-        label = rank,
-        fontface = "bold",
-        size = 10
+## filtere summierte daten für klasse ----
+rfl_draft_classes_sum_filtered <- shiny::reactive({
+  rfl_draft_classes_sum_filtered <- rfl_draft_classes_sum %>%
+    #dplyr::filter(season == 2021)
+    dplyr::filter(season == input$selectYear)
+
+  rfl_draft_classes_sum_filtered
+})
+
+# TODO: filter nach position und draftrunden einbauen und daten dahingehend berechnen
+
+
+# TODO: filterung bei button klick
+# shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+# draftpicks ----
+output$draft_classes_picks <- reactable::renderReactable({
+  data <- rfl_draft_classes_filtered() %>%
+    dplyr::left_join(
+      player_elo %>%
+        dplyr::group_by(mfl_id) %>%
+        dplyr::arrange(season, week) %>%
+        dplyr::summarise(player_elo = list(player_elo_post), .groups = "drop"),
+      by = "mfl_id"
+    ) %>%
+    dplyr::arrange(overall) %>%
+    dplyr::mutate(
+      pick = paste(round, formatC(pick, width = 2, flag = "0"), sep = "."),
+      player_info = paste(pos_grouped, team, sep = ", ")
+    ) %>%
+    dplyr::select(pick, player_name_with_badge, player_info, franchise_name, subline, pick_cat, pvar, voe)
+
+  reactable_default(
+    data,
+    columns = list(
+      player_name_with_badge = reactable::colDef(
+        name = "Spieler",
+        html = TRUE,
+        cell = function(value, index) {
+          content <- shiny::tagList(
+            htmltools::div(htmltools::HTML(value)),
+            htmltools::div(htmltools::HTML(paste0("<small>", data$player_info[index], "</small>")))
+          )
+
+          as.character(content)
+        },
+        minWidth = 170
+      ),
+      franchise_name = reactable::colDef(
+        name = "Team",
+        html = TRUE,
+        cell = function(value, index) {
+          content <- shiny::tagList(
+            htmltools::div(value),
+            htmltools::div(htmltools::HTML(paste0("<small>", data$subline[index], "</small>")))
+          )
+
+          as.character(content)
+        },
+        minWidth = 170
+      ),
+      pick = reactable::colDef(
+        name = "Pick",
+        style = function(value) {
+          list(
+            textAlign = "center"
+          )
+        },
+        minWidth = 50
+      ),
+      pvar = coldef_pvar(),
+      voe = coldef_voe(),
+      player_info = reactable::colDef(show = FALSE),
+      subline = reactable::colDef(show = FALSE),
+      pick_cat = reactable::colDef(show = FALSE)
+    ),
+    columnGroups = list(
+      colGroup(name = "Value", columns = c("pvar", "voe"))
+    ),
+    sortable = TRUE,
+    filterable = TRUE,
+    defaultSorted = c("pick"),
+    # height = 772
+    height = 745
+  )
+})
+
+# impact ----
+output$draft_classes_impact <- ggiraph::renderGirafe({
+  plot <- rfl_draft_classes_sum_filtered() %>%
+    plot_pVARexp_voe()
+
+  girafe_default_output(plot)
+})
+
+# TODO: text auf farbigen flächen
+# draftklassen ----
+
+bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
+  bar <- htmltools::div(style = list(background = fill, width = width, height = height))
+  chart <- htmltools::div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  label <- htmltools::span(text, style = list(fontSize = "0.8em"))
+
+  htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
+}
+
+output$draft_classes_teams <- reactable::renderReactable({
+  data <- rfl_draft_classes_sum_filtered() %>%
+    dplyr::select(franchise_name, picks, rank_season, pvar, voe, rank, pvar_pctl)
+
+  reactable_default(
+    data,
+    columns = list(
+      franchise_name = reactable::colDef(
+        name = "Team",
+        html = TRUE,
+        cell = function(value, index) {
+          content <- shiny::tagList(
+            htmltools::div(value),
+            htmltools::div(htmltools::HTML(paste0("<small>", data$picks[index], " Picks", "</small>")))
+          )
+
+          as.character(content)
+        },
+        minWidth = 170
+      ),
+      pvar = coldef_pvar(palette_fun = pal_pvar_class_sum),
+      voe = coldef_voe(palette_fun = pal_voe_class_sum),
+      rank = reactable::colDef(
+        name = "Platz",
+        html = TRUE,
+        cell = function(value) {
+          content <- shiny::tagList(
+            htmltools::div(value),
+            htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (new_season_march - 2017) * 36, "</small>")))
+          )
+
+          as.character(content)
+        },
+        style = function(value) {
+          list(
+            textAlign = "center"
+          )
+        },
+        minWidth = 70
+      ),
+      pvar_pctl = colDef(
+        name = "Pctl",
+        align = "left",
+        cell = function(value) {
+          width <- paste0(value / max(data$pvar_pctl) * 100, "%")
+          bar_chart(paste0(value * 100, "%"), width = width)
+        },
+        minWidth = 200
+      ),
+      picks = reactable::colDef(show = FALSE),
+      rank_season = reactable::colDef(name = "pVAR #", minWidth = 50)
+    ),
+    columnGroups = list(
+      colGroup(name = paste0("2017-", new_season_march - 1), columns = c("rank", "pvar_pctl")),
+      colGroup(name = paste0(input$selectYear), columns = c("rank_season", "pvar", "voe"))
+    ),
+    details = function(index) {
+      row <- data[index, ]
+
+      picks <- rfl_draft_classes_filtered() %>%
+        dplyr::filter(franchise_name == row$franchise_name) %>%
+        dplyr::select(asset_name_with_badge, voe)
+
+      reactable_default(
+        picks,
+        columns = list(
+          asset_name_with_badge = reactable::colDef(
+            name = "Spieler",
+            html = TRUE,
+            cell = function(value, index) {
+              as.character(htmltools::div(htmltools::HTML(value)))
+            },
+            minWidth = 350
+          ),
+          voe = coldef_voe(),
+          compact = TRUE,
+          fullWidth = FALSE
+        )
       )
+    },
+    filterable = TRUE,
+    sortable = TRUE,
+    height = 745
+  )
+})
+
+# TODO: bei team filter hervorheben
+
+# VOE ----
+rfl_draft_voe <- shiny::reactive({
+  rfl_draft_voe <- rfl_drafts_data %>%
+    dplyr::filter(
+      season == input$selectYear
+      #season == 2018
+    ) %>%
+    dplyr::filter(
+      if(isTruthy(input$showOnlyRookies))
+        is_rookie == 1
+      else
+        TRUE
+    ) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectPositions))
+        pos_grouped %in% input$selectPositions
+      else
+        TRUE
+    ) %>%
+    filter(!is.na(player_name))
+})
+
+output$draft_classes_voe <- ggiraph::renderGirafe({
+  plot <- ggplot2::ggplot(rfl_draft_classes_filtered(), ggplot2::aes(x = overall, y = pvar, color = factor(pos_grouped, positions_grouped))) +
+    ggplot2::geom_vline(xintercept = 36, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 72, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 108, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 144, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 180, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 216, color = color_grey_light) +
+    ggplot2::geom_vline(xintercept = 252, color = color_grey_light) +
+    ggplot2::geom_smooth(
+      data = rfl_draft_pvar_exp,
+      ggplot2::aes(y = pvar_exp),
+      se = FALSE,
+      color = color_red,
+      size = 0.5
     ) +
-    ggplot2::scale_fill_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 18, guide = "none") +
-    ggplot2::scale_size_continuous(guide = "none") +
-    ggplot2::scale_x_date(date_breaks = "1 year", date_labels = "'%y", expand = c(0, 0)) +
+    ggiraph::geom_point_interactive(
+      ggplot2::aes(
+        tooltip = paste(
+          player_name, paste0("(", pos_grouped, ", ", team, ")"),
+          "\n", franchise_name,
+          "\nPick: ", paste0(round, ".", pick, " (#", overall, ")"),
+          "\nVOE:", voe),
+        data_id = mfl_id
+      ),
+      alpha = 0.8,
+      size = 7,
+      hover_nearest = TRUE
+    ) +
+    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(rfl_draft_voe()$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
     plot_defaults +
     ggplot2::labs(
-      title = "RFL Draftklassen Überblick",
-      x = "Saison"
+      title = paste("RFL Draftklasse", input$selectYear, "Value over Expected"),
+      #subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem derzeitigen Wert."),
+      x = "Overall Pick im RFL Draft",
+      y = "pVAR",
+      color = "Position"
     ) +
     ggplot2::theme(
-      axis.title.y = ggplot2::element_blank(),
       panel.grid.major = ggplot2::element_blank(),
       panel.grid.minor = ggplot2::element_blank()
     )
 
-}, height = 800)
-
-# überblick über alle draftklassen eines teams ----
-#output$team_draft_classes <- reactable::renderReactable({
-#  selected_teams <- rfl_draft_classes_sum_filtered() %>%
-#    dplyr::filter(franchise_id %in% input$selectRflTeams)
-
-#  reactable::reactable(
-#    selected_teams
-#  )
-#})
-
-
-
-
-
-## value ----
-#draft_classes_value_height <- shiny::reactiveVal(250)
-
-#shiny::observeEvent(input$selectRflTeams, {
-#  n_selected <- if (is.null(input$selectRflTeams)) 0 else length(input$selectRflTeams)
-
-#  if (n_selected != 0) {
-#    draft_classes_value_height(n_selected * 250)
-#  } else {
-#    draft_classes_value_height(250)
-#  }
-#})
-
-#output$draft_classes_value <- shiny::renderPlot({
-#  ggplot2::ggplot(data = subset(rfl_draft_classes_sum, franchise_id %in% input$selectRflTeams), ggplot2::aes(x = as.Date(paste0(season, "-01-01")), y = value)) +
-#    ggplot2::facet_wrap(~ franchise_name, ncol = 1) +
-#    ggplot2::geom_col(ggplot2::aes(fill = rank)) +
-#    ggplot2::geom_text(
-#      ggplot2::aes(
-#        y = min(value) - 0.7,
-#        label = paste0("#", rank),
-#        color = rank
-#      ),
-#      fontface = "bold",
-#      size = 5
-#    ) +
-#    ggplot2::scale_x_date(date_breaks = "1 year", date_labels = "'%y", expand = c(0, 0)) +
-#    ggplot2::scale_y_continuous(expand = ggplot2::expansion(mult = c(0.2, 0.1))) +
-#    ggplot2::scale_fill_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 16, guide = "none") +
-#    ggplot2::scale_color_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 16, guide = "none") +
-#    ggplot2::scale_size_continuous(guide = "none") +
-#    plot_defaults +
-#    ggplot2::labs(
-#      title = "Ranking der Draftklassen"
-#    ) +
-#    ggplot2::theme(
-#      axis.title.x = ggplot2::element_blank(),
-#      axis.title.y = ggplot2::element_blank(),
-#      axis.text.y = ggplot2::element_blank(),
-#      panel.grid.major = ggplot2::element_blank(),
-#      panel.grid.minor = ggplot2::element_blank()
-#    )
-#}, height = function() { draft_classes_value_height() })
-
-## output ----
-
-
-#observeEvent(event_data("plotly_click", source = "A"), {
-#  click <- event_data("plotly_click", source = "A")
-#  clicked_data <- rfl_draft_classes()[click$pointNumber + 1, ]
-
-#  shinyWidgets::updatePickerInput(
-#    session,
-#    "selectRflTeams",
-#    selected = setNames(clicked_data$franchise_id, clicked_data$franchise_name)
-#  )
-
-#  shiny::updateSliderInput(
-#    session,
-#    "selectYear",
-#    value = clicked_data$season
-#  )
-#})
-
-# einzelne draft klasse eines teams ----
-## reactable ----
-output$team_draft_class <- reactable::renderReactable({
-  data <- rfl_drafts_data %>%
-    dplyr::select(-elo_season_end) %>%
-    dplyr::left_join(
-      player_elo %>%
-        dplyr::select(mfl_id, elo_season = season, elo_season_end) %>%
-        dplyr::distinct(),
-      by = c("mfl_id"),
-      relationship = "many-to-many"
-    ) %>%
-    dplyr::group_by(mfl_id) %>%
-    dplyr::mutate(last_season = ifelse(elo_season == max(elo_season), 1, 0)) %>%
-    dplyr::ungroup()
-
-  row_details <- function(index) {
-    selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
-
-    data_filtered <- data %>%
-      dplyr::filter(.data$class == selected_class)
-
-    ### picks ----
-    output[[paste0("team_draft_class_picks_", index)]] <- reactable::renderReactable({
-      draft_class_data <- data_filtered %>%
-        dplyr::mutate(
-          info = paste0(round, ".", pick, " (#", overall, ")"),
-          player = paste0(player_name, " (", team, ", ", pos_grouped, ")")
-        ) %>%
-        dplyr::select(info, player, subline, pos_rank) %>%
-        dplyr::distinct()
-
-      reactable::reactable(
-        draft_class_data,
-        columns = list(
-          player = reactable::colDef(
-            name = "Spieler",
-            html = TRUE,
-            cell = function(value, index) {
-              tagList <- tagList(
-                div(
-                  div(draft_class_data$player[index]),
-                  div(htmltools::HTML(draft_class_data$subline[index]), style = list(fontSize = "0.6rem"))
-                )
-              )
-
-              as.character(tagList)
-            }
-          ),
-          subline = reactable::colDef(show = FALSE)
-        ),
-        defaultColDef = colDef(vAlign = "center", headerVAlign = "bottom"),
-        sortable = FALSE,
-        searchable = TRUE,
-        striped = TRUE,
-        outlined = TRUE,
-        theme = reactableTheme(
-          borderColor = color_grey_dark,
-          stripedColor = color_bg
-        )
-      )
-    })
-
-    ### value ----
-    output[[paste0("team_draft_class_value_", index)]] <- shiny::renderPlot({
-      ggplot2::ggplot(subset(data_filtered, last_season == 1), ggplot2::aes(x = overall, y = value, color = factor(pos_grouped, positions_grouped))) +
-        ggplot2::geom_hline(yintercept = 0, color = color_red, alpha = 0.5) +
-        ggplot2::geom_point(
-          data = rfl_drafts_data %>%
-            dplyr::group_by(mfl_id) %>%
-            dplyr::filter(season == data_filtered$season[1]) %>%
-            dplyr::filter(franchise_id != data_filtered$franchise_id[1]),
-          fill = color_grey_light,
-          color = color_grey_light,
-          alpha = 1,
-          size = 3
-        ) +
-        ggplot2::geom_point(size = 5, alpha = 1) +
-        ggrepel::geom_label_repel(
-          ggplot2::aes(label = paste(player_name, paste0("(", pos_grouped, ", ", team, ")"))),
-          size = 4,
-          alpha = 1,
-          show.legend = FALSE
-        ) +
-        ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
-        plot_defaults +
-        ggplot2::labs(
-          title = paste(selected_class, "Draftvalue"),
-          subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem derzeitigen Wert."),
-          x = "Overall Pick im RFL Draft",
-          y = "⌀WAR"
-        ) +
-        ggplot2::theme(
-          legend.position = "none",
-          plot.title = ggplot2::element_text(size = 16),
-          plot.subtitle = ggplot2::element_text(size = 11),
-          axis.title = ggplot2::element_text(size = 11)
-        )
-
-    }, height = 700)
-
-    ### elo ----
-    output[[paste0("team_draft_class_elo", index)]] <- shiny::renderPlot({
-      shiny::validate(
-        shiny::need(input$selectYears[2] < new_season_march, "Für die aktuelle Draftklasse gibt es noch keine ELO-Daten. Wähle mit dem zweiten Saison-Regler eine frühere Saison.")
-      )
-
-      ggplot2::ggplot(subset(data_filtered, last_season == 1), ggplot2::aes(x = overall, y = elo_season_end, color = factor(pos_grouped, positions_grouped), alpha = season)) +
-        ggplot2::geom_hline(yintercept = 1500, color = color_red, alpha = 0.5) +
-        ggplot2::geom_point(
-          data = rfl_drafts_data %>%
-            dplyr::group_by(mfl_id) %>%
-            dplyr::filter(season == data_filtered$season[1]) %>%
-            dplyr::filter(elo_season_end == max(elo_season_end)) %>%
-            dplyr::filter(franchise_id != data_filtered$franchise_id[1]),
-          fill = color_grey_light,
-          color = color_grey_light,
-          alpha = 1,
-          size = 3
-        ) +
-        ggplot2::geom_point(size = 10, alpha = 1) +
-        ggplot2::geom_point(data = subset(data_filtered, last_season == 0), size = 5) +
-        ggplot2::scale_alpha_continuous(guide = "none") +
-        ggrepel::geom_label_repel(
-          ggplot2::aes(label = paste(player_name, paste0("(", pos_grouped, ", ", team, ")"))),
-          size = 4,
-          alpha = 1,
-          show.legend = FALSE
-        ) +
-
-        ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
-
-        plot_defaults +
-        ggplot2::labs(
-          title = paste(selected_class, "Draft - ELO Entwicklung"),
-          subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem ELO-Wert am Ende einer Saison.\nDie Picks des Teams werden farbig hervorgehoben und zeigen die ELO-Werte am Ende jeder RFL Regular Season.\nJe heller der Punkt, desto länger ist die Saison her. Der große Punkt ist immer die letzte Saison des Spielers."),
-          x = "Overall Pick im RFL Draft",
-          y = "ELO am Ende jeder RFL Regular Season"
-        ) +
-        ggplot2::theme(
-          legend.position = "none",
-          plot.title = ggplot2::element_text(size = 16),
-          plot.subtitle = ggplot2::element_text(size = 11),
-          axis.title = ggplot2::element_text(size = 11)
-        )
-    }, height = 700)
-
-    ### output ----
-    detail <- shiny::fluidPage(
-      shiny::fluidRow(
-        shiny::column(
-          shinycssloaders::withSpinner(reactable::reactableOutput(paste0("team_draft_class_picks_", index))),
-          width = 12
-        ),
-        shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput(paste0("team_draft_class_value_", index))),
-          width = 6
-        ),
-        shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput(paste0("team_draft_class_elo", index))),
-          width = 6
-        )
-      )
+  ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 9) %>%
+    ggiraph::girafe_options(
+      ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg)),
+      ggiraph::opts_hover_inv(css = "opacity:0.4")
     )
-
-    detail
-  }
-
-  reactable::reactable(
-    rfl_draft_classes_sum_filtered(),
-    columns = list(
-      class = reactable::colDef(name = "", sticky = "left"),
-      picks = reactable::colDef(
-        name = "Picks",
-      ),
-      rank = reactable::colDef(
-        name = "Platzierung im Draftjahr",
-        style = function(value) {
-          value <- as.numeric(value)
-
-          if (value > 6) {
-            color <- color_cyan
-          } else if (value > 12) {
-            color <- color_green
-          } else if (value > 18) {
-            color <- color_yellow
-          } else if (value > 24) {
-            color <- color_orange
-          } else if (value > 30) {
-            color <- color_red
-          } else {
-            color <- color_blue
-          }
-
-          list(color = color)
-        }
-      ),
-      value = reactable::colDef(
-        name = "Value",
-        sortable = TRUE
-      ),
-      value_pctl = reactable::colDef(
-        name = "Perzentil seit 2017",
-        cell = JS('function(cellInfo) {
-          // Format as percentage
-          const pct = (cellInfo.value * 100).toFixed(1) + "%"
-          // Pad single-digit numbers
-          let value = pct.padStart(5)
-          // Show % on first row only
-          if (cellInfo.viewIndex > 0) {
-            value = value.replace("%", " ")
-          }
-          // Render bar chart
-          return `
-            <div class="bar-cell">
-              <span class="number">${value}</span>
-              <div class="bar-chart" style="background-color: #e1e1e1">
-                <div class="bar" style="width: ${pct}; background-color: #fc5185"></div>
-              </div>
-            </div>
-          `
-        }'),
-        html = TRUE
-      ),
-      season = reactable::colDef(show = FALSE),
-      season_date = reactable::colDef(show = FALSE),
-      franchise_id = reactable::colDef(show = FALSE),
-      franchise_name = reactable::colDef(show = FALSE)
-    ),
-    defaultSorted = "value",
-    defaultSortOrder = "desc",
-    sortable = FALSE,
-    showSortable = TRUE,
-    defaultPageSize = 12,
-    showPageSizeOptions = TRUE,
-    pageSizeOptions = c(25, 50, 100),
-    onClick = "expand",
-    resizable = TRUE,
-    details = row_details,
-    wrap = FALSE,
-    compact = TRUE,
-    highlight = TRUE,
-    theme = reactableTheme(
-      borderColor = color_grey_light,
-    ),
-    #virtual = TRUE,
-    height = 800,
-    searchable = TRUE
-  )
 })
 
-
-## trades ----
-draft_class_trades <- shiny::reactive({
-  draft_class_trades <- rfl_trades_data %>%
-    filter(season <= input$selectYears[1]) %>%
-    #filter(season <= 2025) %>%
-    dplyr::group_by(trade_id) %>%
+# draftboard ----
+rfl_draft_boards <- shiny::reactive({
+  rfl_draft_boards <- rfl_draft_classes_filtered() %>%
+    dplyr::left_join(
+      rfl_player_scores %>%
+        dplyr::group_by(player_id) %>%
+        dplyr::summarise(
+          latest_player_name = dplyr::last(player_name),
+          fpts = sum(points, na.rm = TRUE),
+          .groups = "drop"
+        ),
+      by = c("mfl_id" = "player_id")
+    ) %>%
+    dplyr::mutate(fpts_max = max(fpts, na.rm = TRUE)) %>%
+    dplyr::group_by(pos_grouped) %>%
+    dplyr::mutate(fpts = ifelse(is.na(fpts), 0, fpts)) %>%
+    dplyr::arrange(dplyr::desc(fpts)) %>%
     dplyr::mutate(
-      franchise_ids = paste(franchise_id, collapse = ","),
-      asset_ids = paste(asset_id, collapse = ","),
-      asset_names = paste(asset_name, collapse = "\n")
+      fpts_max_pos = max(fpts, na.rm = TRUE),
+      max_bar_legth = fpts_max_pos / fpts_max,
+      fpts_pct = fpts / fpts_max_pos,
+      fpts_pct = ifelse(fpts_pct > 0, fpts_pct, 0),
+      fpts_rank = dplyr::dense_rank(dplyr::desc(fpts)),
+      latest_player_name = ifelse(is.na(latest_player_name), player_name, latest_player_name)
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::filter(grepl(input$selectRflTeams, franchise_ids) & (grepl(paste0(input$selectRflTeams, "_", input$selectYears[1]), asset_ids) | grepl(input$selectYears[1], asset_names))) %>%
-    #dplyr::filter(grepl("0001", franchise_ids) & (grepl(paste0("0001_", 2025), asset_ids) | grepl(2025, asset_names))) %>%
     dplyr::mutate(
-      side = ifelse(franchise_id == input$selectRflTeams, "sent", "received"),
-      #side = ifelse(franchise_id == "0001", "sent", "received")
-    ) %>%
-    dplyr::select(season, date, trade_id, side, asset_name, asset_id) %>%
-    tidyr::separate(asset_id, into = c("prefix", "pick_owner", "pick_year", "pick_round"), sep = "_", remove = FALSE) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(
-      pick_year = dplyr::case_when(
-        prefix == "DP" ~ stringr::word(asset_name, 2),
-        TRUE ~ pick_year
-      ),
-      pick_round = dplyr::case_when(
-        prefix == "FP" ~ as.integer(pick_round),
-        prefix == "DP" ~ as.integer(pick_owner) + 1
-      )
-    ) %>%
-
-    # add draft order um pick für getradete future picks zu erhalten
-    dplyr::left_join(
-      rfl_draft_orders %>%
-        dplyr::mutate(pick_year = as.character(season)) %>%
-        dplyr::select(-season),
-      by = c("pick_year", "pick_owner" = "franchise_id")
-    ) %>%
-
-    # add franchise name to picks where no future draft order is available
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name) %>%
-        dplyr::rename(current_franchise_name = franchise_name),
-      by = c("pick_owner" = "franchise_id")
-    ) %>%
-
-    dplyr::mutate(
-      franchise_name = ifelse(is.na(franchise_name) & !is.na(current_franchise_name), current_franchise_name, franchise_name),
-      asset_id_new = dplyr::case_when(
-        # alle ehemaligen future picks, die jetzt in der gegenwart sind, erhalten eine ID für den aktuellen draft
-        prefix == "FP" & pick_year <= input$selectYears[1] ~ paste("DP", pick_round - 1, pick - 1, pick_year, sep = "_"),
-        prefix == "DP" ~ paste0(asset_id, "_", pick_year),
-      TRUE ~ asset_id
-      ),
-      #asset_id_new = dplyr::case_when(
-      # alle ehemaligen future picks, die jetzt in der gegenwart sind, erhalten eine ID für den aktuellen draft
-      #  prefix == "FP" & pick_year <= 2025 ~ paste("DP", pick_round - 1, pick - 1, pick_year, sep = "_"),
-      #  prefix == "DP" ~ paste0(asset_id, "_", pick_year),
-      #  TRUE ~ asset_id
-      #),
-      pick = dplyr::case_when(
-        prefix == "DP" ~ as.integer(stringr::word(asset_id, 3, sep = "_")) + 1,
-        TRUE ~ as.integer(pick)
-      )
-    ) %>%
-    arrange(side) %>%
-    dplyr::left_join(
-      rfl_drafts_data %>%
-        dplyr::mutate(
-          round = as.integer(round),
-          player_name = paste0(player_name, " (", pos, ", ", team, ")"),
-          pick_team_id = franchise_id,
-          pick_year = as.character(season)
-        ) %>%
-        dplyr::select(pick_year, round, pick, player_name, pick_team_id),
-      by = c("pick_year", "pick_round" = "round", "pick")
-    ) %>%
-    dplyr::mutate(
-      asset_name = ifelse(
-        prefix == "FP",
-        paste(asset_name, franchise_name),
-        asset_name
-      )
-    ) %>%
-    dplyr::bind_rows(as_tibble(lapply(df, \(x) NA), .name_repair = "unique")) %>%  # neue zeile notwendig, damit beim mergen die colnames existieren. sonst kommt es bei teams ohen trades zu fehlern
-    dplyr::select(season:pick_team_id, -prefix, -pick_owner, -current_franchise_name)
-})
-
-draft <- shiny::reactive({
-  draft <- rfl_drafts_data %>%
-    #dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    #dplyr::filter(season == 2025) %>%
-    dplyr::left_join(
-      mfl_adp_data %>%
-        dplyr::mutate(adp = (rfl_min + rfl_max) / 2) %>%
-        dplyr::select(season, mfl_id, adp),
-      by = c("season", "mfl_id")
-    ) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(
-      side = "received",
-      asset_id_new = paste("DP", as.integer(round) - 1, pick - 1, season, sep = "_"),
-      first_pick_new = first_pick,
-      second_pick_new = second_pick,
-      third_pick_new = third_pick,
-      across(
-        c(first_pick_new, second_pick_new, third_pick_new),
-        ~ ifelse(.x == overall, paste0("**", .x, "**"), as.character(.x))
-      ),
-      asset_name = paste(season, paste0(as.integer(round), ".", sprintf("%02d", pick)), player_name, paste0("(", pos, ", ", team, ")")),
-      text_rfl =  paste("RFL:", paste(na.omit(c(first_pick_new, second_pick_new, third_pick_new)), collapse = ", ")),
-      text_adp = paste0("ADP: ", adp),
-      subline = ifelse(
-        !is.na(adp),
-        paste(text_rfl, text_adp, sep = " - "),
-        text_rfl
-      )
-    ) %>%
-    dplyr::rename(date = timestamp)
-})
-
-draft_team <- shiny::reactive({
-  draft_team <- draft() %>%
-    dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
-    #dplyr::filter(franchise_id == "0001") %>%
-    dplyr::mutate(
-      xstart = dplyr::case_when(
-        overall == second_pick ~ first_pick,
-        is.na(second_pick) | is.na(third_pick) ~ max(draft()$overall),
-        TRUE ~ second_pick
-      )
-    )
-})
-
-## output übersicht ----
-output$single_draft_class <- gt::render_gt({
-  req(input$selectRflTeams)
-
-  combined_data <- dplyr::bind_rows(
-    lapply(
-      list(draft_team() %>% dplyr::select(season, date, side, asset_id_new, asset_name, subline), draft_class_trades()),
-      #list(draft_team %>% dplyr::select(season, date, side, asset_id_new, asset_name, subline), draft_class_trades),
-      function(x) {
-        if (is.data.frame(x) && nrow(x) > 0) x else NULL
-      }
-    )
-  ) %>%
-    # filter alle erhaltene picks, mit denen dann gepickt wurde, raus
-    dplyr::group_by(asset_id_new) %>%
-    dplyr::arrange(dplyr::desc(date)) %>%
-    dplyr::filter(dplyr::row_number() == 1 & !is.na(date)) %>%
-
-    dplyr::mutate(
-      side = ifelse(side == "sent", "Abgänge", "Zugänge"),
-      type = dplyr::case_when(
-        "asset_id_new" %in% names(.) && grepl("FP_", asset_id_new) ~ "3_future_pick",
-        "asset_id_new" %in% names(.) && grepl("DP_", asset_id_new) ~ "2_pick",
-        TRUE ~ "1_Player"
-      ),
-      date = dplyr::first(format(date, "%d.%m.%Y")),
-      player_info = ifelse(!is.na(pick_round) & !is.na(pick), paste0(as.integer(pick_round), ".", sprintf("%02d", as.integer(pick)), " ", player_name), ""),
-      asset_name = dplyr::case_when(
-        # für draftpicks
-        !is.na(subline) ~ paste(asset_name, subline, sep = "\n"),
-        !is.na(player_name) & pick_year <= input$selectYears[1] ~ paste(pick_year, player_info),
-        !is.na(player_name) & new_season_march > input$selectYears[1] + 2 ~ paste(asset_name, player_info, sep = "\n"), # zeige gepickte spieler erst 2 jahre nach der gewählten draftklasse
-        pick_year > input$selectYears[1] & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
-        #!is.na(player_name) & pick_year <= 2025 ~ paste(pick_year, player_info),
-        #!is.na(player_name) & new_season_march > 2025 + 2 ~ paste(asset_name, player_info, sep = "\n"),
-        #pick_year > 2025 & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
-        TRUE ~ asset_name
-      )
-    ) %>%
-    dplyr::group_by(side, type) %>%
-    dplyr::arrange(dplyr::desc(side), type, !!!if ("pick_year" %in% names(.)) rlang::syms("pick_year") else NULL, asset_name) # !!! und rlang::syms() erlauben es, Spaltennamen programmatisch einzufügen.
-
-  row_index_line_through <- which(combined_data$side == "Zugänge" & combined_data$pick_team_id != input$selectRflTeams)[1]
-  #row_index_line_through <- which(combined_data$side == "Zugänge" & combined_data$pick_team_id != "0001")[1]
-  row_index_first_pick <- which(is.na(combined_data$trade_id))[1]
-  row_index_future_picks <- which(combined_data$pick_year > input$selectYears[1])[1]
-  #row_index_future_picks <- which(combined_data$pick_year > 2025)[1]
-
-  table <- combined_data %>%
-    dplyr::group_by(side) %>%
-    dplyr::select(date, side, asset_name, pick_team_id) %>%
-    gt::gt() %>%
-    gt::tab_header(
-      title = paste(rfl_franchise_data$franchise_name[rfl_franchise_data$franchise_id == input$selectRflTeams], "Draftklasse", input$selectYears[1])
-    ) %>%
-    gtDefaults() %>%
-    gt::tab_style(
-      style = gt::cell_text(decorate = "line-through"),
-      locations = cells_body(
-        columns = asset_name,
-        rows = side == "Zugänge" & pick_team_id != input$selectRflTeams
-        #rows = side == "Zugänge" & pick_team_id != "0001"
-      )
-    ) %>%
-    gt::fmt_markdown(columns = asset_name) %>%
-    gt::cols_hide(c(side, pick_team_id)) %>%
-    gt::cols_label(
-      date = "Datum",
-      asset_name = "Asset"
+      #normalize bar_length to max 0.6 and min 0.2
+      max_bar_legth = 0.2 + (max_bar_legth * 0.4)
     )
 
-  if (!is.na(row_index_line_through)) {
-    table <- table %>%
-      gt::tab_footnote(
-        footnote = "Durchgestrichenen Picks wurden nicht vom dem ausgewählten Team getätigt, sondern wurden weiter getradet.",
-        locations = cells_body(
-          columns = asset_name,
-          rows = row_index_line_through
-        )
-      )
-  }
-
-  if (!is.na(row_index_first_pick)) {
-    table <- table %>%
-      gt::tab_footnote(
-        footnote = "Der hervorgehobene RFL Pick ist der Spot, an dem das ausgewählte Team den Spieler gewählt hat.",
-        locations = cells_body(
-          columns = asset_name,
-          rows = row_index_first_pick
-        )
-      )
-  }
-
-  if (!is.na(row_index_future_picks)) {
-    table <- table %>%
-      gt::tab_footnote(
-        footnote = "Für Future Picks, die weniger als 2 Jahre in der Zukunft der Draftklasse sind, werden keine Spieler angezeigt.",
-        locations = cells_body(
-          columns = asset_name,
-          rows = row_index_future_picks
-        )
-      )
-  }
-
-  table
-
-  # TODO: add UDFAs
-})
-
-## output trades ----
-output$single_draft_class_trades <- DT::renderDataTable({
-  req(input$selectRflTeams)
-
-  DT::datatable(
-    draft_class_trades() %>%
-      dplyr::filter(!is.na(trade_id)) %>%
+  # nach punkten sortieren
+  if (input$sortForFpts == TRUE) {
+    rfl_draft_boards <- rfl_draft_boards %>%
+      dplyr::arrange(dplyr::desc(fpts)) %>%
       dplyr::mutate(
-        player_info = paste(paste0(as.integer(pick_round), ".", sprintf("%02d", as.integer(pick))), player_name),
-        asset_name = dplyr::case_when(
-          !is.na(player_name) & pick_year <= input$selectYears[1] ~ paste(pick_year, player_info),
-          !is.na(player_name) & new_season_march > input$selectYears[1] + 2 ~ paste(asset_name, player_info, sep = "\n"), # zeige gepickte spieler erst 2 jahre nach der gewählten draftklasse
-          pick_year > input$selectYears[1] & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
-          #!is.na(player_name) & pick_year <= 2025 ~ paste(pick_year, player_info),
-          #!is.na(player_name) & new_season_march > 2025 + 2 ~ paste(asset_name, player_info, sep = "\n"),
-          #pick_year > 2025 & !is.na(pick) ~ paste(asset_name, paste0("(", pick_round, ".", sprintf("%02d", as.integer(pick)), ")")),
-          TRUE ~ asset_name
-        )
+        overall = dplyr::row_number(),
+        round = ceiling(overall / 36)
       ) %>%
-      dplyr::group_by(trade_id, side) %>%
-      dplyr::arrange(asset_name) %>%
-      dplyr::summarise(
-        asset_name = paste(asset_name, collapse = "\n"),
-        date = dplyr::first(format(date, "%d.%m.%Y")),
-        .groups = "drop"
-      ) %>%
-      tidyr::spread(side, asset_name) %>%
-      dplyr::select(-trade_id) %>%
-      dplyr::rename(
-        "Geholt" = received,
-        "Abgegeben" = sent,
-        Datum = date
+      dplyr::group_by(round) %>%
+      dplyr::mutate(
+        pick = dplyr::row_number()
+      )
+  }
+
+  rfl_draft_boards
+})
+
+# TODO: alte teamnamen
+
+# reaches ----
+output$draft_reaches <- ggiraph::renderGirafe({
+  plot_data <- rfl_drafts_data %>%
+    dplyr::filter(season > 2016 & !is.na(player_name)) %>%
+    dplyr::select(season, mfl_id, player_name_with_info, pick_info, min_pick, max_pick, voe) %>%
+    dplyr::mutate(
+      pick_diff = min_pick - max_pick,
+      pick_diff_pctl = 1 - dplyr::percent_rank(pick_diff)
+    )
+
+  plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = min_pick, y = max_pick)) +
+    ggplot2::geom_point(
+      color = color_grey_light,
+      size = 3
+    ) +
+    ggiraph::geom_point_interactive(
+      data = subset(plot_data, season == input$selectYear),
+      ggplot2::aes(
+        tooltip = paste(
+          player_name_with_info,
+          "\n", pick_info
+        ),
+        data_id = mfl_id,
+        color = pick_diff_pctl,
       ),
-    rownames = FALSE, options = list(dom = "Bfrtip", pageLength = 20, scrollY = "600px")
+      size = 5
+    ) +
+    ggplot2::scale_colour_gradientn(colors = c(color_blue, color_green, color_orange, color_red), rescaler = ~ scales::rescale_mid(.x, mid = 0.5), guide = "none") +
+    plot_defaults +
+    ggplot2::labs(
+      title = "Reaches anhand der RFL Draftposition",
+      subtitle = "Jeder Punkt ist ein Spieler im RFL Draft. Die farbig hervorgehobenen gehören zur ausgwählten Klasse.\nJe weiter oben links er in der Ecke steht, desto mehr wurde beim ersten Pick für ihn gereacht.",
+      x = "1. Copy",
+      y = "3. Copy"
+    )
+
+  ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 9) %>%
+    ggiraph::girafe_options(
+      ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg))
+    )
+})
+
+output$draft_board <- shiny::renderPlot({
+  ggplot2::ggplot(rfl_draft_boards(), ggplot2::aes(x = round, y = pick)) +
+    ggplot2::geom_tile(ggplot2::aes(fill = pos_grouped), color = color_bg, size = 0.5, alpha = 0.2) +
+    ggplot2::geom_text(
+      ggplot2::aes(label = paste0("#", overall, ") ", latest_player_name)),
+      size = 4.5, fontface = "bold", nudge_y = 0.2
+    ) +
+
+    ggplot2::geom_text(
+      ggplot2::aes(label = franchise_name),
+      size = 3, fontface = "bold", nudge_y = -0.3
+    ) +
+
+    ggchicklet:::geom_rrect(
+      ggplot2::aes(xmin = round - 0.4, xmax = round - 0.4 + 0.6,
+                   ymin = pick + 0.15, ymax = pick),
+      fill = NA, color = color_black, linetype = "dashed", size = 0.3, r = unit(0.5, "npc")
+    ) +
+
+    ggchicklet:::geom_rrect(
+      ggplot2::aes(xmin = round - 0.4, xmax = round - 0.4 + max_bar_legth,
+                   ymin = pick + 0.15, ymax = pick),
+      fill = color_bg, color = color_black, size = 0.5, r = unit(0.5, "npc")
+    ) +
+
+    ggchicklet:::geom_rrect(
+      ggplot2::aes(fill = pos_grouped, xmin = round - 0.4, xmax = round - 0.4 + max_bar_legth * fpts_pct,
+                   ymin = pick + 0.14, ymax = pick + 0.01),
+      r = unit(0.5, "npc")
+    ) +
+
+    ggplot2::geom_text(
+      ggplot2::aes(label = paste(pos_grouped, paste0("#", fpts_rank, "\n", round(fpts, 0), " FPts"))),
+      size = 3, fontface = "bold", hjust = 0, nudge_x = 0.25, nudge_y = -0.06, lineheight = 0.9
+    ) +
+
+    ggplot2::geom_tile(data = subset(rfl_draft_boards(), franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), fill = NA, linewidth = 2) +
+    ggplot2::scale_color_manual(values = colors) +
+    ggplot2::scale_fill_manual(values = colors_positions_grouped, guide = "none") +
+    ggplot2::scale_y_reverse(limits = c(36.5, 0.5), breaks = c(1:36), expand = c(0, 0)) +
+    ggplot2::scale_x_continuous(limits = c(0.5, max(rfl_draft_boards()$round) + 0.5), breaks = c(1:max(rfl_draft_boards()$round)), expand = c(0, 0)) +
+    plot_defaults +
+    plot_clean +
+    ggplot2::labs(
+      title = paste("RFL Draft Board", input$selectYear),
+      subtitle = "Angezeigt werden alle Picks des Drafts mit ihren Total Fantasy Points (FPts) seit dem Draft.\nDer gepunktete Balken visualisiert die FPts des besten Spielers der Draftklasse. Die länge des weißen Balkens zeigt die relativen FPts des besten Spielers der Positionsgruppe.",
+      x = "Runde",
+      y = "Pick",
+      color = ""
+    )
+}, height = 2600)
+
+# pVARexp ----
+output$draft_class_voe_exp <- reactable::renderReactable({
+  drafts_data <- rfl_drafts_data %>%
+    dplyr::filter(season == input$selectYear & !is.na(player_name) & pos_grouped != "PK") %>%
+    dplyr::select(franchise_id, franchise_name, pos_grouped, voe, pvar_exp, asset_name_with_subline, pick_cat_badge)
+
+  render_draft_history_table(
+    data_source = drafts_data,
+    use_voe = input$draft_class_voe_exp_toggle,
+    use_mean = input$draft_class_voe_exp_toggle_per_pick
   )
 })
 
-draft_elo <- rfl_drafts_data %>%
-  dplyr::filter(season > 2016 & is_rookie == 1 & !is.na(elo_peak)) %>%
-  dplyr::group_by(season, franchise_id) %>%
-  dplyr::summarise(elo_total = sum(elo_peak), .groups = "drop") %>%
-  dplyr::mutate(pctl_total = round(dplyr::percent_rank(elo_total), 2)) %>%
-  dplyr::group_by(season) %>%
-  dplyr::mutate(season_pctl = round(dplyr::percent_rank(elo_total), 2))
+#TODO: vergleich Kapital vor/nach dem draft (wer hat am meisten getradet)
 
 # ui output ----
-output$draft_classes_selected_team <- shiny::renderUI({
-  req(input$selectRflTeams)
-
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_classes")),
-      width = 12
+output$draft_class <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1(paste("RFL Draft", input$selectYear)),
+    shiny::fluidRow(
+      shiny::column(
+        htmltools::h2("Alle Picks des RFL Drafts"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_picks")),
+        width = 6
+      ),
+      shiny::column(
+        htmltools::h2("Alle RFL Draftklassen"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_teams")),
+        width = 6
+      )
     ),
-    style = "height: 800px"
-  )
-})
-
-
-output$draft_class_selected_team <- shiny::renderUI({
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class")),
-      width = 12
+    htmltools::hr(style = "margin-block: 2rem"),
+    htmltools::h2("Welche Draftklasse ist am wertvollsten?"),
+    #htmltools::div("Abgebildet sind alle Draftpicks mit ihrem derzeitigen Wert nach pVAR. Die Rote kurve zeigt den pVARexp des entsprechenden Picks."),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_impact")),
+        width = 12
+      )
     ),
-    style = "height: 800px"
-  )
-})
-
-output$draft_overview <- shiny::renderUI({
-  req(input$selectYears[1] < new_season_march)
-  #req(!input$selectRflTeams)
-
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_classes_overview")),
-      width = 12
+    htmltools::hr(style = "margin-block: 2rem"),
+    htmltools::h2("Welche Picks sind am wertvollsten gewesen?"),
+    htmltools::div("Abgebildet sind alle Draftpicks mit ihrem derzeitigen Wert nach pVAR. Die Rote kurve zeigt den pVARexp des entsprechenden Picks."),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_voe")),
+        width = 12
+      )
     ),
-    style = "height: 800px"
-  )
-})
-
-output$team_draft_class_ui <- shiny::renderUI({
-  shiny::validate(
-    shiny::need(input$selectYears[2] - input$selectYears[1] == 0, "Bitte wähle exakt ein Jahr, um dir eine einzelne Draftklasse anzuschauen. Das machst du, indem du beide Saison-Regler auf das selbe Jahr stellst.")
-  )
-
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("single_draft_class")),
-      width = 5
+    htmltools::hr(style = "margin-block: 2rem"),
+    htmltools::h2("RFL Draftboard"),
+    shinyWidgets::prettySwitch("sortForFpts", "Draftboard nach FPts sortieren", value = FALSE, fill = TRUE, status = "primary"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("draft_board", height = "2600px")),
+        width = 12
+      )
     ),
-    shiny::column(
-      tags$h4("Alle Trades mit Picks dieses Drafts"),
-      shinycssloaders::withSpinner(DT::DTOutput("single_draft_class_trades")),
-      # TODO: meldung, wenn keine trades gefunden wurden
-      width = 7
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_reaches")),
+        width = 12
+      )
+    ),
+    htmltools::hr(style = "margin-block: 2rem"),
+    htmltools::h2("Wie viel haben die Teams in die verschiedenen Positionsgruppen investiert?"),
+    htmltools::div("Summe der Werte, die für eine bestimmte Positionsgruppe investiert wurden. pVARexp zeigt dabei, wie viel ein Team investiert hat. Schaust du dir VOE an, siehst du, wie erfolgreich es dabei war. Um die Effzizenz statt die Summe zu sehen ändere die Ansicht zu \"per Pick\". Mit Klick auf die Pfeile kannst du dir die konkreten Picks anschauen."),
+    htmltools::div(
+      shinyWidgets::prettySwitch("draft_class_voe_exp_toggle", label = "VOE statt pVARexp zeigen", status = "primary", fill = TRUE),
+      shinyWidgets::prettySwitch("draft_class_voe_exp_toggle_per_pick", label = "per Pick Daten zeigen", status = "primary", fill = TRUE),
+      style = "display: flex; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 2rem;"
+    ),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(reactable::reactableOutput("draft_class_voe_exp")),
+        width = 12
+      )
     )
   )
 })

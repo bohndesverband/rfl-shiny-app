@@ -1,5 +1,6 @@
 draftorder_history <- reactive({
-  standing_data %>%
+  rfl_standing_data %>%
+    dplyr::filter(season == max(season)) %>%
     dplyr::filter(
       div_id == selected_team()$division
     ) %>%

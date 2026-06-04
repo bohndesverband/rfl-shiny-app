@@ -4,9 +4,7 @@ rfl_hit_rates <- shiny::reactive({
   # verhindere fehler beim ersten laden wenn der input noch auf der aktuellen saison steht, es dafür aber noch keine daten gibt
   req(input$selectYears[1] != new_season_march)
 
-  rfl_hit_rates <-
-
-  rfl_drafts_data %>%
+  rfl_hit_rates <- rfl_drafts_data %>%
     #filter(mfl_id == "15329") %>%
     #filter(pos_grouped == "TE") %>%
     dplyr::filter((season >= input$selectYears[1] & season <= input$selectYears[2]) & (round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])) %>%
@@ -45,9 +43,7 @@ rfl_hit_rates <- shiny::reactive({
 })
 
 hit_rates_average <- shiny::reactive({
-  hit_rates_average <-
-
-  rfl_hit_rates() %>%
+  hit_rates_average <- rfl_hit_rates() %>%
     dplyr::group_by(round) %>%
     dplyr::summarise(
       count = n(),
@@ -64,9 +60,7 @@ hit_rates_average <- shiny::reactive({
 })
 
 hit_rates_per_team <- shiny::reactive({
-  hit_rates_per_team <-
-
-  rfl_hit_rates() %>%
+  hit_rates_per_team <- rfl_hit_rates() %>%
     dplyr::group_by(franchise_id, franchise_name, round) %>%
     dplyr::summarise(
       total_picks_in_round = n(),
@@ -132,8 +126,9 @@ output$draft_hit_rates_plot <- shiny::renderPlot({
     )
 }, height = 900)
 
-output$team_hit_rates_table <- gt::render_gt({
-  formatted_players <- rfl_hit_rates() %>%
+# table ----
+output$team_hit_rates_table <- reactable::renderReactable({
+  data <- rfl_hit_rates() %>%
       dplyr::mutate(
         label = paste(season, paste0(round, ".", pick, " (", overall, ")"), player_name, paste0("(", team, ", ", pos, ")"))
       ) %>%
@@ -145,10 +140,8 @@ output$team_hit_rates_table <- gt::render_gt({
         label = paste(label, collapse = "\n"),
         .groups = "drop"
       ) %>%
-      tidyr::spread(category, label)
-
-  formatted_players %>%
-    dplyr::left_join(
+      tidyr::spread(category, label) %>%
+      dplyr::left_join(
       hit_rates_per_team() %>%
         dplyr::group_by(franchise_id, franchise_name, category) %>%
         dplyr::summarise(
@@ -161,107 +154,108 @@ output$team_hit_rates_table <- gt::render_gt({
       by = "franchise_id"
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::select(-dplyr::starts_with("total_")) %>%
-    dplyr::arrange(dplyr::desc(pct_Hit)) %>%
+    dplyr::rowwise() %>%
+    dplyr::mutate(total_picks = sum(total_picks_Hit, `total_picks_Home Run`, total_picks_Miss, na.rm = TRUE)) %>%
+    dplyr::select(franchise_name, total_picks, pct_Hit, picks_Hit, "pct_Home Run", "picks_Home Run", pct_Miss, picks_Miss, hit, hr, miss)
 
-    gt::gt() %>%
-    gt::tab_header(
-      title = paste("RFL Draft Hit Rates"),
-      subtitle = paste0(input$selectYears[1], "-", input$selectYears[2], " Runden ", input$selectDraftRounds[1], "-", input$selectDraftRounds[2])
-    ) %>%
+  pal_hit <- scale_red_blue(range(data$pct_Hit, na.rm = TRUE))
+  pal_hr <- scale_red_blue(range(data$`pct_Home Run`, na.rm = TRUE))
+  pal_miss <- scale_red_blue(range(data$pct_Miss, na.rm = TRUE))
 
-    gt::tab_spanner(
-      "Hits",
-      columns = c(pct_Hit, picks_Hit, hit)
-    ) %>%
+  data
+  reactable::reactable(
+    data,
+    columns = list(
+      franchise_name = reactable::colDef(
+        name = "Team",
+        minWidth = 250
+      ),
+      total_picks = reactable::colDef(
+        name = "Picks",
+        style = list(textAlign = "center"),
+        minWidth = 100
+      ),
+      picks_Hit = reactable::colDef(
+        name = "Picks",
+        details = function(index) {
+          content <- shiny::tagList(
+            htmltools::strong("Hits"),
+            htmltools::div(htmltools::HTML(data$hit[index]))
+          )
 
-    gt::tab_spanner(
-      "Home Runs",
-      columns = c("pct_Home Run", "picks_Home Run", hr)
-    ) %>%
+          as.character(content)
+        },
+        style = list(textAlign = "center"),
+        html = TRUE,
+        minWidth = 150
+      ),
+      pct_Hit = reactable_coldef_bg(
+        name = "Pct",
+        cell_fun = function(value) {
+          scales::percent(value)
+        },
+        palette_fun = pal_hit,
+        minWidth = 100
+      ),
+      "picks_Home Run" = reactable::colDef(
+        name = "Picks",
+        details = function(index) {
+          content <- shiny::tagList(
+            htmltools::strong("Home Runs"),
+            htmltools::div(htmltools::HTML(data$hr[index]))
+          )
 
-    gt::tab_spanner(
-      "Misses",
-      columns = c(pct_Miss, picks_Miss, miss)
-    ) %>%
+          as.character(content)
+        },
+        style = list(textAlign = "center"),
+        html = TRUE,
+        minWidth = 150
+      ),
+      "pct_Home Run" = reactable_coldef_bg(
+        name = "Pct",
+        cell_fun = function(value) {
+          scales::percent(value)
+        },
+        palette_fun = pal_hr,
+        minWidth = 100
+      ),
+      picks_Miss = reactable::colDef(
+        name = "Picks",
+        details = function(index) {
+          content <- shiny::tagList(
+            htmltools::strong("Misses"),
+            htmltools::div(htmltools::HTML(data$miss[index]))
+          )
 
-    gt::fmt_percent(
-      columns = dplyr::starts_with("pct_"),
-      decimals = 0
-    ) %>%
-
-    gt::data_color(
-      pct_Hit,
-      palette = c(color_red, color_blue)
-    ) %>%
-
-    gt::data_color(
-      picks_Hit,
-      palette = c(color_bg, color_grey_light)
-    ) %>%
-
-    gt::data_color(
-      "pct_Home Run",
-      palette = c(color_red, color_blue)
-    ) %>%
-
-    gt::data_color(
-      "picks_Home Run",
-      palette = c(color_bg, color_grey_light)
-    ) %>%
-
-    gt::data_color(
-      pct_Miss,
-      palette = c(color_blue, color_red)
-    ) %>%
-
-    gt::data_color(
-      picks_Miss,
-      palette = c(color_grey_light, color_bg)
-    ) %>%
-
-    gt::cols_align(
-      align = "center",
-      columns = gt::everything()
-    ) %>%
-
-    gt::cols_align(
-      align = "left",
-      columns = c(franchise_name)
-    ) %>%
-
-    gt::cols_label(
-      franchise_name = "Team",
-      pct_Hit = "Pct",
-      picks_Hit = "Picks",
-      hit = "Spieler",
-      "pct_Home Run" = "Pct",
-      "picks_Home Run" = "Picks",
-      hr = "Spieler",
-      pct_Miss = "Pct",
-      picks_Miss = "Picks",
-      miss = "Spieler",
-    ) %>%
-
-    gtDefaults() %>%
-
-    gtExtras::gt_highlight_rows(
-      rows = franchise_id %in% input$selectRflTeams,
-      columns = franchise_name,
-      fill = color_grey_mid
-    ) %>%
-
-    gt::cols_hide(franchise_id) %>%
-    gt::tab_options(
-      ihtml.active = TRUE,
-      ihtml.use_filters = FALSE,
-      ihtml.use_search = TRUE,
-      ihtml.use_pagination = TRUE,
-      ihtml.use_page_size_select = TRUE,
-      ihtml.page_size_default = 6,
-      ihtml.page_size_values = c(12, 24, 36),
-      ihtml.use_highlight = TRUE
-    )
+          as.character(content)
+        },
+        style = list(textAlign = "center"),
+        html = TRUE,
+        minWidth = 150
+      ),
+      pct_Miss = reactable_coldef_bg(
+        name = "Pct",
+        cell_fun = function(value) {
+          scales::percent(value)
+        },
+        palette_fun = pal_miss,
+        minWidth = 100
+      ),
+      hit = reactable::colDef(show = FALSE),
+      hr = reactable::colDef(show = FALSE),
+      miss = reactable::colDef(show = FALSE)
+    ),
+    columnGroups = list(
+      colGroup(name = "Hits", columns = c("pct_Hit", "picks_Hit")),
+      colGroup(name = "Home Runs", columns = c("pct_Home Run","picks_Home Run")),
+      colGroup(name = "Misses", columns = c("pct_Miss", "picks_Miss"))
+    ),
+    defaultSorted = "pct_Hit",
+    defaultSortOrder = "desc",
+    filterable = TRUE,
+    pagination = FALSE,
+    height = 800
+  )
 })
 
 reframe_hit_rate_data <- function(df) {
@@ -377,4 +371,39 @@ output$hit_rates_fantasy_finishes <- gt::render_gt({
       rfl_rounds = "RFL Runden",
       draft_year = "Jahr"
     )
+})
+
+# ui output ----
+output$draft_hit_rates <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1("RFL Draft Hit Rates"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_plot")),
+        width = 12
+      )
+    ),
+    htmltools::hr(),
+    htmltools::h2("Welche RFL Teams haben die besten Hit Rates im Draft?"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(reactable::reactableOutput("team_hit_rates_table")),
+        width = 12
+      )
+    ),
+    htmltools::hr(),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_by_round")),
+        width = 12
+      )
+    ),
+    htmltools::hr(),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(gt::gt_output("hit_rates_fantasy_finishes")),
+        width = 12
+      )
+    )
+  )
 })

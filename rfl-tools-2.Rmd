@@ -57,6 +57,10 @@ library(ggforce)
 library(ggchicklet) # runde Ecken bei Balken
 library(hexbin)
 library(ggimage)
+library(reactable)
+library(sparkline)
+library(gdtools)
+library(gfonts)
 #library(shinyjs)
 ```
 
@@ -126,7 +130,7 @@ shinyWidgets::pickerInput(
   choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
   #selected = franchises$franchise_id,
   #selected = "0007",
-  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
   multiple = TRUE
 )
 
@@ -151,7 +155,7 @@ shiny::selectizeInput(
 )
 
 shinyWidgets::pickerInput(
-  "selectRflDivisions",
+  "selectRflDivisionsdd",
   "RFL Divisions",
   choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
   options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
@@ -234,9 +238,32 @@ shinyWidgets::pickerInput(
 )
 
 shinyWidgets::prettySwitch("showOnlyRookies", "Nur Rookies anzeigen", value = TRUE, fill = TRUE, status = "primary")
-shinyWidgets::prettySwitch("sortForFpts", "Draftboard nach FPts sortieren", value = FALSE, fill = TRUE, status = "primary")
 
 shiny::actionButton("filterData", "Filtern", icon = icon("arrows-rotate"))
+
+htmltools::div(
+  htmltools::div("pVAR = player Value above Replacement. Wert eines Spielers auf Grundlage seiner durchschnittlichen WAR, seiner gespielten Spiele und seiner Fantasy Finishes."),
+  htmltools::hr(),
+  htmltools::div("pVARexp = Erwartungswert eines Draftpicks."),
+  htmltools::hr(),
+  htmltools::div("VOE = Value over Expected. Performance eines Spielers im Vergleich zu seinem Draftpick."),
+  class="alert alert-info pvar"
+)
+
+htmltools::div(
+  htmltools::div("Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler); mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen"),
+  htmltools::hr(),
+  htmltools::div("Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)"),
+  htmltools::hr(),
+  htmltools::div("Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB"),
+  class = "alert alert-info hitrate"
+)
+
+selected_team_names <- shiny::reactive({
+  rfl_franchise_data %>%
+    dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
+    dplyr::pull(franchise_name)
+})
 ```
 
 > Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
@@ -263,7 +290,7 @@ loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
 observeEvent(active_tab(), {
   if (active_tab() == "#section-conference-ranking" & !loaded_data_conference_stanging()) {
     source("R new/rankings/standing.R", local = TRUE)
-    source("R new/rankings/ranking_tables.R", local = TRUE)
+    source("R new/rankings/standing_output.R", local = TRUE)
     
     loaded_data_conference_stanging(TRUE)
   }
@@ -715,13 +742,13 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes_weekly")),
+      shinycssloaders::withSpinner(reactable::reactableOutput("fantasy_finishes_weekly")),
       width = 12
     )
   ),
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("fantasy_finishes_yearly")),
+      shinycssloaders::withSpinner(reactable::reactableOutput("fantasy_finishes_yearly")),
       width = 12
     )
   )
@@ -882,7 +909,7 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("matchupPreview")),
+      shinycssloaders::withSpinner(gt::gt_output("matchupTable")),
       width = 12
     )
   ),
@@ -985,6 +1012,32 @@ source("R new/matchups/sos.R", local = TRUE)
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_schedule")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(plotly::plotlyOutput("rfl_fpts_abv_avg", height = "800px")),
+      width = 12
+    ),
+    style = "height: 800px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
+      width = 12
+    ),
+    style = "height: 600px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
       shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
       width = 12
     ),
@@ -1000,35 +1053,32 @@ shiny::fluidPage(
 )
 ```
 
-# Basics {data-navmenu="Draft"}
+# Draft History {data-navmenu="Draft"}
 
-```{r draft-basics, echo=FALSE, message=FALSE, warning=FALSE}
-loaded_data_draft_basics <- shiny::reactiveVal(FALSE)
+```{r draft-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_draft_history <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
-  if (active_tab() == "#section-basics" & !loaded_data_draft_basics()) {
-    source("R new/draft/basics.R", local = TRUE)
+  if (active_tab() == "#section-draft-history" & !loaded_data_draft_history()) {
+    source("R new/draft/history.R", local = TRUE)
 
-    loaded_data_draft_basics(TRUE)
+    loaded_data_draft_history(TRUE)
   }
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      #shinycssloaders::withSpinner(plotly::plotlyOutput("draft_basics_average")),
-      shinycssloaders::withSpinner(shiny::plotOutput("rfl_picks_over_nfl_rounds")),
-      width = 12
-    )
-  )
+  shiny::uiOutput("draft_history")
 )
 ```
+
+
+
+```{r draft-boards, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 
 # Draftboards {data-navmenu="Draft"}
 
 ##
 
-```{r draft-boards, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_draft_boards <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -1042,7 +1092,20 @@ observeEvent(active_tab(), {
 shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_board")),
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_board", height = "2600px")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_voe")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      h4("Spielerkategorisierungen"),
+      shinycssloaders::withSpinner(reactable::reactableOutput("pick_categories")),
       width = 12
     )
   )
@@ -1064,15 +1127,11 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::uiOutput("draft_overview"),
-  shiny::uiOutput("team_draft_classes"),
-  shiny::uiOutput("team_draft_class")
+  shiny::uiOutput("draft_class")
 )
 ```
 
 # Hit Rates {data-navmenu="Draft"}
-
-##
 
 ```{r draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_draft_hit_rates <- shiny::reactiveVal(FALSE)
@@ -1086,32 +1145,7 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_plot")),
-      width = 12
-    ),
-    style = "height: 900px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("team_hit_rates_table")),
-      width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("draft_hit_rates_by_round")),
-      width = 12
-    ),
-    style = "height: 900px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("hit_rates_fantasy_finishes")),
-      width = 12
-    )
-  )
+  shiny::uiOutput("draft_hit_rates")
 )
 ```
 

@@ -71,211 +71,20 @@ colors_positions_grouped <- c(
 color_text <- color_black
 
 #("Poppins")
-#gdtools::register_gfont("Open Sans")
+gdtools::register_gfont("Open Sans")
+gdtools::register_gfont("Poppins")
 
 #systemfonts::register_font("Poppins")
 
 font <- "Poppins"
 
-var.fontTextBold <- "Open Sans Semibold"
-var.fontHeadline <- "Open Sans Semibold"
-
 # dark: https://iibawards-prod.s3.amazonaws.com/projects/images/000/006/283/page.png?1693573818
-# ggplot defaults ----
-plot_defaults <- list(
-  ggplot2::labs(
-    caption = paste("RFL Tools, Stand", format(Sys.Date(), "%d.%m.%Y"))
-  ),
-  ggplot2::theme(
-    plot.margin = ggplot2::margin(25, 25, 25, 25),
-    text = ggplot2::element_text(color = color_text, family = font, lineheight = 1.2),
-
-
-    plot.title = ggplot2::element_text(size = 24, face = "bold", lineheight = 0.8, margin = ggplot2::margin(b = 15)),
-    plot.title.position = "plot",
-    plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = -5, b = 15)),
-    plot.caption = ggplot2::element_text(size = 12),
-
-    axis.title = ggplot2::element_text(size = 14, face = "bold"),
-    axis.title.x = ggplot2::element_text(vjust = -5),
-    axis.title.y = ggplot2::element_text(vjust = 2.5),
-    #axis.title.y.right = ggplot2::element_text(vjust = 2.5, hjust = 1),
-    axis.text = ggplot2::element_text(size = 12),
-    #axis.line = element_line(color = var.colorAccent, linewidth = 0.5),
-    axis.ticks = ggplot2::element_blank(),
-
-    strip.background = ggplot2::element_rect(fill = color_grey_dark),
-    strip.text = ggplot2::element_text(size = 12, color = color_bg, face = "bold"),
-
-    legend.background = ggplot2::element_blank(),
-    legend.title = ggplot2::element_text(size = 14, face = "bold"),
-    #legend.key = element_blank(),
-    legend.key.size = ggplot2::unit(6, "pt"),
-    legend.text = ggplot2::element_text(size = 12),
-    legend.position = "top",
-    legend.margin = ggplot2::margin(t = 25),
-
-    panel.background = ggplot2::element_blank(),
-    panel.grid.major = ggplot2::element_line(color = color_grey_light, linewidth = 0.35),
-    panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
-  )
-)
-
-plot_clean <- list(
-  ggplot2::theme(
-    plot.background = ggplot2::element_blank(),
-    panel.grid.major = ggplot2::element_blank(),
-    panel.grid.minor = ggplot2::element_blank(),
-    axis.ticks = ggplot2::element_blank()
-  )
-)
-
-## geoms ----
-
-plot_geom_point <- function(...) {
-  ggplot2::geom_point(size = 5, ...)
-}
-
-plot_geom_xspline <- function(...) {
-  df %>%
-    ggalt::geom_xspline(spline_shape = -0.2, ...) +
-    ggplot2::aes(lwd = 1) +
-    ggplot2::scale_linewidth_identity()
-}
-
-plot_geom_vline <- function(xintercept, ...) {
-  ggplot2::geom_vline(xintercept = xintercept, color = color_grey_mid, linewidth = 0.5, linetype = "dashed", ...)
-}
-
-plot_geom_hline <- function(yintercept, ...) {
-  ggplot2::geom_hline(yintercept = yintercept, color = color_grey_mid, linewidth = 0.5, linetype = "dashed", ...)
-}
-
-plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, lbl) { # ltp = label top left etc, bottom right etc.
-  abs_x = (abs(xmax - xmin) / 100) * 3
-  abs_y = (abs(ymax - ymin) / 100) * 5
-
-  list <- list(
-    # oben links fläche
-    ggplot2::annotate(
-      "rect",
-      xmin = xmin - abs_x,
-      xmax = xmean,
-      ymin = ymean,
-      ymax = ymax + abs_y,
-      fill = color_green,
-      alpha = 0.10
-    ),
-    # oben links text
-    ggplot2::annotate(
-      "text",
-      label = ltl,
-      x = xmin,
-      y = ymax,
-      hjust = 0,
-      vjust = 1,
-      lineheight = 0.9,
-    ),
-    # oben rechts fläche
-    ggplot2::annotate(
-      "rect",
-      xmin = xmean,
-      xmax = xmax + abs_x,
-      ymin = ymean,
-      ymax = ymax + abs_y,
-      fill = color_blue,
-      alpha = 0.15
-    ),
-    # oben rechts text
-    ggplot2::annotate(
-      "text",
-      label = ltr,
-      x = xmax,
-      y = ymax,
-      hjust = 1,
-      vjust = 1,
-      lineheight = 0.9,
-    ),
-    # unten rechts fläche
-    ggplot2::annotate(
-      "rect",
-      xmin = xmean,
-      xmax = xmax + abs_x,
-      ymin = ymin - abs_y,
-      ymax = ymean,
-      fill = color_yellow,
-      alpha = 0.2
-    ),
-    # unten rechts text
-    ggplot2::annotate(
-      "text",
-      label = lbr,
-      x = xmax,
-      y = ymin,
-      hjust = 1,
-      vjust = 0,
-      lineheight = 0.9,
-    ),
-    # unten links fläche
-    ggplot2::annotate(
-      "rect",
-      xmin = xmin - abs_x,
-      xmax = xmean,
-      ymin = ymin - abs_y,
-      ymax = ymean,
-      fill = color_red,
-      alpha = 0.15
-    ),
-    # unten links text
-    ggplot2::annotate(
-      "text",
-      label = lbl,
-      x = xmin,
-      y = ymin,
-      hjust = 0,
-      vjust = 0,
-      lineheight = 0.9,
-    ),
-    plot_geom_vline(xmean),
-    plot_geom_hline(ymean),
-    ggplot2::scale_x_continuous(expand = c(0, 0)),
-    ggplot2::scale_y_continuous(expand = c(0, 0))
-  )
-
-  list
+rem_to_pt <- function(rem, base_px = 16) {
+  rem * base_px * 0.75
 }
 
 
 
-#plot_geom_large_text <- function(color = c_light, ...) {
-#  geom_text(color = color, size = 6, family = "accent", ...)
-#}
-
-#plot_geom_xsmall_text <- function(...) {
-#  geom_text(size = 2, family = "accent", ...)
-#}
-
-## elo ----
-plot_elo_defaults <- list(
-  ggplot2::aes(lwd = 1.2),
-  ggplot2::scale_linewidth_identity(),
-  ggplot2::scale_fill_continuous(type = "gradient"),
-  ggplot2::scale_fill_gradientn(colors = c("#f1f4f6", color_grey_mid), guide = "none"),
-  geom_hline(yintercept = 1500, color = color_grey_light, linewidth = 0.5, alpha = 0.75), # default elo
-  ggplot2::scale_color_discrete(type = colors),
-  plot_defaults,
-  plot_clean,
-  ggplot2::labs(
-    y = "ELO",
-    x = "",
-    color = ""
-  ),
-  ggplot2::theme(
-    legend.position = "inside",
-    legend.position.inside = c(0.08, 0.9),
-    axis.text.x = ggplot2::element_blank()
-  )
-)
 
 # gt ----
 gtDefaults <- function(df) {
@@ -312,6 +121,19 @@ gtDefaults <- function(df) {
     )
 }
 
+
+gt_stack_cols <- function(df, col1, col2) {
+  df %>%
+    gtExtras::gt_merge_stack(
+      col1,
+      col2,
+      small_cap = FALSE,
+      palette = c(color_text, color_grey_mid),
+      #font_size = c("14px", "10px"),
+      font_weight = c("normal", "normal")
+    )
+}
+
 ## player tables ----
 gt_player <- function(df) {
   df %>%
@@ -331,4 +153,136 @@ gt_player <- function(df) {
       ihtml.use_highlight = TRUE
     ) %>%
     gtDefaults
+}
+
+# gt_pct_bar
+gt_pctl_bar <- function(df, value, pctl) {
+  df %>%
+    nflplotR::gt_pct_bar(
+      value,
+      pctl,
+      value_scale = 100,
+      hide_col_pct = TRUE,
+      value_position = "above",
+      background_fill.height = "8px",
+      background_fill.color = color_grey_light,
+      fill_palette = c(color_red, color_orange, color_yellow, color_green, color_blue)
+    )
+}
+
+# reactable ----
+reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
+  defaults <- list(
+    data = data,
+    columns = columns,
+    defaultColDef = colDef(
+      headerStyle = list(background = color_bg),
+      vAlign = "center",
+      headerVAlign = "bottom",
+      footerStyle = list(fontWeight = "bold", textAlign = "center")
+    ),
+    theme = reactableTheme(
+      borderColor = color_grey_light,
+      stripedColor = color_bg
+    ),
+    striped = TRUE,
+    wrap = FALSE,
+    pagination = pagination
+  )
+
+  args <- c(defaults, list(...))
+
+  do.call(reactable::reactable, args)
+}
+
+## columns ----
+reactable_coldef_bg <- function(
+    name,
+    cell_fun = NULL,
+    palette_fun,
+    details_fun = NULL,
+    minWidth = 100,
+    footer_fun = NULL
+) {
+  reactable::colDef(
+    name = name,
+    minWidth = minWidth,
+
+    cell = if (!is.null(cell_fun)) {
+      function(index) {
+        cell_fun(index)
+      }
+    } else NULL,
+
+    style = function(value) {
+      list(
+        background = palette_fun(value),
+        textAlign = "center"
+      )
+    },
+
+    details = if (!is.null(details_fun)) {
+      function(index) {
+        details_fun(index)
+      }
+    } else NULL,
+
+    footer = if (!is.null(footer_fun)) {
+      function(values) footer_fun(values, na.rm = TRUE)
+    } else NULL
+  )
+}
+
+reactable_coldef_color <- function(
+    palette_fun,
+    footer_fun,
+    ...
+) {
+  reactable::colDef(
+    ...,
+    style = function(value) {
+      list(
+        color = palette_fun(value),
+        textAlign = "center",
+        fontWeight = "bold"
+      )
+    },
+
+    footer = if (!is.null(footer_fun)) {
+      function(values) footer_fun(values, na.rm = TRUE)
+    } else NULL
+  )
+}
+
+## rainbow scale ----
+scale_rainbow <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_red, color_orange, color_yellow, color_green, color_blue),
+    domain = domain_values,
+    na.color = "transparent"
+  )
+}
+
+scale_rainbow_text <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_bg, color_black, color_bg),
+    domain = domain_values,
+    na.color = "transparent"
+  )
+}
+
+scale_red_green <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_red, color_green),
+    domain = domain_values,
+    na.color = "transparent"
+  )
+}
+
+scale_red_blue <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_red, color_blue),
+    domain = domain_values,
+    na.color = "transparent"
+  )
 }

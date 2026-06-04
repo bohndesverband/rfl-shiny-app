@@ -197,9 +197,11 @@ output$matchupOverview <- shiny::renderPlot({
     )
 }, height = 2600)
 
+
+
 # preview ----
-output$matchupPreview <- gt::render_gt({
-  dplyr::bind_rows(
+output$matchupTable <- gt::render_gt({
+  data <- dplyr::bind_rows(
     rfl_matchups(),
     rfl_matchups() %>%
       dplyr::rename(
@@ -215,31 +217,140 @@ output$matchupPreview <- gt::render_gt({
       else
         TRUE
     ) %>%
-    dplyr::select(-dplyr::starts_with("away")) %>%
-    dplyr::rename(franchise_id = home, franchise_name = home_name) %>%
-    dplyr::left_join(
-      rfl_current_standing %>%
-        dplyr::select(-week, -franchise_name),
-      by = "franchise_id"
-    ) %>%
-    dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
-    dplyr::select(-conference_name) %>%
-    dplyr::group_by(matchup) %>%
-    dplyr::mutate(
-      elo_sum = paste("Total ELO:", sum(franchise_elo_postgame))
-    ) %>%
-    dplyr::ungroup() %>%
-    dplyr::arrange(dplyr::desc(elo_sum)) %>%
-    dplyr::group_by(matchup, elo_sum) %>%
-    gt::gt() %>%
-    gt::tab_header(
-      title = paste("RFL Matchups Woche", input$selectWeek)
-    ) %>%
-    ranking_table_base() %>%
-    ranking_table_standing() %>%
-    ranking_table_elo() %>%
-    ranking_table_power_rank() %>%
-    ranking_table_bowl() %>%
-    gtDefaults()
+    dplyr::rename(franchise_id = home, franchise_name = home_name, opponent_id = away) %>%
+    dplyr::select(-away_name)
+
+  if (input$selectWeek == current_week) {
+    data %>%
+      dplyr::select(-opponent_id) %>%
+      dplyr::left_join(
+        rfl_current_standing %>%
+          dplyr::select(-week, -franchise_name),
+        by = "franchise_id"
+      ) %>%
+      dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
+      dplyr::select(-conference_name) %>%
+      dplyr::group_by(matchup) %>%
+      dplyr::mutate(
+        elo_sum = paste("Total ELO:", sum(franchise_elo_postgame))
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::arrange(dplyr::desc(elo_sum)) %>%
+      dplyr::group_by(matchup, elo_sum) %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = paste("RFL Matchups Woche", input$selectWeek)
+      ) %>%
+      ranking_table_base() %>%
+      ranking_table_standing() %>%
+      ranking_table_elo() %>%
+      ranking_table_power_rank() %>%
+      ranking_table_bowl() %>%
+      gtDefaults()
+  } else {
+    data %>%
+      dplyr::left_join(
+        rfl_matchups_history %>%
+          dplyr::select(-franchise_name) %>%
+          dplyr::filter(season == max(season)) %>%
+          dplyr::filter(week == input$selectWeek),
+        by = c("franchise_id", "opponent_id")
+      ) %>%
+      dplyr::left_join(
+        rfl_franchise_data %>%
+          dplyr::mutate(subline = paste(conference_name, division_name, sep = " - ")) %>%
+          dplyr::select(franchise_id, subline),
+        by = "franchise_id"
+      ) %>%
+      dplyr::select(matchup, subline, franchise_name, franchise_score, pp, eff, all_play_wins, franchise_ppg_score, franchise_points_ppg_diff, franchise_elo_pregame, elo_shift, total_points, score_diff, score_diff_pct, total_elo, dplyr::ends_with("_pctl")) %>%
+      dplyr::arrange(abs(score_diff)) %>%
+      dplyr::group_by(matchup) %>%
+      gt::gt() %>%
+      gt::tab_header(
+        title = paste("RFL Matchups Woche", input$selectWeek),
+        subtitle = "Die farbigen Balken zeigen das Perzentil in allen gespielten RFL Regular Season Matchups an"
+      ) %>%
+      gtExtras::gt_merge_stack(
+        franchise_name,
+        subline,
+        small_cap = FALSE,
+        palette = c(color_text, color_grey_mid),
+        font_weight = c("normal", "normal")
+      ) %>%
+      gt::tab_spanner(
+        "Punkte",
+        c(franchise_score, pp, eff, franchise_ppg_score, franchise_points_ppg_diff)
+      ) %>%
+      gt::tab_spanner(
+        "ELO",
+        c(franchise_elo_pregame, elo_shift)
+      ) %>%
+      gt::tab_spanner(
+        "Matchup Totals",
+        c(total_points, total_elo, score_diff, score_diff_pct)
+      ) %>%
+      gtDefaults() %>%
+      gt_pctl_bar("franchise_score", "franchise_score_pctl") %>%
+      gt_pctl_bar("pp", "pp_pctl") %>%
+      gt_pctl_bar("eff", "eff_pctl") %>%
+      gt_pctl_bar("franchise_ppg_score", "franchise_ppg_score_pctl") %>%
+      gt_pctl_bar("franchise_points_ppg_diff", "franchise_points_ppg_diff_pctl") %>%
+      gt_pctl_bar("all_play_wins", "all_play_wins_pctl") %>%
+      gt_pctl_bar("franchise_elo_pregame", "franchise_elo_pregame_pctl") %>%
+      gt_pctl_bar("elo_shift", "elo_shift_pctl") %>%
+      gt_pctl_bar("total_points", "total_points_pctl") %>%
+      gt_pctl_bar("score_diff", "score_diff_pctl") %>%
+      gt_pctl_bar("score_diff_pct", "score_diff_pct_pctl") %>%
+      gt_pctl_bar("total_elo", "total_elo_pctl") %>%
+
+      gtExtras::gt_add_divider(c(franchise_name, all_play_wins, elo_shift), color = color_grey_light, include_labels = FALSE) %>%
+
+      gt::fmt_percent(
+        c(eff)
+        # TODO: score_diff_pct auch als pct formatieren
+      ) %>%
+      gt::cols_align(
+        align = "center",
+        columns = gt::everything()
+      ) %>%
+
+      gt::cols_align(
+        align = "left",
+        columns = c(franchise_name)
+      ) %>%
+      gt::cols_width(
+        c(franchise_score, pp, eff, franchise_ppg_score, elo_shift, total_points, total_elo) ~ gt::px(80),
+        c(franchise_points_ppg_diff, franchise_elo_pregame, score_diff, score_diff_pct) ~ gt::px(100)
+      ) %>%
+      gt::cols_label(
+        franchise_name = "Team",
+        franchise_score = "FPts",
+        pp = "PP",
+        eff = "Eff",
+        all_play_wins = "All-Play Wins",
+        franchise_ppg_score = "PPG",
+        franchise_points_ppg_diff = "FPtsOAvg",
+        franchise_elo_pregame = "Pregame",
+        elo_shift = "+/-",
+        total_points = "FPts",
+        total_elo = "ELO",
+        score_diff = "Score Diff",
+        score_diff_pct = "Score Diff %",
+      ) %>%
+      gt::tab_footnote(
+        "Summe aller PPG der gesatarten Spieler im jeweiligen Matchup",
+        locations = gt::cells_column_labels(
+          columns = c(franchise_ppg_score)
+        )
+      ) %>%
+      gt::tab_footnote(
+        "PPG - FPts, zeigt, ob das Team im Matchup Over- (positiv) oder Unterachieved (negativ) hat im Vergleich zu den PPG der gestarteten Spieler",
+        locations = gt::cells_column_labels(
+          columns = c(franchise_points_ppg_diff)
+        )
+      ) %>%
+      gtDefaults()
+  }
 })
+
 

@@ -51,7 +51,8 @@ output$running_elo <- shiny::renderPlot({
       title = paste("RFL ELO Rating"),
       #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
     )
-}, height = 800)
+}, height = 800) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 top_pctl <- elo_change %>%
   dplyr::filter(elo_shift > 0) %>%
@@ -85,4 +86,5 @@ output$elo_change <- shiny::renderPlot({
       axis.ticks = ggplot2::element_blank(),
       panel.grid.major.y = ggplot2::element_blank()
     )
-}, height = 1200)
+}, height = 1200) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)

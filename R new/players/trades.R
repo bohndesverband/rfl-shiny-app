@@ -24,7 +24,7 @@ shiny::observeEvent(input$selectYears, {
 
 # trade history ----
 trade_history <- reactive({
-  rfl_trades_data %>%
+  trade_history <- rfl_trades_data %>%
     dplyr::left_join(
       rfl_franchise_data %>%
         dplyr::select(franchise_id, franchise_name),
@@ -63,6 +63,7 @@ trade_history <- reactive({
       asset_names = paste0(franchise_name, " sends\n", asset_names),
     ) %>%
 
+
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]
     ) %>%
@@ -88,6 +89,7 @@ trade_history <- reactive({
       else
         TRUE
     ) %>%
+
 
     #dplyr::filter(
     #  if(isTruthy(input$selectPositions))

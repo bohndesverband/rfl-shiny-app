@@ -40,14 +40,14 @@ advance_rates <- shiny::reactive({
 output$advanceRates <- gt::render_gt({
   advance_rates() %>%
     dplyr::arrange(dplyr::desc(points)) %>%
-    dplyr::filter(
-      if(isTruthy(input$selectPositions))
-        sapply(seq_along(pos), function(i) {
-          any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
-        })
-      else
-        TRUE
-    ) %>%
+    #dplyr::filter(
+    #  if(isTruthy(input$selectPositions))
+    #    sapply(seq_along(pos), function(i) {
+    #      any(input$selectPositions %in% trimws(strsplit(pos[i], ",")[[1]]))
+    #    })
+    #  else
+    #    TRUE
+    #) %>%
     #filter(pos == "QB") %>%
 
     gt::gt() %>%

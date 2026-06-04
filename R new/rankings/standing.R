@@ -34,10 +34,5 @@ if (current_week > 13) {
     dplyr::mutate(week = 14) %>%
     dplyr::bind_rows(postseason_results)
 
-  draft_order <- rbind(draft_order, draft_order_postseason) %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, division),
-      by = "franchise_id"
-    )
+  draft_order <- rbind(draft_order, draft_order_postseason)
 }

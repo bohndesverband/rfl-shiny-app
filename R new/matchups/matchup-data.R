@@ -1,6 +1,6 @@
 rfl_matchups_raw <- shiny::reactive({
   rfl_matchups_raw <-
-    #jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", 6, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
+    ##jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", current_week - 1, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
     jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", input$selectWeek, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
     dplyr::tibble()
 })
@@ -110,7 +110,7 @@ matchup_projection_table_data <- shiny::reactive({
   req(rfl_matchups())
   req(starter())
 
-  data.frame(
+  matchup_projection_table_data <- data.frame(
     franchise_id = c(rfl_matchups()$home, rfl_matchups()$away),
     franchise_name = c(rfl_matchups()$home_name, rfl_matchups()$away_name),
     matchup = rfl_matchups()$matchup
