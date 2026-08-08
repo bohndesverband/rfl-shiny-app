@@ -46,6 +46,27 @@ plot_clean <- list(
   )
 )
 
+plot_elo_defaults <- list(
+  ggplot2::aes(lwd = 1.2),
+  ggplot2::scale_linewidth_identity(),
+  ggplot2::scale_fill_continuous(type = "gradient"),
+  ggplot2::scale_fill_gradientn(colors = c("#f1f4f6", color_grey_mid), guide = "none"),
+  geom_hline(yintercept = 1500, color = color_grey_light, linewidth = 0.5, alpha = 0.75), # default elo
+  ggplot2::scale_color_discrete(type = colors),
+  plot_defaults,
+  plot_clean,
+  ggplot2::labs(
+    y = "ELO",
+    x = "",
+    color = ""
+  ),
+  ggplot2::theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.08, 0.9),
+    axis.text.x = ggplot2::element_blank()
+  )
+)
+
 ## geoms ----
 
 plot_geom_point <- function(...) {
@@ -254,7 +275,7 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
 girafe_default_output <- function(plot, width = 16, height = 9) {
   ggiraph::girafe(ggobj = plot, width_svg = width, height_svg = height) %>%
     ggiraph::girafe_options(
-      ggiraph::opts_sizing(rescale = FALSE),
+      ggiraph::opts_sizing(rescale = TRUE),
       ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg, ";")),
       ggiraph::opts_hover_inv(css = "opacity:0.4"),
       ggiraph::opts_hover_key(css = "opacity:1")

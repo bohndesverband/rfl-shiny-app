@@ -31,7 +31,7 @@ ranking_table_base <- function(df) {
       fill = color_grey_light
     ) %>%
     gt::cols_width(
-      franchise_name ~ gt::px(210)
+      franchise_name ~ gt::px(250)
     ) %>%
     gt::tab_footnote(
       "Meilensteine: D = Division; PB = Pro Bowl; SB = Super Bowl; zZ = Super Bowl Bye. Durchgestrichen = nicht mehr erreichbar",
@@ -67,6 +67,11 @@ ranking_table_standing <- function(df) {
       target = pf_total,
       width = 30,
       palette = c(color_grey_mid, color_grey_dark)
+    ) %>%
+
+    gt::cols_width(
+      wins_total ~ gt::px(50),
+      losses_total ~ gt::px(50)
     ) %>%
 
     gt::cols_label(
@@ -109,6 +114,10 @@ ranking_table_elo <- function(df) {
     gt::data_color(
       elo_shift,
       palette = c(color_red, color_blue)
+    ) %>%
+
+    gt::cols_width(
+      franchise_elo_postgame ~ gt::px(100)
     ) %>%
 
     gt::cols_label(
@@ -168,6 +177,16 @@ ranking_table_power_rank <- function(df) {
 
     gt::cols_hide(elo_shift) %>%
 
+    gt::cols_width(
+      elo_rank ~ gt::px(70),
+      pf_rank ~ gt::px(50),
+      pp_rank ~ gt::px(50),
+      record_rank ~ gt::px(70),
+      all_play_rank ~ gt::px(70),
+      eff_rank ~ gt::px(70),
+      power_rank ~ gt::px(70)
+    ) %>%
+
     gt::cols_label(
       elo_rank = "ELO",
       pf_rank = "PF",
@@ -188,6 +207,10 @@ ranking_table_bowl <- function(df) {
       small_cap = FALSE,
       palette = c(color_text, color_text),
       font_weight = c("normal", "normal")
+    ) %>%
+
+    gt::cols_width(
+      bowl_emoji ~ gt::px(70)
     ) %>%
 
     gt::cols_label(

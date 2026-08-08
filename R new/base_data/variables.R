@@ -196,6 +196,20 @@ reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
 }
 
 ## columns ----
+text_color <- function(bg) {
+  if (is.na(bg) || bg == "transparent") {
+    return(NULL)
+  }
+
+  rgb <- grDevices::col2rgb(bg)
+
+  lum <- (0.2126 * rgb[1] +
+            0.7152 * rgb[2] +
+            0.0722 * rgb[3]) / 255
+
+  if (lum > 0.5) "#000000" else "#FFFFFF"
+}
+
 reactable_coldef_bg <- function(
     name,
     cell_fun = NULL,
@@ -215,8 +229,11 @@ reactable_coldef_bg <- function(
     } else NULL,
 
     style = function(value) {
+      bg <- palette_fun(value)
+
       list(
-        background = palette_fun(value),
+        background = bg,
+        color = text_color(bg),
         textAlign = "center"
       )
     },
@@ -263,6 +280,14 @@ scale_rainbow <- function(domain_values) {
   )
 }
 
+scale_rainbow_reverse <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_blue, color_green, color_yellow, color_orange, color_red),
+    domain = domain_values,
+    na.color = "transparent"
+  )
+}
+
 scale_rainbow_text <- function(domain_values) {
   scales::col_numeric(
     palette = c(color_bg, color_black, color_bg),
@@ -274,6 +299,14 @@ scale_rainbow_text <- function(domain_values) {
 scale_red_green <- function(domain_values) {
   scales::col_numeric(
     palette = c(color_red, color_green),
+    domain = domain_values,
+    na.color = "transparent"
+  )
+}
+
+scale_green_red <- function(domain_values) {
+  scales::col_numeric(
+    palette = c(color_green, color_red),
     domain = domain_values,
     na.color = "transparent"
   )

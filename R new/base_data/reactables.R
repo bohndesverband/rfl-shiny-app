@@ -162,3 +162,105 @@ render_draft_history_table <- function(
     pagination = TRUE
   )
 }
+
+# Draftklassen Tabelle ----
+bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
+  bar <- htmltools::div(style = list(background = fill, width = width, height = height))
+  chart <- htmltools::div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  label <- htmltools::span(text, style = list(fontSize = "0.8em"))
+
+  htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
+}
+
+# reusable reactable for draft class teams
+draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = NULL, columns = NULL, ...) {
+  # define default columns
+  default_columns <- list(
+    franchise_name = reactable::colDef(
+      name = "Team",
+      html = TRUE,
+      cell = function(value, index) {
+        content <- shiny::tagList(
+          htmltools::div(value),
+          htmltools::div(htmltools::HTML(paste0("<small>", data$picks[index], " Picks", "</small>")))
+        )
+
+        as.character(content)
+      },
+      minWidth = 170
+    ),
+    rank_season = reactable::colDef(name = "VOE #", minWidth = 70),
+    pvar = coldef_pvar_text(palette_fun = pal_pvar_class_sum),
+    voe = coldef_voe_bg(palette_fun = pal_voe_class_sum_bg),
+    rank = reactable::colDef(
+      name = "Platz",
+      html = TRUE,
+      cell = function(value) {
+        content <- shiny::tagList(
+          htmltools::div(value),
+          htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (new_season_march - 2017) * 36, "</small>")))
+        )
+
+        as.character(content)
+      },
+      style = function(value) {
+        list(
+          textAlign = "center"
+        )
+      },
+      minWidth = 70
+    ),
+    voe_pctl = colDef(
+      name = "VOE Pctl",
+      align = "left",
+      cell = function(value) {
+        width <- paste0(value * 100, "%")
+        bar_chart(width, width = width)
+      },
+      minWidth = 200
+    ),
+    picks = reactable::colDef(show = FALSE)
+  )
+
+  # allow overriding/merging of columns
+  if (!is.null(columns)) {
+    default_columns <- utils::modifyList(default_columns, columns)
+  }
+
+  reactable_default(
+    data,
+    columns = default_columns,
+    columnGroups = column_groups,
+    details = function(index) {
+      row <- data[index, ]
+
+      picks <- picks_reactive() %>%
+        dplyr::filter(franchise_name == row$franchise_name & season == row$season) %>%
+        dplyr::select(asset_name_with_badge, voe)
+
+      reactable_default(
+        picks,
+        columns = list(
+          asset_name_with_badge = reactable::colDef(
+            name = "Spieler",
+            html = TRUE,
+            cell = function(value, index) {
+              as.character(htmltools::div(htmltools::HTML(value)))
+            },
+            minWidth = 350
+          ),
+          voe = coldef_voe(),
+          compact = TRUE,
+          fullWidth = FALSE
+        ),
+        defaultSorted = c("asset_name_with_badge")
+      )
+    },
+    filterable = TRUE,
+    sortable = TRUE,
+    defaultSorted = "voe",
+    defaultSortOrder = "desc",
+    height = 745,
+    ...
+  )
+}

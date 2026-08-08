@@ -1,5 +1,7 @@
 source("R new/roster/depth_chart_data.R", local = TRUE)
 
+# TODO: in reactable tabellen umwandeln
+
 roster_war_filtered <- shiny::reactive({
   roster_war_filtered <- roster_war %>%
     dplyr::filter(
