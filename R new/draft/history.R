@@ -397,6 +397,109 @@ output$draft_history_picks_by_round <- shiny::renderPlot({
     )
 }, height = 800)
 
+## grades ----
+rfl_draft_class_grades <- rfl_draft_grades %>%
+  dplyr::filter(pick == "klasse") %>%
+  dplyr::group_by(team_id, franchise_name, draft_class) %>%
+  dplyr::filter(year == max(year)) %>%
+  dplyr::summarise(
+    grade = mean(grade),
+    .groups = "drop"
+  )
+
+output$draft_grades_overview <- reactable::renderReactable({
+  reactable_default(
+    rfl_draft_class_grades,
+    columns = list(
+      team_id = reactable::colDef(show = FALSE),
+      franchise_name = reactable::colDef(
+        name = "Team",
+        minWidth = 170
+      ),
+      draft_class = reactable::colDef(
+        name = "Draft",
+        style = function(value) {
+          list(
+            textAlign = "center"
+          )
+        },
+        minWidth = 50
+      ),
+      grade = reactable_coldef_bg(
+        name = "Ø Note",
+        palette_fun = scale_rainbow_reverse(range(rfl_draft_class_grades$grade, na.rm = TRUE))
+      )
+    ),
+    sortable = TRUE,
+    filterable = TRUE,
+    defaultSorted = c("grade"),
+    pagination = TRUE,
+    defaultPageSize = 10
+    # height = 772
+    #height = 745
+  )
+})
+
+### plot ----
+output$draft_grades_overview_plot <- ggiraph::renderGirafe({
+  plot <- ggplot2::ggplot(rfl_draft_class_grades, ggplot2::aes(x = draft_class, y = grade)) +
+    plot_defaults +
+    ggplot2::scale_x_continuous(
+      limits = c(min(rfl_draft_class_grades$draft_class), max(rfl_draft_class_grades$draft_class)),
+      breaks = seq(min(rfl_draft_class_grades$draft_class), max(rfl_draft_class_grades$draft_class), by = 1),
+      minor_breaks = NULL
+    ) +
+    ggplot2::scale_y_reverse(
+      limits = c(7, 1),
+      breaks = seq(6, 1, by = -1),
+      minor_breaks = seq(6.666, 1, by = -0.333),
+      expand = c(0, 0)
+    ) +
+    ggplot2::labs(
+      x = "Draft-Jahr",
+      y = "Aktuellste Ø Gesamtbewertung"
+    ) +
+    ggplot2::theme(
+
+    )
+
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot +
+      ggplot2::geom_point(
+        size = 5,
+        color = color_grey_light
+      ) +
+      ggiraph::geom_point_interactive(
+        data = subset(rfl_draft_class_grades, team_id %in% input$selectRflTeams),
+        ggplot2::aes(
+          tooltip = paste(draft_class, franchise_name),
+          data_id = team_id,
+          color = franchise_name
+        ),
+        size = 10,
+        alpha = 1
+      ) +
+      ggplot2::scale_color_discrete(palette = colors) +
+      ggplot2::labs(
+        color = "RFL Team"
+      )
+  } else {
+    plot <- plot +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(
+          tooltip = paste(draft_class, franchise_name),
+          data_id = team_id,
+          color = grade
+        ),
+        size = 10,
+        alpha = 0.5
+      ) +
+      ggplot2::scale_color_continuous(palette = c(color_blue, color_green, color_yellow, color_orange, color_red), guide = "none")
+  }
+
+  girafe_default_output(plot)
+})
+
 # ui output ----
 output$draft_history <- shiny::renderUI({
   shiny::fluidPage(
@@ -467,6 +570,20 @@ output$draft_history <- shiny::renderUI({
         shinycssloaders::withSpinner(reactable::reactableOutput("draft_history_voe_exp")),
         width = 12
       )
+    ),
+    htmltools::hr(),
+    htmltools::h2("Bewertungen der RFL Draftklassen"),
+    htmltools::div("Adrian und Jakob bewerten die RFL Draftklassen seit 2024 nach dem Draft, nach einem, drei und fünf Jahren. Hier abgebildet werden die durchschnittlichen Gesamtnoten der aktuellsten Bewertung."),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(reactable::reactableOutput("draft_grades_overview")),
+        width = 4
+      ),
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_grades_overview_plot")),
+        width = 8
+      ),
+      style = "padding-inline: 2rem;"
     ),
     htmltools::hr(),
     htmltools::h2("Wann wurden die NFL Draftpicks in den RFL Drafts gepickt?"),

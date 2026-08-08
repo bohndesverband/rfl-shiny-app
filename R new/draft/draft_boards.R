@@ -26,7 +26,7 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
   ) %>%
   dplyr::mutate(
     id = paste(season, franchise_id, sep = "_"),
-    pvar_pctl = dplyr::percent_rank(pvar)
+    voe_pctl = dplyr::percent_rank(pvar)
   ) %>%
   dplyr::group_by(season) %>%
   dplyr::arrange(dplyr::desc(pvar)) %>%
@@ -35,11 +35,11 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
     season_date = as.Date(paste0(season, "-01-01"))
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, pvar_pctl)
+  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, voe_pctl)
 
 # filtere gesamte klasse
 rfl_draft_classes_sum_filtered <- shiny::reactive({
-  rfl_draft_classes_sum %>%
+  rfl_draft_classes_sum_filtered <- rfl_draft_classes_sum %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::filter(
       if(isTruthy(input$selectRflTeams))
@@ -136,8 +136,8 @@ output$team_draft_class <- reactable::renderReactable({
     dplyr::ungroup()
 
   row_details <- function(index) {
-    selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
-    #selected_class <- "2019 Dresden Jaguars"
+    #selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
+    selected_class <- "2019 Dresden Jaguars"
 
     data_filtered <- data %>%
       dplyr::filter(.data$class == selected_class)
@@ -517,7 +517,7 @@ output$team_draft_class <- reactable::renderReactable({
   }
 
   reactable::reactable(
-    rfl_draft_classes_sum_filtered(),
+    rfl_draft_classes_sum_filtered,
     columns = list(
       id = reactable::colDef(show = FALSE),
       class = reactable::colDef(name = "", sticky = "left"),
@@ -550,7 +550,7 @@ output$team_draft_class <- reactable::renderReactable({
         name = "pVAR",
         sortable = TRUE
       ),
-      pvar_pctl = reactable::colDef(
+      voe_pctl = reactable::colDef(
         name = "Perzentil seit 2017",
         cell = JS('function(cellInfo) {
           // Format as percentage
