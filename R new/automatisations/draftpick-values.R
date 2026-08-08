@@ -143,35 +143,36 @@ rfl_drafts_data <- feather::read_feather("data/rfl_drafts_data.feather") %>%
 feather::write_feather(rfl_drafts_data, "data/rfl_drafts_data.feather")
 
 # historische trades ----
-gamma <- 13
+# TODO: Tradevalues
+#gamma <- 13
 
-calc_trade_values <- function(ev, gamma){
-  (ev / max(ev))^gamma * 1000
-}
+#calc_trade_values <- function(ev, gamma){
+#  (ev / max(ev))^gamma * 1000
+#}
 
-player_to_tv <- function(rating, beta = 2.5) {
-  1000 * (rating / 10)^beta
-}
+#player_to_tv <- function(rating, beta = 2.5) {
+#  1000 * (rating / 10)^beta
+#}
 
-trades <- rfl_trades_data %>%
-  dplyr::filter(season > 2016 & trade_id != "2024064") %>%
-  dplyr::group_by(trade_id) %>%
-  dplyr::filter(any(grepl("DP", asset_id))) %>%
-  dplyr::filter(!any(grepl("FP", asset_id))) %>%
-  dplyr::filter(!any(is.na(draft_pick))) %>%
-  dplyr::mutate(overall = ((as.integer(draft_round) - 1) * 36) + as.integer(draft_pick)) %>%
-  dplyr::select(trade_id, trade_side, overall)
+#trades <- rfl_trades_data %>%
+#  dplyr::filter(season > 2016 & trade_id != "2024064") %>%
+#  dplyr::group_by(trade_id) %>%
+#  dplyr::filter(any(grepl("DP", asset_id))) %>%
+#  dplyr::filter(!any(grepl("FP", asset_id))) %>%
+#  dplyr::filter(!any(is.na(draft_pick))) %>%
+#  dplyr::mutate(overall = ((as.integer(draft_round) - 1) * 36) + as.integer(draft_pick)) %>%
+#  dplyr::select(trade_id, trade_side, overall)
 
-trades_with_value <- trades %>%
-  dplyr::left_join(
-  curve_clean %>%
-    dplyr::select(pick, trade_value),
-  by = c("overall" = "pick")
-) %>%
-dplyr::group_by(trade_id, trade_side) %>%
-dplyr::summarise(trade_value = sum(trade_value), .groups = "drop") %>%
-dplyr::group_by(trade_id)
-dplyr::mutate(diff = trade_value - lag(trade_value)) %>%
-dplyr::ungroup()
+#trades_with_value <- trades %>%
+#  dplyr::left_join(
+#  curve_clean %>%
+#    dplyr::select(pick, trade_value),
+#  by = c("overall" = "pick")
+#) %>%
+#dplyr::group_by(trade_id, trade_side) %>%
+#dplyr::summarise(trade_value = sum(trade_value), .groups = "drop") %>%
+#dplyr::group_by(trade_id)
+#dplyr::mutate(diff = trade_value - lag(trade_value)) %>%
+#dplyr::ungroup()
 
 rm(war_data, draft_data, C_def, L_def, S_def, sigma_fun, weight_function, estimate_pick_value, curve_raw, iso, curve_clean, eps)

@@ -1,3 +1,5 @@
+source("R new/reports/team/team_report_draft.R", local = TRUE)
+
 # team mvp ----
 #rfl_roster_data %>%
 #  dplyr::filter(season == max(season)) %>%
@@ -28,21 +30,32 @@
 #source("R new/rankings/power_ranking.R", local = TRUE)
 
 # Output ----
-#output$teamReport <- shiny::renderUI({
-#  shiny::fluidPage(
-    #tags$h1(paste(selected_team()$franchise_name, "Team Report", new_season_sept)),
-    #shiny::plotOutput("pickHistory"),
+output$team_report <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1("Teambericht", paste(selected_team_name())),
+    htmltools::h2("Draft"),
+    shiny::fluidRow(
+      shiny::column(
+        htmltools::h3("Alle Draftklassen"),
+        shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
+        width = 6
+      ),
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
+        width = 6
+      )
+    ),
+    shiny::fluidRow(
+      shiny::column(
+        htmltools::h3("Alle Zu- und Abgänge"),
+        #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
+        width = 6
+      ),
+      shiny::column(
+        #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
+        width = 6
+      )
+    )
+  )
+})
 
-#    shiny::fluidRow(
-#      shiny::column(
-      #tags$h2("Rankings"),
-#        shiny::plotOutput("team_report_power_ranking"),
-#        width = 8
-#      ),
- #     shiny::column(
-#        shiny::renderText("Text"),
-#        width = 4
-#      )
-#    )
-#  )
-#})

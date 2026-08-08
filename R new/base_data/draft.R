@@ -13,7 +13,7 @@ rfl_drafts_rookies <- rfl_drafts_data %>%
   dplyr::filter(season > 2016 & is_rookie) # nur rookie drafts & rookies
 
 rfl_draft_pvar_exp <- rfl_drafts_data %>%
-  dplyr::filter(season > 2016) %>%
+  dplyr::filter(season > 2016 & season < new_season_march - 1) %>%
   dplyr::select(overall, pvar_exp) %>%
   dplyr::distinct()
 
@@ -29,22 +29,22 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
     voe = round(sum(voe), 1),
     .groups = "drop"
   ) %>%
-  dplyr::arrange(dplyr::desc(pvar)) %>%
+  dplyr::arrange(dplyr::desc(voe)) %>%
   dplyr::mutate(
     id = paste(season, franchise_id, sep = "_"),
     rank = dplyr::row_number(),
-    pvar_pctl = round(dplyr::percent_rank(pvar), 2)
+    voe_pctl = round(dplyr::percent_rank(voe), 2)
   ) %>%
   dplyr::group_by(season) %>%
-  dplyr::arrange(dplyr::desc(pvar)) %>%
+  dplyr::arrange(dplyr::desc(voe)) %>%
   dplyr::mutate(
-    pvar_per_pick = round(pvar / picks, 2),
-    pvar_pctl_season = round(dplyr::percent_rank(pvar), 2),
+    voe_per_pick = round(voe / picks, 2),
+    voe_pctl_season = round(dplyr::percent_rank(voe), 2),
     rank_season = dplyr::row_number(),
     season_date = as.Date(paste0(season, "-01-01")),
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, pvar_exp, voe, pvar_per_pick, pvar_pctl, rank_season, pvar_pctl_season)
+  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, pvar_exp, voe, voe_per_pick, voe_pctl, rank_season, voe_pctl_season)
 
 rfl_draft_orders <- feather::read_feather("data/rfl_draft_orders.feather") %>%
   #dplyr::mutate(
@@ -79,7 +79,8 @@ pal_pvar <- scale_rainbow(range(rfl_drafts_rookies$pvar, na.rm = TRUE))
 pal_pvar_class_sum <- scale_rainbow(range(rfl_draft_classes_sum$pvar, na.rm = TRUE))
 pal_pvar_exp <- scale_rainbow(range(rfl_drafts_rookies$pvar_exp, na.rm = TRUE))
 pal_voe <- scale_red_green(range(rfl_drafts_rookies$voe, na.rm = TRUE))
-pal_voe_class_sum <- scale_red_green(range(rfl_draft_classes_sum$voe, na.rm = TRUE))
+pal_voe_class_sum_text <- scale_red_green(range(rfl_draft_classes_sum$voe, na.rm = TRUE))
+pal_voe_class_sum_bg <- scale_rainbow(range(rfl_draft_classes_sum$voe, na.rm = TRUE))
 
 coldef_voe <- function(palette_fun = pal_voe, footer_fun = NULL, ...) {
   reactable_coldef_color(
@@ -100,12 +101,41 @@ coldef_voe <- function(palette_fun = pal_voe, footer_fun = NULL, ...) {
   )
 }
 
+coldef_voe_bg <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
+  reactable_coldef_bg(
+    name = "VOE",
+    cell = function(value) {
+      if (is.na(value)) return(NA)
+
+      if (value > 0) {
+        paste0("+", value)
+      } else {
+        value
+      }
+    },
+    palette_fun = palette_fun,
+    footer_fun = footer_fun,
+    minWidth = 70,
+    ...
+  )
+}
+
 coldef_pvar <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
   reactable_coldef_bg(
     name = "pVAR",
     palette_fun = palette_fun,
     footer_fun = footer_fun,
-    minWidth = 100,
+    minWidth = 70,
+    ...
+  )
+}
+
+coldef_pvar_text <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
+  reactable_coldef_color(
+    name = "pVAR",
+    palette_fun = palette_fun,
+    footer_fun = footer_fun,
+    minWidth = 70,
     ...
   )
 }
@@ -119,3 +149,4 @@ coldef_pvar_exp <- function(palette_fun = pal_pvar_exp, footer_fun = NULL, ...) 
     ...
   )
 }
+

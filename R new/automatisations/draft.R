@@ -133,7 +133,7 @@ nfl_drafts <- nflreadr::load_draft_picks(2017:var_season) %>%
 
 feather::write_feather(nfl_drafts, "data/nfl_drafts_data.feather")
 
-rfl_draft_grades <- draft_grades %>%
+rfl_draft_grades <- readr::read_csv("../rfl-data/data/rfl-draft-grades.csv") %>%
   #filter(team_id == "0001")
   #filter(merge_id == "2025_0027_1_1_0") %>%
   dplyr::rowwise() %>%
@@ -163,6 +163,11 @@ rfl_draft_grades <- draft_grades %>%
   ) %>%
   dplyr::ungroup() %>%
   dplyr::arrange(order) %>%
-  dplyr::select(-merge_id, -draft_class, -pick_split:-trade_id, -subline)
+  dplyr::select(-merge_id, -pick_split:-trade_id, -subline) %>%
+  dplyr::left_join(
+    rfl_franchise_data %>%
+      dplyr::select(franchise_id, franchise_name),
+    by = c("team_id" = "franchise_id")
+  )
 
 feather::write_feather(rfl_draft_grades, "data/rfl_draft_grates_data.feather")

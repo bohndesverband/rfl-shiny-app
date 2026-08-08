@@ -40,6 +40,10 @@ rfl_draft_classes_sum_filtered <- shiny::reactive({
 # shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 # draftpicks ----
 output$draft_classes_picks <- reactable::renderReactable({
+  shiny::validate(
+    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+  )
+
   data <- rfl_draft_classes_filtered() %>%
     dplyr::left_join(
       player_elo %>%
@@ -112,106 +116,35 @@ output$draft_classes_picks <- reactable::renderReactable({
 
 # impact ----
 output$draft_classes_impact <- ggiraph::renderGirafe({
+  shiny::validate(
+    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+  )
+
   plot <- rfl_draft_classes_sum_filtered() %>%
     plot_pVARexp_voe()
 
   girafe_default_output(plot)
 })
 
-# TODO: text auf farbigen flächen
 # draftklassen ----
-
-bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
-  bar <- htmltools::div(style = list(background = fill, width = width, height = height))
-  chart <- htmltools::div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
-  label <- htmltools::span(text, style = list(fontSize = "0.8em"))
-
-  htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
-}
-
 output$draft_classes_teams <- reactable::renderReactable({
+  shiny::validate(
+    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+  )
+
   data <- rfl_draft_classes_sum_filtered() %>%
-    dplyr::select(franchise_name, picks, rank_season, pvar, voe, rank, pvar_pctl)
+    dplyr::select(franchise_name, season, picks, rank_season, voe, pvar, rank, voe_pctl)
 
-  reactable_default(
+  draft_classes_teams_reactable(
     data,
+    rfl_draft_classes_filtered,
     columns = list(
-      franchise_name = reactable::colDef(
-        name = "Team",
-        html = TRUE,
-        cell = function(value, index) {
-          content <- shiny::tagList(
-            htmltools::div(value),
-            htmltools::div(htmltools::HTML(paste0("<small>", data$picks[index], " Picks", "</small>")))
-          )
-
-          as.character(content)
-        },
-        minWidth = 170
-      ),
-      pvar = coldef_pvar(palette_fun = pal_pvar_class_sum),
-      voe = coldef_voe(palette_fun = pal_voe_class_sum),
-      rank = reactable::colDef(
-        name = "Platz",
-        html = TRUE,
-        cell = function(value) {
-          content <- shiny::tagList(
-            htmltools::div(value),
-            htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (new_season_march - 2017) * 36, "</small>")))
-          )
-
-          as.character(content)
-        },
-        style = function(value) {
-          list(
-            textAlign = "center"
-          )
-        },
-        minWidth = 70
-      ),
-      pvar_pctl = colDef(
-        name = "Pctl",
-        align = "left",
-        cell = function(value) {
-          width <- paste0(value / max(data$pvar_pctl) * 100, "%")
-          bar_chart(paste0(value * 100, "%"), width = width)
-        },
-        minWidth = 200
-      ),
-      picks = reactable::colDef(show = FALSE),
-      rank_season = reactable::colDef(name = "pVAR #", minWidth = 50)
+      season = reactable::colDef(show = FALSE)
     ),
-    columnGroups = list(
-      colGroup(name = paste0("2017-", new_season_march - 1), columns = c("rank", "pvar_pctl")),
-      colGroup(name = paste0(input$selectYear), columns = c("rank_season", "pvar", "voe"))
-    ),
-    details = function(index) {
-      row <- data[index, ]
-
-      picks <- rfl_draft_classes_filtered() %>%
-        dplyr::filter(franchise_name == row$franchise_name) %>%
-        dplyr::select(asset_name_with_badge, voe)
-
-      reactable_default(
-        picks,
-        columns = list(
-          asset_name_with_badge = reactable::colDef(
-            name = "Spieler",
-            html = TRUE,
-            cell = function(value, index) {
-              as.character(htmltools::div(htmltools::HTML(value)))
-            },
-            minWidth = 350
-          ),
-          voe = coldef_voe(),
-          compact = TRUE,
-          fullWidth = FALSE
-        )
-      )
-    },
-    filterable = TRUE,
-    sortable = TRUE,
-    height = 745
+    column_groups = list(
+      colGroup(name = paste0("2017-", new_season_march - 1), columns = c("rank", "voe_pctl")),
+      colGroup(name = paste0(input$selectYear), columns = c("rank_season", "voe", "pvar"))
+    )
   )
 })
 
@@ -240,6 +173,10 @@ rfl_draft_voe <- shiny::reactive({
 })
 
 output$draft_classes_voe <- ggiraph::renderGirafe({
+  shiny::validate(
+    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+  )
+
   plot <- ggplot2::ggplot(rfl_draft_classes_filtered(), ggplot2::aes(x = overall, y = pvar, color = factor(pos_grouped, positions_grouped))) +
     ggplot2::geom_vline(xintercept = 36, color = color_grey_light) +
     ggplot2::geom_vline(xintercept = 72, color = color_grey_light) +
@@ -347,7 +284,11 @@ output$draft_reaches <- ggiraph::renderGirafe({
     dplyr::mutate(
       pick_diff = min_pick - max_pick,
       pick_diff_pctl = 1 - dplyr::percent_rank(pick_diff)
-    )
+    ) %>%
+    dplyr::group_by(season, mfl_id) %>%
+    dplyr::arrange(pick_info) %>%
+    dplyr::filter(dplyr::row_number() == 1) %>%
+    dplyr::ungroup()
 
   plot <- ggplot2::ggplot(plot_data, ggplot2::aes(x = min_pick, y = max_pick)) +
     ggplot2::geom_point(
@@ -446,6 +387,9 @@ output$draft_class_voe_exp <- reactable::renderReactable({
   )
 })
 
+# bewertung ----
+
+
 #TODO: vergleich Kapital vor/nach dem draft (wer hat am meisten getradet)
 
 # ui output ----
@@ -459,7 +403,7 @@ output$draft_class <- shiny::renderUI({
         width = 6
       ),
       shiny::column(
-        htmltools::h2("Alle RFL Draftklassen"),
+        htmltools::h2("Alle Picks der RFL Draftklassen"),
         shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_teams")),
         width = 6
       )

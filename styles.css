@@ -181,7 +181,7 @@
 }
 
 /* Team Report */
-.sidebar:has(~ #dashboard-container #section-team-report.active) .form-group:not(:has(#selectRflTeam-label)) {
+.sidebar:has(~ #dashboard-container #section-report.active) .form-group:not(:has(#selectRflTeam-label)) {
   display: none;
 }
 
@@ -261,7 +261,17 @@
       translate: 0 0;
     }
   }
+}
 
+#section-draft-history.active .rt-th {
+  &[aria-label*="Draft"],
+  &[aria-label*="Note"] {
+    text-align: center;
+
+    .rt-sort-header {
+      justify-content: center;
+    }
+  }
 }
 
 
@@ -270,7 +280,7 @@
   display: none;
 }
 
-/* Draft Classes*/
+/* Draft Classes */
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectDraftRounds-label)):not(:has(#showOnlyRookies)):not(:has(#sortForFpts)) {
   display: none;
 }
@@ -565,7 +575,7 @@ hr {
 .shiny-html-output > .container-fluid > * {
   padding-inline: 2rem;
 
-  &:has(.girafe),
+  /*&:has(.girafe),*/
   &:has(.shiny-plot-output) {
     padding-inline: 0;
   }
@@ -602,6 +612,10 @@ hr {
 
     &.col-sm-6 {
       grid-column: span 6;
+    }
+
+    &.col-sm-8 {
+      grid-column: span 8;
     }
 
     @container row (width < 50vw) {
