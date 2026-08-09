@@ -283,7 +283,7 @@ plot_draft_defaults <- function(df) {
     ggplot2::geom_vline(xintercept = 180, color = color_grey_light),
     ggplot2::geom_vline(xintercept = 216, color = color_grey_light),
     ggplot2::geom_vline(xintercept = 252, color = color_grey_light),
-    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(rfl_drafts_data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)),
+    ggplot2::scale_color_manual(values = colors_position, guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)),
     plot_defaults,
     ggplot2::theme(
       panel.grid.major = ggplot2::element_blank(),

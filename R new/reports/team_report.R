@@ -61,7 +61,22 @@ output$team_report <- shiny::renderUI({
     shiny::fluidRow(
       shiny::column(
         htmltools::h3("Einzelne Draftklasse"),
-        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class_adp")),
+        htmltools::div(
+          class = "flex",
+          shinyWidgets::radioGroupButtons(
+            "selectDraftClassCharts",
+            choices = c("ADP", "WAR", "ELO", "VOE", "Bewertung")
+          ),
+          #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
+          # TODO: liga vergleich charts
+        ),
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class")),
+        width = 12
+      )
+    ),
+    shiny::fluidRow(
+      shiny::column(
+        #shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class_war")),
         width = 12
       )
     )
