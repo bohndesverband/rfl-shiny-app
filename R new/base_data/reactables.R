@@ -234,7 +234,7 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
     details = function(index) {
       row <- data[index, ]
 
-      picks <- picks_reactive() %>%
+      picks <- picks_reactive %>%
         dplyr::filter(franchise_name == row$franchise_name & season == row$season) %>%
         dplyr::select(asset_name_with_badge, voe)
 

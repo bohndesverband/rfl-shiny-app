@@ -137,7 +137,7 @@ output$draft_classes_teams <- reactable::renderReactable({
 
   draft_classes_teams_reactable(
     data,
-    rfl_draft_classes_filtered,
+    rfl_draft_classes_filtered(),
     columns = list(
       season = reactable::colDef(show = FALSE)
     ),

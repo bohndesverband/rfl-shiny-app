@@ -181,7 +181,7 @@
 }
 
 /* Team Report */
-.sidebar:has(~ #dashboard-container #section-report.active) .form-group:not(:has(#selectRflTeam-label)) {
+.sidebar:has(~ #dashboard-container #section-report.active) .form-group:not(:has(#selectRflTeam-label)):not(:has(#selectYear-label)) {
   display: none;
 }
 

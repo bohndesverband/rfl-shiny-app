@@ -1,3 +1,4 @@
+#source("R new/reports/team/team_report_offseason.R", local = TRUE)
 source("R new/reports/team/team_report_draft.R", local = TRUE)
 
 # team mvp ----
@@ -33,6 +34,18 @@ source("R new/reports/team/team_report_draft.R", local = TRUE)
 output$team_report <- shiny::renderUI({
   shiny::fluidPage(
     htmltools::h1("Teambericht", paste(selected_team_name())),
+    htmltools::h2("Offseason"),
+    shiny::fluidRow(
+      shiny::column(
+        htmltools::h3("Zu- & Abgänge"),
+        #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
+        width = 6
+      ),
+      shiny::column(
+        #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
+        width = 6
+      )
+    ),
     htmltools::h2("Draft"),
     shiny::fluidRow(
       shiny::column(
@@ -47,13 +60,9 @@ output$team_report <- shiny::renderUI({
     ),
     shiny::fluidRow(
       shiny::column(
-        htmltools::h3("Alle Zu- und Abgänge"),
-        #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-        width = 6
-      ),
-      shiny::column(
-        #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
-        width = 6
+        htmltools::h3("Einzelne Draftklasse"),
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class_adp")),
+        width = 12
       )
     )
   )

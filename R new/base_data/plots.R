@@ -273,6 +273,31 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
     ggplot2::scale_size(range = c(3, 10), guide = "none")
 }
 
+# draft plot defauls ----
+plot_draft_defaults <- function(df) {
+  list <- list(
+    ggplot2::geom_vline(xintercept = 36, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 72, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 108, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 144, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 180, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 216, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 252, color = color_grey_light),
+    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(rfl_drafts_data$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)),
+    plot_defaults,
+    ggplot2::theme(
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank()
+    ),
+    ggplot2::labs(
+      x = "Overall Pick im Draft",
+      color = "Position"
+    )
+  )
+
+  list
+}
+
 # giraf defaults ----
 girafe_default_output <- function(plot, width = 16, height = 9) {
   ggiraph::girafe(ggobj = plot, width_svg = width, height_svg = height) %>%
