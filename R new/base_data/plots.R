@@ -216,6 +216,8 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
       ltr = "viel Kapital, viel Value",
       lbr = "viel Kapital, wenig Value",
       lbl = "wenig Kapital, wenig Value",
+      ctl = color_blue,
+      ctr = color_green,
       cbr = color_red,
       cbl = color_yellow
     ) +
