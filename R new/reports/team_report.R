@@ -65,7 +65,7 @@ output$team_report <- shiny::renderUI({
           class = "flex",
           shinyWidgets::radioGroupButtons(
             "selectDraftClassCharts",
-            choices = c("ADP", "WAR", "ELO", "VOE", "Bewertung")
+            choices = c("ADP", "VOE", "WAR", "ELO", "Bewertung")
           ),
           #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
           # TODO: liga vergleich charts

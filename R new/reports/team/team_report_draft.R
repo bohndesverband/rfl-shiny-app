@@ -4,7 +4,7 @@ rfl_rookie_drafts <- rfl_drafts_data %>%
 selected_draft_year <- shiny::reactive({
   selected_draft_year <- rfl_drafts_data %>%
     dplyr::filter(season == input$selectYear)
-    #dplyr::filter(season == 2026)
+    #dplyr::filter(season == 2025)
 })
 
 selected_draft_team <- shiny::reactive({
@@ -16,6 +16,18 @@ selected_draft_team <- shiny::reactive({
 selected_draft_players <- shiny::reactive({
   selected_draft_players <- selected_draft_team() %>%
     dplyr::pull(mfl_id)
+})
+
+selected_draft_grades <- shiny::reactive({
+  selected_draft_grades <- rfl_draft_grades %>%
+    dplyr::select(-asset_name, -asset_id_new) %>%
+    dplyr::filter(draft_class == input$selectYear & team_id == input$selectRflTeam) %>%
+    #dplyr::filter(draft_class == 2025 & team_id == "0007") %>%
+    dplyr::left_join(
+      selected_draft_team() %>%
+        dplyr::mutate(pick_id = paste(round, pick, sep = "_")),
+      by = c("pick" = "pick_id")
+    )
 })
 
 rfl_draft_classes_sum_filtered <- shiny::reactive({
@@ -153,7 +165,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren 3 Copies und dem MFL ADP (Dreieck).",
       ) +
       ggplot2::theme(
-        panel.grid.major.y = ggplot2::element_line(width = 1, color = color_grey_light)
+        panel.grid.major.y = ggplot2::element_line(linewidth = 1, color = color_grey_light)
       )
   } else if (type == "WAR") {
     ## WAR ----
@@ -167,15 +179,15 @@ output$team_draft_class <- ggiraph::renderGirafe({
 
     plot <- ggplot2::ggplot(data, ggplot2::aes(x = war, y = asset_name, color = factor(pos, positions_grouped), alpha = season, size = season)) +
       draft_class_plot_defaults +
-      ggplot2::geom_vline(xintercept = 0, color = color_red, alpha = 0.5) +
+      plot_geom_vline(0) +
       ggiraph::geom_point_interactive(
         ggplot2::aes(
           tooltip = paste(season, "\nWAR: ", war),
           data_id = player_id
         )
       ) +
-      ggplot2::scale_alpha_continuous(range = c(0.2, 0.9), limits = c(input$selectYear, new_season_march), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march), guide = "none") +
+      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren Wins Above Replacement (WAR) seit dem Draft.",
         x = "WAR"
@@ -195,26 +207,142 @@ output$team_draft_class <- ggiraph::renderGirafe({
 
     plot <- ggplot2::ggplot(data, ggplot2::aes(x = player_elo_post, y = asset_name, color = factor(position, positions_grouped), alpha = season, size = season)) +
       draft_class_plot_defaults +
-      ggplot2::geom_vline(xintercept = 1500, color = color_red, alpha = 0.5) +
+      plot_geom_vline(1500) +
       ggiraph::geom_point_interactive(
         ggplot2::aes(
           tooltip = paste(season, "\nELO: ", player_elo_post),
           data_id = mfl_id
         )
       ) +
-      ggplot2::scale_alpha_continuous(range = c(0.2, 0.9), limits = c(input$selectYear, new_season_march), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march), guide = "none") +
+      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihrer ELO seit dem Draft.",
         x = "ELO am Ende der Saison"
       )
+  } else if (type == "VOE") {
+    ## VOE ----
+    shiny::validate(
+      shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+    )
+
+    plot <- ggplot2::ggplot(selected_draft_team(), ggplot2::aes(x = voe, y = asset_name, color = factor(pos_grouped, positions_grouped))) +
+      draft_class_plot_defaults +
+      plot_geom_vline(0) +
+
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(
+          tooltip = paste(season, "\nVOE: ", voe),
+          data_id = mfl_id
+        ),
+        size = 8
+      ) +
+      ggplot2::labs(
+        subtitle = "Abgebildet werden alle Draftpicks der Klasse und ihr Value over Expected (VOE).",
+        x = "VOE"
+      )
+
+    # Liga vergleich
+    #plot <- ggplot2::ggplot(selected_draft_team(), ggplot2::aes(x = overall, y = pvar, color = factor(pos_grouped, positions_grouped))) +
+    #  draft_class_plot_defaults +
+    #  plot_draft_defaults()
+
+    #  ggplot2::geom_smooth(
+    #    data = rfl_draft_pvar_exp,
+    #    ggplot2::aes(y = pvar_exp),
+    #    se = FALSE,
+    #    color = color_red,
+    #    size = 0.5
+    #  ) +
+    #  ggiraph::geom_point_interactive(
+    #    data = selected_draft_year(),
+    #    ggplot2::aes(
+    #      tooltip = paste(
+    #        player_name, paste0("(", pos_grouped, ", ", team, ")"),
+    #        "\n", franchise_name,
+    #        "\nPick: ", paste0(round, ".", pick, " (#", overall, ")"),
+    #        "\nVOE:", voe),
+    #      data_id = mfl_id
+    #    ),
+    #    color = color_grey_light,
+    #    alpha = 0.6,
+    #    size = 5,
+    #    hover_nearest = TRUE
+    #  ) +
+    #  ggiraph::geom_point_interactive(
+    #    ggplot2::aes(
+    #      tooltip = paste(
+    #        player_name, paste0("(", pos_grouped, ", ", team, ")"),
+    #        "\n", franchise_name,
+    #        "\nPick: ", paste0(round, ".", pick, " (#", overall, ")"),
+    #        "\nVOE:", voe),
+    #      data_id = mfl_id
+    #    ),
+    #    size = 7,
+    #    hover_nearest = TRUE
+    #  ) +
+    #  ggplot2::labs(
+    #    y = "pVAR"
+    #  )
+  } else if (type == "Bewertung") {
+    ## Bewertung ----
+
+    breaks <- seq(1, 20/3, by = 1/3)
+
+    labels <- c(
+      "1+", "1", "1-",
+      "2+", "2", "2-",
+      "3+", "3", "3-",
+      "4+", "4", "4-",
+      "5+", "5", "5-",
+      "6+", "6", "6-"
+    )
+
+    plot <- ggplot2::ggplot(data = subset(selected_draft_grades(), !is.na(asset_name)), ggplot2::aes(x = grade, y = asset_name, color = user, alpha = year, size = year)) +
+      draft_class_plot_defaults +
+      ggplot2::geom_vline(
+        data = selected_draft_grades() %>%
+          dplyr::filter(
+            pick == "klasse",
+            year == max(year, na.rm = TRUE)
+          ),
+        ggplot2::aes(xintercept = grade, color = user),
+        linewidth = 0.5, linetype = "dashed"
+      ) +
+
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(
+          tooltip = paste(user, year, "\nNote: ", grade),
+          data_id = user
+        ),
+      ) +
+      ggplot2::scale_x_continuous(
+        limits = c(1, 6.666),
+        breaks = breaks,
+        minor_breaks = NULL,
+        labels = labels
+      ) +
+      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(min(selected_draft_grades()$year), max(selected_draft_grades()$year)), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(selected_draft_grades()$year), max(selected_draft_grades()$year)), guide = "none") +
+      ggplot2::scale_color_discrete(palette = colors) +
+      ggplot2::labs(
+        subtitle = "Abgebildet werden alle Draftpicks der Klasse und ihre Bewertungen nach dem Draft, einem, drei und fünf Jahren. Die gestrichelten Linien sind die letzten Bewertungen der gesamten Klasse.",
+        x = "Bewertung",
+        color = ""
+      )
+  }
+
+  if (type != "Bewertung") {
+    plot <- plot +
+      ggplot2::scale_color_manual(values = colors_position, guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
+      ggplot2::labs(
+        color = "Position",
+      )
   }
 
   plot <- plot +
-    ggplot2::scale_color_manual(values = colors_position, guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
     ggplot2::labs(
-      title = paste("Draftklasse", selected_team_name(), input$selectYear, "-", input$selectDraftClassCharts),
-      color = "Position",
+      title = paste("Draftpicks", selected_team_name(), input$selectYear, "-", input$selectDraftClassCharts),
       y = ""
     ) +
     theme(
