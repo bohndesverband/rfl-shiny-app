@@ -121,7 +121,7 @@ output$draft_classes_impact <- ggiraph::renderGirafe({
   )
 
   plot <- rfl_draft_classes_sum_filtered() %>%
-    plot_pVARexp_voe()
+    plot_pVARexp_voe(selectedTeamNames = input$selectRflTeams)
 
   girafe_default_output(plot)
 })
@@ -178,13 +178,7 @@ output$draft_classes_voe <- ggiraph::renderGirafe({
   )
 
   plot <- ggplot2::ggplot(rfl_draft_classes_filtered(), ggplot2::aes(x = overall, y = pvar, color = factor(pos_grouped, positions_grouped))) +
-    ggplot2::geom_vline(xintercept = 36, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 72, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 108, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 144, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 180, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 216, color = color_grey_light) +
-    ggplot2::geom_vline(xintercept = 252, color = color_grey_light) +
+    plot_draft_defaults() +
     ggplot2::geom_smooth(
       data = rfl_draft_pvar_exp,
       ggplot2::aes(y = pvar_exp),
@@ -205,18 +199,10 @@ output$draft_classes_voe <- ggiraph::renderGirafe({
       size = 7,
       hover_nearest = TRUE
     ) +
-    ggplot2::scale_color_manual(values = colors_position[names(colors_position) %in% unique(rfl_draft_voe()$pos_grouped)], guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)) +
-    plot_defaults +
     ggplot2::labs(
       title = paste("RFL Draftklasse", input$selectYear, "Value over Expected"),
       #subtitle = paste("Angezeigt werden alle",  paste(input$selectPositions, collapse = ", "), "Picks aus den Runden", paste0(input$selectDraftRounds[1], "-", input$selectDraftRounds[2]), "mit ihrem derzeitigen Wert."),
-      x = "Overall Pick im RFL Draft",
-      y = "pVAR",
-      color = "Position"
-    ) +
-    ggplot2::theme(
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank()
+      y = "pVAR"
     )
 
   ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 9) %>%
