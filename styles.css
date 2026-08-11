@@ -181,9 +181,33 @@
 }
 
 /* Team Report */
-.sidebar:has(~ #dashboard-container #section-team-report.active) .form-group:not(:has(#selectRflTeam-label)) {
+.sidebar:has(~ #dashboard-container #section-report.active) .form-group:not(:has(#selectRflTeam-label)):not(:has(#selectYear-label)) {
   display: none;
 }
+
+#section-report {
+  #team_draft_class_grades {
+
+    /* wenn details eingeblendet blende letzten content aus */
+    .rt-tr:has(~ .rt-tr-details) .rt-td:nth-child(n+3) .rt-td-inner {
+      display: none;
+    }
+
+    .rt-tr:has(~ .rt-tr-details) > .rt-td {
+      background: transparent !important;
+    }
+
+    > .Reactable > .rt-table > .rt-tbody:has(> .rt-tr-group > .rt-tr-details) > .rt-tr-group:not(:has(> .rt-tr-details)) {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
+    }
+}
+
+  .rt-td-inner {
+    white-space: break-spaces;
+  }
+}
+
 
 /* Info für Teamsauswahl um Spieler vorzufiltern */
 .sidebar form > p {
@@ -261,7 +285,17 @@
       translate: 0 0;
     }
   }
+}
 
+#section-draft-history.active .rt-th {
+  &[aria-label*="Draft"],
+  &[aria-label*="Note"] {
+    text-align: center;
+
+    .rt-sort-header {
+      justify-content: center;
+    }
+  }
 }
 
 
@@ -270,7 +304,7 @@
   display: none;
 }
 
-/* Draft Classes*/
+/* Draft Classes */
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectDraftRounds-label)):not(:has(#showOnlyRookies)):not(:has(#sortForFpts)) {
   display: none;
 }
@@ -415,7 +449,8 @@
   &[aria-label*="DL"],
   &[aria-label*="LB"],
   &[aria-label*="DB"],
-  &[aria-label*="Total"] {
+  &[aria-label*="Total"],
+  &[aria-label*="Note"]{
     .rt-th-inner > * {
         justify-content: center !important;
 
@@ -565,7 +600,7 @@ hr {
 .shiny-html-output > .container-fluid > * {
   padding-inline: 2rem;
 
-  &:has(.girafe),
+  /*&:has(.girafe),*/
   &:has(.shiny-plot-output) {
     padding-inline: 0;
   }
@@ -604,8 +639,19 @@ hr {
       grid-column: span 6;
     }
 
+    &.col-sm-8 {
+      grid-column: span 8;
+    }
+
     @container row (width < 50vw) {
       grid-column: span 12;
     }
   }
+}
+
+.flex {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
 }

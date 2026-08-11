@@ -216,6 +216,8 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
       ltr = "viel Kapital, viel Value",
       lbr = "viel Kapital, wenig Value",
       lbl = "wenig Kapital, wenig Value",
+      ctl = color_blue,
+      ctr = color_green,
       cbr = color_red,
       cbl = color_yellow
     ) +
@@ -269,6 +271,32 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
 
   p +
     ggplot2::scale_size(range = c(3, 10), guide = "none")
+}
+
+# draft plot defauls ----
+plot_draft_defaults <- function(df) {
+  list <- list(
+    ggplot2::geom_vline(xintercept = 36, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 72, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 108, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 144, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 180, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 216, color = color_grey_light),
+    ggplot2::geom_vline(xintercept = 252, color = color_grey_light),
+    ggplot2::scale_color_manual(values = colors_position, guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)),
+    ggplot2::scale_x_continuous(limits = c(1, 253), breaks = seq(1, 253, by = 12)),
+    plot_defaults,
+    ggplot2::theme(
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank()
+    ),
+    ggplot2::labs(
+      x = "Overall Pick im Draft",
+      color = "Position"
+    )
+  )
+
+  list
 }
 
 # giraf defaults ----

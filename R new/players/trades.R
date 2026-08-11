@@ -24,45 +24,7 @@ shiny::observeEvent(input$selectYears, {
 
 # trade history ----
 trade_history <- reactive({
-  trade_history <- rfl_trades_data %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name),
-      by = "franchise_id"
-    ) %>%
-    dplyr::mutate(
-      asset_type = ifelse(grepl("DP_", asset_id), "pick", "player")
-    ) %>%
-    dplyr::rowwise() %>%
-    dplyr::mutate(
-      pos = stringr::str_split(gsub(".*\\(([^)]+)\\).*", "\\1", asset_name), ",")[[1]][1]
-    ) %>%
-    dplyr::group_by(trade_id) %>%
-    dplyr::mutate(
-      asset_types = paste(asset_type, collapse = ","),
-      asset_ids = paste(trade_asset_id, collapse = ","),
-      trade_asset_ids = paste(asset_id, collapse = ","),
-      asset_positions = paste(pos, collapse = ", "),
-      franchise_ids = paste(franchise_id, collapse = ",")
-    ) %>%
-    dplyr::group_by(season, trade_id, trade_side, asset_types) %>%
-    dplyr::summarise(
-      date = dplyr::first(date),
-      asset_ids = dplyr::first(asset_ids),
-      trade_asset_ids = dplyr::first(trade_asset_ids),
-      asset_types = dplyr::first(asset_types),
-      asset_positions = dplyr::first(asset_positions),
-      franchise_ids = dplyr::first(franchise_ids),
-      asset_names = paste(trade_asset_name, collapse = "\n"),
-      franchise_id = dplyr::first(franchise_id),
-      franchise_name = dplyr::first(franchise_name),
-      .groups = "drop"
-    ) %>%
-    dplyr::mutate(
-      trade_assets = asset_names,
-      asset_names = paste0(franchise_name, " sends\n", asset_names),
-    ) %>%
-
+  trade_history <- rfl_trade_history %>%
 
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]

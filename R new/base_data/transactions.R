@@ -1,6 +1,8 @@
 rfl_trades_data <- feather::read_feather("data/rfl_trades_data.feather")
 
-rfl_transactions_draft <- feather::read_feather("data/rfl_transactions_draft_data.feather")
+rfl_trade_history <- feather::read_feather("data/rfl_trade_history_data.feather")
+
+#rfl_transactions_draft <- feather::read_feather("data/rfl_transactions_draft_data.feather")
 
 # nötig für trades in draftklassen
 #rfl_trade_assets_per_side <- rfl_transactions_draft %>%

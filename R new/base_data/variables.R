@@ -83,9 +83,6 @@ rem_to_pt <- function(rem, base_px = 16) {
   rem * base_px * 0.75
 }
 
-
-
-
 # gt ----
 gtDefaults <- function(df) {
   df %>%
@@ -216,12 +213,13 @@ reactable_coldef_bg <- function(
     palette_fun,
     details_fun = NULL,
     minWidth = 100,
-    footer_fun = NULL
+    footer_fun = NULL,
+    ...
 ) {
   reactable::colDef(
     name = name,
     minWidth = minWidth,
-
+    ...,
     cell = if (!is.null(cell_fun)) {
       function(index) {
         cell_fun(index)

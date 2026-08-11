@@ -42,8 +42,8 @@ shiny::observeEvent(active_tab(), {
   # year
   if (active_tab() == "#section-draftklassen") {
     shiny::updateSliderInput(session, "selectYear", min = 2017, max = max(rfl_drafts_data$season), value = new_season_sept - 2)
-  } else if (active_tab() == "#section-bewertungen") {
-    shiny::updateSliderInput(session, "selectYear", min = 2024, max = 2026, value = 2025)
+  } else if (active_tab() == "#section-report") {
+    shiny::updateSliderInput(session, "selectYear", min = 2017, max = max(rfl_drafts_data$season), value = max(rfl_drafts_data$season))
   } else {
     #shiny::updateSliderInput(session, "selectYear", min = 2016, max = new_season_sept, value = new_season_sept)
   }

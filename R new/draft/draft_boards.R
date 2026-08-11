@@ -6,10 +6,10 @@ pal_voe <- scale_red_green(range(rfl_drafts_data$voe, na.rm = TRUE))
 # fitere draft daten
 rfl_draft_classes <- shiny::reactive({
   rfl_draft_classes <- rfl_drafts_data %>%
-    dplyr::filter(season > 2016 & season < new_season_march) %>%
+    #dplyr::filter(season > 2016 & season < new_season_march) %>%
 
-    #filter(franchise_id == "0001") %>%
-    #dplyr::filter(season == 2025) %>%
+    filter(franchise_id == "0007") %>%
+    dplyr::filter(season == 2023)
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::filter(round >= input$selectDraftRounds[1] & round <= input$selectDraftRounds[2])
 }) %>%
@@ -26,7 +26,7 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
   ) %>%
   dplyr::mutate(
     id = paste(season, franchise_id, sep = "_"),
-    pvar_pctl = dplyr::percent_rank(pvar)
+    voe_pctl = dplyr::percent_rank(pvar)
   ) %>%
   dplyr::group_by(season) %>%
   dplyr::arrange(dplyr::desc(pvar)) %>%
@@ -35,11 +35,11 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
     season_date = as.Date(paste0(season, "-01-01"))
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, pvar_pctl)
+  dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, voe_pctl)
 
 # filtere gesamte klasse
 rfl_draft_classes_sum_filtered <- shiny::reactive({
-  rfl_draft_classes_sum %>%
+  rfl_draft_classes_sum_filtered <- rfl_draft_classes_sum %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::filter(
       if(isTruthy(input$selectRflTeams))
@@ -52,42 +52,6 @@ rfl_draft_classes_sum_filtered <- shiny::reactive({
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 # ranking aller draftklassen ----
-## overview ----
-output$draft_classes_overview <- shiny::renderPlot({
-  ggplot2::ggplot(rfl_draft_classes_sum, ggplot2::aes(x = season_date, y = reorder(franchise_name, dplyr::desc(franchise_name)), fill = rank)) +
-    ggplot2::geom_tile(ggplot2::aes(key = id), color = color_bg) +
-    ggplot2::geom_text(
-      ggplot2::aes(
-        label = rank,
-        fontface = "bold",
-        size = 8
-      ),
-      show.legend = FALSE
-    ) +
-    ggplot2::scale_fill_gradient2(high = color_red, mid = color_yellow, low = color_green, midpoint = 18, guide = "none") +
-    ggplot2::scale_size_continuous(guide = "none") +
-    ggplot2::scale_x_date(date_breaks = "1 year", date_labels = "'%y", expand = c(0, 0)) +
-    plot_defaults +
-    ggplot2::labs(
-      title = "RFL Draftklassen Überblick",
-      subtitle = "Dargestellt werden alle RFL Draftklassen seit 2017 mit ihrem Ranking nach kumulierten pVAR der Draftpicks",
-      x = "Saison"
-    ) +
-    ggplot2::theme(
-      axis.title.y = ggplot2::element_blank(),
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank()
-    )
-
-  #plotly::ggplotly(plot, source = "draft_classes_overview", height = 800) %>%
-  #  plotly::event_register("plotly_click") %>%
-  #  plotly::layout(
-  #    font = list(family = font),
-  #    title = list(font = list(family = var.fontHeadline, size = 24)),
-  #    yaxis = list(font = list(size = 6))
-  #  )
-  # TODO: interaktiv machen
-}, height = 800)
 
 # input bei klick setzen
 #observeEvent(event_data("plotly_click", source = "draft_classes_overview"), {
@@ -136,8 +100,8 @@ output$team_draft_class <- reactable::renderReactable({
     dplyr::ungroup()
 
   row_details <- function(index) {
-    selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
-    #selected_class <- "2019 Dresden Jaguars"
+    #selected_class <- rfl_draft_classes_sum_filtered()[index, ]$class
+    selected_class <- "2019 Dresden Jaguars"
 
     data_filtered <- data %>%
       dplyr::filter(.data$class == selected_class)
@@ -517,7 +481,7 @@ output$team_draft_class <- reactable::renderReactable({
   }
 
   reactable::reactable(
-    rfl_draft_classes_sum_filtered(),
+    rfl_draft_classes_sum_filtered,
     columns = list(
       id = reactable::colDef(show = FALSE),
       class = reactable::colDef(name = "", sticky = "left"),
@@ -550,7 +514,7 @@ output$team_draft_class <- reactable::renderReactable({
         name = "pVAR",
         sortable = TRUE
       ),
-      pvar_pctl = reactable::colDef(
+      voe_pctl = reactable::colDef(
         name = "Perzentil seit 2017",
         cell = JS('function(cellInfo) {
           // Format as percentage
