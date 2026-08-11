@@ -53,63 +53,15 @@ output$draft_classes_picks <- reactable::renderReactable({
       by = "mfl_id"
     ) %>%
     dplyr::arrange(overall) %>%
-    dplyr::mutate(
-      pick = paste(round, formatC(pick, width = 2, flag = "0"), sep = "."),
-      player_info = paste(pos_grouped, team, sep = ", ")
-    ) %>%
-    dplyr::select(pick, player_name_with_badge, player_info, franchise_name, subline, pick_cat, pvar, voe)
+    dplyr::select(round_pick, player_name_with_badge, pos_team, franchise_name, draft_range_subline, pick_cat, pvar, voe)
 
-  reactable_default(
+  draft_class_players_reactable(
     data,
-    columns = list(
-      player_name_with_badge = reactable::colDef(
-        name = "Spieler",
-        html = TRUE,
-        cell = function(value, index) {
-          content <- shiny::tagList(
-            htmltools::div(htmltools::HTML(value)),
-            htmltools::div(htmltools::HTML(paste0("<small>", data$player_info[index], "</small>")))
-          )
-
-          as.character(content)
-        },
-        minWidth = 170
-      ),
-      franchise_name = reactable::colDef(
-        name = "Team",
-        html = TRUE,
-        cell = function(value, index) {
-          content <- shiny::tagList(
-            htmltools::div(value),
-            htmltools::div(htmltools::HTML(paste0("<small>", data$subline[index], "</small>")))
-          )
-
-          as.character(content)
-        },
-        minWidth = 170
-      ),
-      pick = reactable::colDef(
-        name = "Pick",
-        style = function(value) {
-          list(
-            textAlign = "center"
-          )
-        },
-        minWidth = 50
-      ),
-      pvar = coldef_pvar(),
-      voe = coldef_voe(),
-      player_info = reactable::colDef(show = FALSE),
-      subline = reactable::colDef(show = FALSE),
+    col_names = list(
       pick_cat = reactable::colDef(show = FALSE)
-    ),
-    columnGroups = list(
-      colGroup(name = "Value", columns = c("pvar", "voe"))
     ),
     sortable = TRUE,
     filterable = TRUE,
-    defaultSorted = c("pick"),
-    # height = 772
     height = 745
   )
 })

@@ -134,8 +134,8 @@ rfl_drafts_data <- feather::read_feather("data/rfl_drafts_data.feather") %>%
     player_and_pick_info = paste0("<div>", player_name_with_info, "</div>", "<div>", "<small>", pick_info, "</small>", "</div>"),
     player_name_with_badge = ifelse(!is.na(pick_cat), paste0(player_name, pick_cat_badge), player_name),
     asset_name_with_badge = ifelse(!is.na(pick_cat), paste0(asset_name, pick_cat_badge), asset_name),
-    player_name_with_subline = paste0("<div>", player_name_with_badge, "</div>", "<div>", "<small>", subline, "</small>", "</div>"),
-    asset_name_with_subline = paste0("<div>", asset_name_with_badge, "</div>", "<div>", "<small>", subline, "</small>", "</div>")
+    player_name_with_subline = paste0("<div>", player_name_with_badge, "</div>", "<div>", "<small>", draft_range_subline, "</small>", "</div>"),
+    asset_name_with_subline = paste0("<div>", asset_name_with_badge, "</div>", "<div>", "<small>", draft_range_subline, "</small>", "</div>")
   ) %>%
   #filter(season == 2024 & franchise_id == "0007")
   dplyr::select(-dplyr::starts_with("threshold"))

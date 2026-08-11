@@ -284,6 +284,7 @@ plot_draft_defaults <- function(df) {
     ggplot2::geom_vline(xintercept = 216, color = color_grey_light),
     ggplot2::geom_vline(xintercept = 252, color = color_grey_light),
     ggplot2::scale_color_manual(values = colors_position, guide = ggplot2::guide_legend(direction = "horizontal", nrow = 1)),
+    ggplot2::scale_x_continuous(limits = c(1, 253), breaks = seq(1, 253, by = 12)),
     plot_defaults,
     ggplot2::theme(
       panel.grid.major = ggplot2::element_blank(),

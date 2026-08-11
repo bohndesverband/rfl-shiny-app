@@ -34,18 +34,18 @@ source("R new/reports/team/team_report_draft.R", local = TRUE)
 output$team_report <- shiny::renderUI({
   shiny::fluidPage(
     htmltools::h1("Teambericht", paste(selected_team_name())),
-    htmltools::h2("Offseason"),
-    shiny::fluidRow(
-      shiny::column(
-        htmltools::h3("Zu- & Abgänge"),
+    #htmltools::h2("Offseason"),
+    #shiny::fluidRow(
+    #  shiny::column(
+    #    htmltools::h3("Zu- & Abgänge"),
         #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-        width = 6
-      ),
-      shiny::column(
+    #    width = 6
+    #  ),
+    #  shiny::column(
         #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
-        width = 6
-      )
-    ),
+    #    width = 6
+    #  )
+    #),
     htmltools::h2("Draft"),
     shiny::fluidRow(
       shiny::column(
@@ -65,7 +65,7 @@ output$team_report <- shiny::renderUI({
           class = "flex",
           shinyWidgets::radioGroupButtons(
             "selectDraftClassCharts",
-            choices = c("ADP", "VOE", "WAR", "ELO", "Bewertung")
+            choices = c("ADP", "Bewertung", "VOE", "WAR", "ELO")
           ),
           #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
           # TODO: liga vergleich charts
@@ -75,8 +75,9 @@ output$team_report <- shiny::renderUI({
       )
     ),
     shiny::fluidRow(
+      htmltools::h4("Bewertung"),
       shiny::column(
-        #shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class_war")),
+        shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class_grades")),
         width = 12
       )
     )

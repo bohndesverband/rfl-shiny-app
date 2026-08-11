@@ -32,6 +32,8 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   dplyr::group_by(season, mfl_id) %>%
   dplyr::arrange(overall) %>%
   dplyr::mutate(
+    pos_team = paste(pos, team, sep = ", "),
+    round_pick = paste(round, sprintf("%02d", pick), sep = "."),
     first_pick = overall[1],
     second_pick = overall[2],
     third_pick = overall[3],
@@ -107,11 +109,12 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
     asset_name = paste(season, paste0(as.integer(round), ".", sprintf("%02d", pick)), player_name, paste0("(", pos, ", ", team, ")")),
     text_rfl =  paste("RFL:", paste(na.omit(c(first_pick_new, second_pick_new, third_pick_new)), collapse = ", ")),
     text_adp = paste0("ADP: ", adp),
-    subline = ifelse(
+    draft_range_subline = ifelse(
       !is.na(adp),
       paste(text_rfl, text_adp, sep = " - "),
       text_rfl
-    )
+    ),
+    pick_id = paste(round, sprintf("%02d", pick), sep = "_")
   ) %>%
   dplyr::rename(date = timestamp) %>%
   dplyr::select(-dplyr::ends_with("pick_new"), -text_rfl, -text_adp)
@@ -132,42 +135,3 @@ nfl_drafts <- nflreadr::load_draft_picks(2017:var_season) %>%
   dplyr::rename(nfl_round = round)
 
 feather::write_feather(nfl_drafts, "data/nfl_drafts_data.feather")
-
-rfl_draft_grades <- readr::read_csv("../rfl-data/data/rfl-draft-grades.csv") %>%
-  #filter(team_id == "0001")
-  #filter(merge_id == "2025_0027_1_1_0") %>%
-  dplyr::rowwise() %>%
-  dplyr::mutate(
-    grade = as.double(grade),
-    draft_class = as.double(draft_class),
-    pick_split = stringr::str_split(pick, "_"),
-    round = as.double(pick_split[1]),
-    trade_id = as.double(pick_split[2])
-  ) %>%
-  dplyr::left_join(
-    rfl_drafts_data %>%
-      dplyr::select(season, round, pick, asset_name, subline, asset_id_new),
-    by = c("draft_class" = "season", "round", "trade_id" = "pick")
-  ) %>%
-  dplyr::group_by(team_id, draft_class) %>%
-  dplyr::arrange(round, trade_id) %>%
-  dplyr::mutate(
-    order = dplyr::case_when(
-      pick == "klasse" ~ 0,
-      pick == "laterounds" ~ 20,
-      grepl("trade", pick) ~ 30,
-      TRUE ~ dplyr::row_number()
-    ),
-    asset_name = ifelse(is.na(asset_name), pick, paste0(asset_name, "<br>", "<small>", subline, "</small>")),
-    year = draft_class + as.double(year)
-  ) %>%
-  dplyr::ungroup() %>%
-  dplyr::arrange(order) %>%
-  dplyr::select(-merge_id, -pick_split:-trade_id, -subline) %>%
-  dplyr::left_join(
-    rfl_franchise_data %>%
-      dplyr::select(franchise_id, franchise_name),
-    by = c("team_id" = "franchise_id")
-  )
-
-feather::write_feather(rfl_draft_grades, "data/rfl_draft_grates_data.feather")

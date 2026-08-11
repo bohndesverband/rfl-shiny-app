@@ -185,6 +185,30 @@
   display: none;
 }
 
+#section-report {
+  #team_draft_class_grades {
+
+    /* wenn details eingeblendet blende letzten content aus */
+    .rt-tr:has(~ .rt-tr-details) .rt-td:nth-child(n+3) .rt-td-inner {
+      display: none;
+    }
+
+    .rt-tr:has(~ .rt-tr-details) > .rt-td {
+      background: transparent !important;
+    }
+
+    > .Reactable > .rt-table > .rt-tbody:has(> .rt-tr-group > .rt-tr-details) > .rt-tr-group:not(:has(> .rt-tr-details)) {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
+    }
+}
+
+  .rt-td-inner {
+    white-space: break-spaces;
+  }
+}
+
+
 /* Info für Teamsauswahl um Spieler vorzufiltern */
 .sidebar form > p {
   display: none;
@@ -425,7 +449,8 @@
   &[aria-label*="DL"],
   &[aria-label*="LB"],
   &[aria-label*="DB"],
-  &[aria-label*="Total"] {
+  &[aria-label*="Total"],
+  &[aria-label*="Note"]{
     .rt-th-inner > * {
         justify-content: center !important;
 

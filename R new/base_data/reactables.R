@@ -164,6 +164,81 @@ render_draft_history_table <- function(
 }
 
 # Draftklassen Tabelle ----
+## reusable reactable for draft class player ----
+draft_class_players_reactable <- function(data, col_names = NULL, ...) {
+
+  column_groups <- NULL
+
+  if (all(c("pvar", "voe") %in% names(data))) {
+    column_groups <- list(
+      reactable::colGroup(
+        name = "Value",
+        columns = c("pvar", "voe")
+      )
+    )
+  }
+
+  reactable_default(
+    data,
+    columns = c(
+      list(
+        player_name_with_badge = reactable::colDef(
+          name = "Spieler",
+          html = TRUE,
+          cell = function(value, index) {
+            content <- shiny::tagList(
+              htmltools::div(htmltools::HTML(value)),
+              htmltools::div(
+                htmltools::HTML(
+                  paste0("<small>", data$pos_team[index], "</small>")
+                )
+              )
+            )
+
+            as.character(content)
+          },
+          minWidth = 170
+        ),
+        franchise_name = reactable::colDef(
+          name = "Team",
+          html = TRUE,
+          cell = function(value, index) {
+            content <- shiny::tagList(
+              htmltools::div(value),
+              htmltools::div(
+                htmltools::HTML(
+                  paste0("<small>", data$draft_range_subline[index], "</small>")
+                )
+              )
+            )
+
+            as.character(content)
+          },
+          minWidth = 170
+        ),
+        round_pick = reactable::colDef(
+          name = "Pick",
+          style = function(value) {
+            list(textAlign = "center")
+          },
+          minWidth = 50
+        ),
+        pvar = coldef_pvar(),
+        voe = coldef_voe(),
+        pos_team = reactable::colDef(show = FALSE),
+        draft_range_subline = reactable::colDef(show = FALSE)
+      ),
+      col_names
+    ),
+    columnGroups = column_groups,
+    defaultSorted = "round_pick",
+    ...
+  )
+}
+
+
+
+## bar chart helper ----
 bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
   bar <- htmltools::div(style = list(background = fill, width = width, height = height))
   chart <- htmltools::div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
@@ -172,7 +247,10 @@ bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_m
   htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
 }
 
-# reusable reactable for draft class teams
+## draft grades ----
+
+
+## reusable reactable for draft class teams ----
 draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = NULL, columns = NULL, ...) {
   # define default columns
   default_columns <- list(
@@ -264,3 +342,41 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
     ...
   )
 }
+
+## raft grades defauls -----
+draft_grades_reactable <- function(data, writers, col_names = NULL, ...) {
+  writers_col_names <- list()
+  writers_col_groups <- list()
+
+  for (name in writers) {
+    text_col <- paste0("text_", name)
+    grade_col <- paste0("grade_", name)
+
+    writers_col_names[[text_col]] <- reactable::colDef(
+      name = "Analyse",
+      minWidth = 300
+    )
+
+    writers_col_names[[grade_col]] <- reactable_coldef_bg(
+      name = "Note",
+      palette_fun = scale_rainbow_reverse(range(1:7, na.rm = TRUE)),
+      minWidth = 70
+    )
+
+    writers_col_groups[[length(writers_col_groups) + 1]] <- reactable::colGroup(
+      name = name,
+      columns = c(text_col, grade_col)
+    )
+  }
+
+  reactable::reactable(
+    data,
+    columns = c(
+      col_names,
+      writers_col_names
+    ),
+    columnGroups = writers_col_groups,
+    ...
+  )
+}
+

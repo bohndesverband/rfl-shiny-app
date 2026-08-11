@@ -10,7 +10,7 @@ selected_draft_year <- shiny::reactive({
 selected_draft_team <- shiny::reactive({
   selected_draft_team <- selected_draft_year() %>%
     dplyr::filter(franchise_id == input$selectRflTeam)
-    #dplyr::filter(franchise_id == "0007")
+    #dplyr::filter(franchise_id == "0027")
 })
 
 selected_draft_players <- shiny::reactive({
@@ -20,20 +20,26 @@ selected_draft_players <- shiny::reactive({
 
 selected_draft_grades <- shiny::reactive({
   selected_draft_grades <- rfl_draft_grades %>%
-    dplyr::select(-asset_name, -asset_id_new) %>%
-    dplyr::filter(draft_class == input$selectYear & team_id == input$selectRflTeam) %>%
-    #dplyr::filter(draft_class == 2025 & team_id == "0007") %>%
-    dplyr::left_join(
-      selected_draft_team() %>%
-        dplyr::mutate(pick_id = paste(round, pick, sep = "_")),
-      by = c("pick" = "pick_id")
+    dplyr::select(-asset_id_new) %>%
+    dplyr::filter(draft_class == input$selectYear & team_id == input$selectRflTeam)
+    #dplyr::filter(draft_class == 2025 & team_id == "0027")
+})
+
+selected_draft_trades <- shiny::reactive({
+  selected_draft_trades <- rfl_trade_history %>%
+    dplyr::filter(
+      #grepl(paste("FP", input$selectRflTeam, input$selectYear, sep = "_"), trade_asset_ids)
+      #grepl(paste("FP", "0027", "2025", sep = "_"), trade_asset_ids) |
+      grepl(input$selectRflTeam, franchise_ids)
+      #grepl("0027", franchise_ids)
+
     )
 })
 
 rfl_draft_classes_sum_filtered <- shiny::reactive({
   rfl_draft_classes_sum_filtered <- rfl_draft_classes_sum %>%
     dplyr::filter(franchise_id == input$selectRflTeam) %>%
-    #dplyr::filter(franchise_id == "0007") %>%
+    #dplyr::filter(franchise_id == "0027") %>%
     dplyr::select(franchise_name, season, picks, rank_season, pvar, voe, rank, voe_pctl)
 })
 
@@ -186,8 +192,8 @@ output$team_draft_class <- ggiraph::renderGirafe({
           data_id = player_id
         )
       ) +
-      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
+      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(min(data$season), max(data$season)), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren Wins Above Replacement (WAR) seit dem Draft.",
         x = "WAR"
@@ -214,8 +220,8 @@ output$team_draft_class <- ggiraph::renderGirafe({
           data_id = mfl_id
         )
       ) +
-      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(input$selectYear, new_season_march - 1), guide = "none") +
+      ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(min(data$season), max(data$season)), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihrer ELO seit dem Draft.",
         x = "ELO am Ende der Saison"
@@ -287,6 +293,10 @@ output$team_draft_class <- ggiraph::renderGirafe({
   } else if (type == "Bewertung") {
     ## Bewertung ----
 
+    shiny::validate(
+      shiny::need(nrow(selected_draft_grades()) > 0, "Noch keine Daten vorhanden")
+    )
+
     breaks <- seq(1, 20/3, by = 1/3)
 
     labels <- c(
@@ -310,11 +320,13 @@ output$team_draft_class <- ggiraph::renderGirafe({
         linewidth = 0.5, linetype = "dashed"
       ) +
 
-      ggiraph::geom_point_interactive(
+      ggiraph::geom_jitter_interactive(
         ggplot2::aes(
           tooltip = paste(user, year, "\nNote: ", grade),
           data_id = user
         ),
+        width = 0,
+        height = 0.3
       ) +
       ggplot2::scale_x_continuous(
         limits = c(1, 6.666),
@@ -326,7 +338,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
       ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(selected_draft_grades()$year), max(selected_draft_grades()$year)), guide = "none") +
       ggplot2::scale_color_discrete(palette = colors) +
       ggplot2::labs(
-        subtitle = "Abgebildet werden alle Draftpicks der Klasse und ihre Bewertungen nach dem Draft, einem, drei und fünf Jahren. Die gestrichelten Linien sind die letzten Bewertungen der gesamten Klasse.",
+        subtitle = "Abgebildet werden alle Draftpicks der Klasse und ihre Bewertungen nach dem Draft, einem, drei und fünf Jahren.\nDie gestrichelten Linien sind die letzten Bewertungen der gesamten Klasse.",
         x = "Bewertung",
         color = ""
       )
@@ -354,81 +366,141 @@ output$team_draft_class <- ggiraph::renderGirafe({
   ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 5 + (as.integer(player_count) * 0.3)) %>%
     ggiraph::girafe_options(
       ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg)),
-      ggiraph::opts_hover_inv(css = "opacity:0.4")
+      ggiraph::opts_hover_inv(css = "opacity:0.2")
     )
 })
 
 # grades ----
-#rfl_draft_class_grades <- rfl_draft_grades %>%
-#  dplyr::filter(pick == "klasse") %>%
-#  dplyr::group_by(team_id, franchise_name, draft_class) %>%
-#  dplyr::filter(year == max(year)) %>%
-#  dplyr::summarise(
-#    grade = mean(grade),
-#    .groups = "drop"
-#  )
+output$team_draft_class_grades <- reactable::renderReactable({
+  assets <- selected_draft_grades() %>%
+    dplyr::filter(!is.na(grade)) %>%
+    dplyr::select(pick, text, grade, user, asset_name_output, year) %>%
+    tidyr::pivot_wider(names_from = c(user), values_from = c(text, grade))
 
-output$draft_grades_overview <- reactable::renderReactable({
-  #shiny::validate(
-  #  shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
-  #)
+  assets_latest <- assets %>%
+    dplyr::group_by(pick) %>%
+    dplyr::filter(year == max(year)) %>%
+    dplyr::distinct() %>%
+    dplyr::select(-year)
 
-  #reactable_default(
-  #  rfl_draft_class_grades,
-  #  columns = list(
-  #    team_id = reactable::colDef(show = FALSE),
-  #    franchise_name = reactable::colDef(
-  #      name = "Team",
-  #      minWidth = 170
-  #    ),
-  #    draft_class = reactable::colDef(
-  #      name = "Draft",
-  #      style = function(value) {
-  #        list(
-  #          textAlign = "center"
-  #        )
-  #      },
-  #      minWidth = 50
-  #    ),
-  #    grade = reactable_coldef_bg(
-  #      name = "Note",
-  #      palette_fun = scale_rainbow(range(data$grade, na.rm = TRUE)),
-  #      style_fun = function(value) {
-  #        list(
-  #          textAlign = "center"
-  #        )
-  #      }
-  #    )
-  #  ),
-  #  sortable = TRUE,
-  #  filterable = TRUE,
-  #  defaultSorted = c("grade"),
-  #  pagination = TRUE,
-  #  defaultPageSize = 10
-    # height = 772
-    #height = 745
-  #)
+  writers <- sort(unique(selected_draft_grades()$user))
+
+  row_details <- function(index) {
+    selected_asset <- assets_latest[index, ]$pick
+    #selected_asset <- "trade_2023012"
+
+    selected_grades <- assets %>%
+      dplyr::filter(pick == selected_asset)
+
+    trade_details <- NULL
+    player_details <- NULL
+    data <- NULL
+
+    if (selected_asset != "klasse" || startsWith(selected_asset, "trade_")) {
+      data <- selected_draft_team()
+
+      if (selected_asset == "laterounds") {
+        data <- data %>%
+          dplyr::filter(round > 3)
+      } else {
+        data <- data %>%
+          dplyr::filter(pick_id == selected_asset)
+      }
+
+      data <- data %>%
+        dplyr::arrange(overall) %>%
+        dplyr::select(round_pick, player_name_with_badge, franchise_name, pvar, voe, pos_team, draft_range_subline)
+
+      if (input$selectYear == new_season_march) {
+        data <- data %>%
+          dplyr::select(-pvar, -voe)
+      }
+
+      if (nrow(data) > 0) {
+        player_details <- draft_class_players_reactable(
+          data
+        )
+      }
+    }
+
+    if (grepl("_", selected_asset)) {
+      data <- selected_draft_trades()
+
+      if (grepl("trade", selected_asset)) {
+        data <- data %>%
+          dplyr::filter(trade_id == stringr::str_split_i(selected_asset, "_", 2))
+      } else {
+        #selected_asset <- "2_23"
+        data <- data %>%
+          dplyr::filter(season == input$selectYear & grepl(stringr::str_replace(selected_asset, "_", "."), asset_positions))
+      }
+
+      data <- data %>%
+        dplyr::mutate(
+          date = format(date, format = "%d.%m.%Y"),
+          trade_side = ifelse(franchise_name == selected_team_name(), "Abgegeben", "Geholt")
+        ) %>%
+        dplyr::arrange(dplyr::desc(trade_side)) %>%
+        dplyr::select(date, trade_side, asset_names_with_draft_info_badge) %>%
+        tidyr::pivot_wider(names_from = trade_side, values_from = asset_names_with_draft_info_badge)
+
+      if (nrow(data) > 0) {
+        trade_details <- reactable::reactable(
+          data,
+          columns = list(
+            date = reactable::colDef(name = "Datum"),
+            Geholt = reactable::colDef(
+              html = TRUE
+            ),
+            Abgegeben = reactable::colDef(
+              html = TRUE
+            )
+          )
+        )
+      }
+    }
+
+    htmltools::tagList(
+      trade_details,
+      player_details,
+      draft_grades_reactable(
+        data = selected_grades,
+        writers = writers,
+        col_names = list(
+          pick = reactable::colDef(
+            show = FALSE
+          ),
+          asset_name_output = reactable::colDef(
+            show = FALSE
+          ),
+          year = reactable::colDef(
+            name = "Jahr",
+            minWidth = 80,
+            defaultSortOrder = "desc"
+          )
+        ),
+        defaultSorted = "year"
+      )
+    )
+  }
+
+  draft_grades_reactable(
+    data = assets_latest,
+    writers = writers,
+    col_names = list(
+      pick = reactable::colDef(
+        show = FALSE
+      ),
+      asset_name_output = reactable::colDef(
+        name = "Asset",
+        html = TRUE,
+        minWidth = 250
+      )
+    ),
+    details = row_details
+  )
 })
 
-output$draft_grades_overview_plot <- ggiraph::renderGirafe({
-  #plot <- ggplot2::ggplot(rfl_draft_class_grades, ggplot2::aes(x = draft_class, y = grade)) +
-  #  ggiraph::geom_point_interactive(
-  #    ggplot2::aes(
-  #      tooltip = paste(draft_class, franchise_name),
-  #      data_id = team_id,
-  #    ),
-  #    size = 5
-  #  ) +
-  #  plot_defaults +
-  #  ggplot2::labs(
-  #    x = "Draft-Jahr",
-  #    y = "Aktuellste Ø Gesamtbewertung"
-  #  )
+# TODO: tabelle um war, elo & FPTs (wie bei draftboard mit %) avg grade in tabelle erweitern (auch mit ranks als vergleich zur bewertung)
 
-  #ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 9) %>%
-  #  ggiraph::girafe_options(
-  #    ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg)),
-  #    ggiraph::opts_hover_inv(css = "opacity:0.4")
-  #  )
-})
 # TODO: Charts von Draftklassen seite (Investment Returns), Draftkapital

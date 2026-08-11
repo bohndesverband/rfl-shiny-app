@@ -72,7 +72,7 @@ mfl_adp_data <- feather::read_feather("data/mfl_adp_data.feather")
 
 nfl_drafts_data <- feather::read_feather("data/nfl_drafts_data.feather")
 
-rfl_draft_grades <- feather::read_feather("data/rfl_draft_grates_data.feather")
+rfl_draft_grades <- feather::read_feather("data/rfl_draft_grades_data.feather")
 
 # reactable paletten
 pal_pvar <- scale_rainbow(range(rfl_drafts_rookies$pvar, na.rm = TRUE))
