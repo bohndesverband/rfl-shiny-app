@@ -194,15 +194,20 @@ reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
 
 ## columns ----
 text_color <- function(bg) {
-  if (is.na(bg) || bg == "transparent") {
+
+  if (length(bg) == 0 || is.na(bg[1]) || bg[1] == "transparent") {
     return(NULL)
   }
 
+  bg <- bg[1]
+
   rgb <- grDevices::col2rgb(bg)
 
-  lum <- (0.2126 * rgb[1] +
-            0.7152 * rgb[2] +
-            0.0722 * rgb[3]) / 255
+  lum <- (
+    0.2126 * rgb[1] +
+      0.7152 * rgb[2] +
+      0.0722 * rgb[3]
+  ) / 255
 
   if (lum > 0.5) "#000000" else "#FFFFFF"
 }
@@ -250,7 +255,7 @@ reactable_coldef_bg <- function(
 
 reactable_coldef_color <- function(
     palette_fun,
-    footer_fun,
+    footer_fun = NULL,
     ...
 ) {
   reactable::colDef(
@@ -270,12 +275,25 @@ reactable_coldef_color <- function(
 }
 
 ## rainbow scale ----
-scale_rainbow <- function(domain_values) {
-  scales::col_numeric(
+scale_rainbow <- function(domain_values, reverse = FALSE) {
+  pal <- scales::col_numeric(
     palette = c(color_red, color_orange, color_yellow, color_green, color_blue),
     domain = domain_values,
-    na.color = "transparent"
+    na.color = "transparent",
+    reverse = reverse
   )
+
+  function(x) {
+    result <- pal(x)
+
+    low_color <- if (reverse) color_blue else color_red
+    high_color <- if (reverse) color_red else color_blue
+
+    result[x < min(domain_values)] <- low_color
+    result[x > max(domain_values)] <- high_color
+
+    result
+  }
 }
 
 scale_rainbow_reverse <- function(domain_values) {
@@ -294,12 +312,25 @@ scale_rainbow_text <- function(domain_values) {
   )
 }
 
-scale_red_green <- function(domain_values) {
-  scales::col_numeric(
+scale_red_green <- function(domain_values, reverse = FALSE) {
+  pal <- scales::col_numeric(
     palette = c(color_red, color_green),
     domain = domain_values,
-    na.color = "transparent"
+    na.color = "transparent",
+    reverse = reverse
   )
+
+  function(x) {
+    result <- pal(x)
+
+    low_color <- if (reverse) color_blue else color_red
+    high_color <- if (reverse) color_red else color_blue
+
+    result[x < min(domain_values)] <- low_color
+    result[x > max(domain_values)] <- high_color
+
+    result
+  }
 }
 
 scale_green_red <- function(domain_values) {

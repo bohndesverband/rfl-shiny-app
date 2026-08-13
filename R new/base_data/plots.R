@@ -9,7 +9,7 @@ plot_defaults <- list(
 
     plot.title = ggplot2::element_text(size = rem_to_pt(2.074), face = "bold", lineheight = 0.8, margin = ggplot2::margin(b = rem_to_pt(2.074 * 0.25))),
     plot.title.position = "plot",
-    plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = -5, b = 15)),
+    plot.subtitle = ggplot2::element_text(size = 16, margin = ggplot2::margin(t = 0, b = 15)),
     plot.caption = ggplot2::element_text(size = 12),
 
     axis.title = ggplot2::element_text(size = 14, face = "bold"),

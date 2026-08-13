@@ -39,8 +39,7 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   # füge draftorder zu trades mit picks hinzu
   dplyr::mutate(
     pick_owner = dplyr::case_when(
-      grepl("FP", asset_id) ~ stringr::word(asset_id, 2, sep = "_"),
-      grepl("DP", asset_id) ~ franchise_id
+      grepl("FP", asset_id) ~ stringr::word(asset_id, 2, sep = "_")
     ),
     pick_year = dplyr::case_when(
       grepl("FP", asset_id) ~ as.double(stringr::word(asset_id, 3, sep = "_")),
@@ -53,7 +52,10 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
     by = c("pick_year" = "season", "pick_owner" = "franchise_id")
   ) %>%
   dplyr::mutate(
-    draft_pick = as.double(stringr::str_pad(pick, 2, pad = "0")),
+    draft_pick = dplyr::case_when(
+      is.na(pick_owner) ~ as.double(stringr::word(asset_id, 3, sep = "_")) + 1,
+      TRUE ~ as.double(stringr::str_pad(pick, 2, pad = "0"))
+    )
   ) %>%
   dplyr::select(-pick) %>%
 
@@ -74,7 +76,11 @@ rfl_trade_history <- rfl_trades_data %>%
     by = "franchise_id"
   ) %>%
   dplyr::mutate(
-    asset_type = ifelse(grepl("DP_", asset_id), "pick", "player")
+    asset_type = ifelse(grepl("DP_", asset_id), "pick", "player"),
+    trade_asset_id = dplyr::case_when(
+      pick_year <= new_season_march ~ paste("DP", pick_round, stringr::str_pad(draft_pick, 2, pad = "0"), pick_year, sep = "_"),
+      TRUE ~ asset_id
+    )
   ) %>%
   dplyr::rowwise() %>%
   dplyr::mutate(
@@ -84,18 +90,18 @@ rfl_trade_history <- rfl_trades_data %>%
   ) %>%
   dplyr::group_by(trade_id) %>%
   dplyr::mutate(
-    asset_types = paste(asset_type, collapse = ","),
-    asset_ids = paste(trade_asset_id, collapse = ","),
+    asset_types = paste(unique(asset_type), collapse = ","),
+    asset_ids = paste(unique(trade_asset_id), collapse = ","),
     trade_asset_ids = paste(asset_id, collapse = ","),
-    asset_positions = paste(pos, collapse = ", "),
-    franchise_ids = paste(franchise_id, collapse = ",")
+    asset_positions = paste(unique(pos), collapse = ", "),
+    franchise_ids = paste(unique(franchise_id), collapse = ",")
   ) %>%
   dplyr::group_by(season, trade_id, trade_side, asset_types) %>%
   dplyr::summarise(
     date = dplyr::first(date),
     asset_ids = dplyr::first(asset_ids),
     trade_asset_ids = dplyr::first(trade_asset_ids),
-    asset_types = dplyr::first(asset_types),
+    #asset_types = dplyr::first(asset_types),
     asset_positions = dplyr::first(asset_positions),
     franchise_ids = dplyr::first(franchise_ids),
     asset_names = paste(trade_asset_name, collapse = "\n"),

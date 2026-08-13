@@ -69,10 +69,18 @@
 
 .sidebar .alert { display: none; }
 
+.sidebar:has(~ #dashboard-container #section-report.active),
 .sidebar:has(~ #dashboard-container #section-draft-history.active),
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) {
   .alert.pvar,
   .alert.voe {
+    display: block;
+  }
+}
+
+.sidebar:has(~ #dashboard-container #section-report.active) {
+  .alert.war,
+  .alert.elo-player{
     display: block;
   }
 }
@@ -205,6 +213,19 @@
 
   .rt-td-inner {
     white-space: break-spaces;
+  }
+
+  #draft_classes_team {
+    .rt-tr[style*="background"] {
+      .bar-chart--chart {
+        background: #808e9b !important;
+      }
+
+      .bar-chart--bar {
+        background: #485460 !important;
+      }
+    }
+
   }
 }
 
@@ -450,7 +471,13 @@
   &[aria-label*="LB"],
   &[aria-label*="DB"],
   &[aria-label*="Total"],
-  &[aria-label*="Note"]{
+  &[aria-label*="Note"],
+  &[aria-label*="Peak"],
+  &[aria-label*="Current"],
+  &[aria-label*="Rank"],
+  &[aria-label*="PPG"],
+  &[aria-label*="Finish"],
+  &[aria-label*="Career"] {
     .rt-th-inner > * {
         justify-content: center !important;
 
@@ -635,8 +662,16 @@ hr {
       grid-column: span 4;
     }
 
+    &.col-sm-5 {
+      grid-column: span 5;
+    }
+
     &.col-sm-6 {
       grid-column: span 6;
+    }
+
+    &.col-sm-7 {
+      grid-column: span 7;
     }
 
     &.col-sm-8 {

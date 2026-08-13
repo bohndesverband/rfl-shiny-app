@@ -51,16 +51,26 @@ output$team_report <- shiny::renderUI({
       shiny::column(
         htmltools::h3("Alle Draftklassen"),
         shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-        width = 6
+        width = 7
       ),
       shiny::column(
         shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
+        width = 5
+      )
+    ),
+    htmltools::h3("Einzelne Draftklasse"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital")),
+        width = 6
+      ),
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital_positions")),
         width = 6
       )
     ),
     shiny::fluidRow(
       shiny::column(
-        htmltools::h3("Einzelne Draftklasse"),
         htmltools::div(
           class = "flex",
           shinyWidgets::radioGroupButtons(

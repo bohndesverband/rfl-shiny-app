@@ -50,6 +50,13 @@ rfl_draft_grades <- readr::read_csv("../rfl-data/data/rfl-draft-grades.csv") %>%
       TRUE ~ asset_name
     )
   ) %>%
-  dplyr::select(-trade_assets)
+  dplyr::select(-trade_assets) %>%
+
+  # avg grade
+  dplyr::group_by(team_id, draft_class, year, pick) %>%
+  dplyr::mutate(
+    grade_avg = round(mean(grade, na.rm = TRUE), 1)
+  ) %>%
+  dplyr::ungroup()
 
 feather::write_feather(rfl_draft_grades, "data/rfl_draft_grades_data.feather")

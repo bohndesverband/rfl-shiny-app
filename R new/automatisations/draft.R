@@ -1,4 +1,4 @@
-# after franchises, player elo & fantasy finishes
+# after franchises, player elo, war & fantasy finishes
 library(tidyverse)
 library(feather)
 
@@ -32,7 +32,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   dplyr::group_by(season, mfl_id) %>%
   dplyr::arrange(overall) %>%
   dplyr::mutate(
-    pos_team = paste(pos, team, sep = ", "),
+    pos_team = paste(pos_grouped, team, sep = ", "),
     round_pick = paste(round, sprintf("%02d", pick), sep = "."),
     first_pick = overall[1],
     second_pick = overall[2],
@@ -68,15 +68,38 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
       dplyr::select(mfl_id, current_player_elo, elo_peak, elo_season_end, elo_shift, ppg, peak_season),
     by = "mfl_id"
   ) %>%
+  dplyr::group_by(season, pos_grouped) %>%
+  dplyr::mutate(
+    current_player_elo_rank = dplyr::dense_rank(desc(current_player_elo)),
+    player_count = n()
+  ) %>%
 
   # add fantasy finish
   dplyr::left_join(
     feather::read_feather("data/rfl_fantasy_finishes_season.feather") %>%
-      dplyr::select(player_id, dplyr::starts_with("top")) %>%
+      dplyr::select(player_id, dplyr::starts_with("top"), pos_rank) %>%
       dplyr::rename_with(~ gsub("_season", "", .x)) %>%
       dplyr::group_by(player_id) %>%
-      dplyr::summarise(across(dplyr::starts_with("top"), ~ sum(.x, na.rm = TRUE)), .groups = "drop"),
+      dplyr::summarise(
+        across(dplyr::starts_with("top"), ~ sum(.x, na.rm = TRUE)),
+        best_pos_rank = min(pos_rank),
+        .groups = "drop"
+      ),
     by = c("mfl_id" = "player_id")
+  ) %>%
+
+  # add war
+  dplyr::left_join(
+    rfl_war_data %>%
+      dplyr::group_by(player_id) %>%
+      dplyr::summarise(
+        war_career = round(sum(war), 2)
+      ),
+    by = c("mfl_id" = "player_id")
+  ) %>%
+  dplyr::group_by(season, pos_grouped) %>%
+  dplyr::mutate(
+    war_career_rank = dplyr::dense_rank(desc(war_career))
   ) %>%
 
   dplyr::group_by(mfl_id) %>%

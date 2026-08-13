@@ -165,12 +165,12 @@ render_draft_history_table <- function(
 
 # Draftklassen Tabelle ----
 ## reusable reactable for draft class player ----
-draft_class_players_reactable <- function(data, col_names = NULL, ...) {
+draft_class_players_reactable <- function(data, col_names = NULL, col_groups = NULL, ...) {
 
-  column_groups <- NULL
+  default_column_groups <- NULL
 
   if (all(c("pvar", "voe") %in% names(data))) {
-    column_groups <- list(
+    default_column_groups <- list(
       reactable::colGroup(
         name = "Value",
         columns = c("pvar", "voe")
@@ -230,7 +230,10 @@ draft_class_players_reactable <- function(data, col_names = NULL, ...) {
       ),
       col_names
     ),
-    columnGroups = column_groups,
+    columnGroups = c(
+      default_column_groups,
+      col_groups
+    ),
     defaultSorted = "round_pick",
     ...
   )
@@ -240,9 +243,9 @@ draft_class_players_reactable <- function(data, col_names = NULL, ...) {
 
 ## bar chart helper ----
 bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
-  bar <- htmltools::div(style = list(background = fill, width = width, height = height))
-  chart <- htmltools::div(style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
-  label <- htmltools::span(text, style = list(fontSize = "0.8em"))
+  bar <- htmltools::div(class="bar-chart--bar", style = list(background = fill, width = width, height = height))
+  chart <- htmltools::div(class="bar-chart--chart", style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  label <- htmltools::span(class="bar-chart--label", text, style = list(fontSize = "0.8em"))
 
   htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
 }
@@ -343,12 +346,20 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
   )
 }
 
-## raft grades defauls -----
-draft_grades_reactable <- function(data, writers, col_names = NULL, ...) {
+## draft grades defauls -----
+draft_grades_reactable <- function(
+    data,
+    writers,
+    col_names = NULL,
+    col_groups = NULL,
+    ...
+) {
+
   writers_col_names <- list()
   writers_col_groups <- list()
 
   for (name in writers) {
+
     text_col <- paste0("text_", name)
     grade_col <- paste0("grade_", name)
 
@@ -363,10 +374,11 @@ draft_grades_reactable <- function(data, writers, col_names = NULL, ...) {
       minWidth = 70
     )
 
-    writers_col_groups[[length(writers_col_groups) + 1]] <- reactable::colGroup(
-      name = name,
-      columns = c(text_col, grade_col)
-    )
+    writers_col_groups[[length(writers_col_groups) + 1]] <-
+      reactable::colGroup(
+        name = name,
+        columns = c(text_col, grade_col)
+      )
   }
 
   reactable::reactable(
@@ -375,7 +387,10 @@ draft_grades_reactable <- function(data, writers, col_names = NULL, ...) {
       col_names,
       writers_col_names
     ),
-    columnGroups = writers_col_groups,
+    columnGroups = c(
+      col_groups,
+      writers_col_groups
+    ),
     ...
   )
 }

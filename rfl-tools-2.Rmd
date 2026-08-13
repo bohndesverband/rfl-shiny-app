@@ -242,6 +242,18 @@ shinyWidgets::prettySwitch("showOnlyRookies", "Nur Rookies anzeigen", value = TR
 shiny::actionButton("filterData", "Filtern", icon = icon("arrows-rotate"))
 
 htmltools::div(
+  htmltools::HTML("Das ELO Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst."),
+  htmltools::HTML("<a href=\"https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf\" target=\"_blank\">Eine ausführliche Erklärung gibt's hier</a>"),
+  class="alert alert-info elo-player"
+)
+
+htmltools::div(
+  htmltools::HTML("WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet."),
+  htmltools::HTML("<a href=\"https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory\" target=\"_blank\">Mehr dazu gibts hier zu lesen</a>"),
+  class="alert alert-info war"
+)
+
+htmltools::div(
   htmltools::div("pVAR = player Value above Replacement. Wert eines Spielers auf Grundlage seiner durchschnittlichen WAR, seiner gespielten Spiele und seiner Fantasy Finishes."),
   htmltools::hr(),
   htmltools::div("pVARexp = Erwartungswert eines Draftpicks."),

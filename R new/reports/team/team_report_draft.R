@@ -29,7 +29,7 @@ selected_draft_trades <- shiny::reactive({
   selected_draft_trades <- rfl_trade_history %>%
     dplyr::filter(
       #grepl(paste("FP", input$selectRflTeam, input$selectYear, sep = "_"), trade_asset_ids)
-      #grepl(paste("FP", "0027", "2025", sep = "_"), trade_asset_ids) |
+      #grepl(paste("FP", "0016", "2025", sep = "_"), trade_asset_ids)
       grepl(input$selectRflTeam, franchise_ids)
       #grepl("0027", franchise_ids)
 
@@ -65,7 +65,14 @@ output$draft_classes_team <- reactable::renderReactable({
     column_groups = list(
       reactable::colGroup(name = paste0("2017-", new_season_march - 1), columns = c("rank", "voe_pctl")),
       reactable::colGroup(name = "VOE", columns = c("rank_season", "voe"))
-    )
+    ),
+    rowStyle = function(index) {
+      if (rfl_draft_classes_sum_filtered()$season[index] == input$selectYear) {
+        list(
+          background = color_grey_light
+        )
+      }
+    }
   )
 })
 
@@ -87,7 +94,7 @@ output$draft_classes_team_chart <- ggiraph::renderGirafe({
 
     ggplot2::geom_point(data = subset(rfl_draft_classes_sum, franchise_id %in% c(input$selectRflTeam)), ggplot2::aes(size = picks)) +
     ggplot2::scale_color_discrete(type = colors) +
-    ggplot2::scale_size_continuous(range = c(1, 6), guide = "none") +
+    ggplot2::scale_size_continuous(range = c(1, 8), guide = "none") +
     ggplot2::scale_alpha(guide = "none") +
 
     plot_defaults +
@@ -101,7 +108,7 @@ output$draft_classes_team_chart <- ggiraph::renderGirafe({
       color = ""
     )
 
-  ggiraph::girafe(ggobj = plot, width_svg = 10, height_svg = 11) %>%
+  ggiraph::girafe(ggobj = plot, width_svg = 10, height_svg = 13) %>%
     ggiraph::girafe_options(
       ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg)),
       ggiraph::opts_hover_inv(css = "opacity:0.4")
@@ -109,6 +116,108 @@ output$draft_classes_team_chart <- ggiraph::renderGirafe({
 })
 
 # einzelne Draftklasse ----
+## kapital ----
+
+# TODO: maximum für pvar aus daten ermitteln
+
+output$draft_class_capital <- shiny::renderPlot({
+  team_pick <- rfl_draft_orders %>%
+    dplyr::filter(season == input$selectYear & franchise_id == input$selectRflTeam) %>%
+    dplyr::pull(pick)
+
+  team_draft_capital_theory <- rfl_drafts_data %>%
+    dplyr::filter(season == input$selectYear & pick == team_pick) %>%
+    dplyr::group_by(round) %>%
+    dplyr::summarise(pvar_exp = round(sum(pvar_exp), 2))
+
+  team_draft_capital_actual <- selected_draft_team() %>%
+    dplyr::group_by(round) %>%
+    dplyr::summarise(dplyr::across(c(pvar, pvar_exp), ~ round(sum(.x), 2))) %>%
+    dplyr::mutate(direction = ifelse(pvar >= pvar_exp, "up", "down"))
+
+  plot <- ggplot2::ggplot(team_draft_capital_theory, ggplot2::aes(x = round, y = pvar_exp)) +
+    ggplot2::geom_smooth(color = color_grey_mid, se = FALSE) +
+    ggplot2::scale_x_continuous(breaks = c(1:6)) +
+    ggplot2::scale_y_continuous(limits = c(0, 20), breaks = , expand = 0) +
+    ggplot2::scale_color_manual(values = c("down" = color_red, "up" = color_blue), guide = "none") +
+    plot_defaults +
+    ggplot2::labs(
+      title = paste("Draftkapital vs. Ertrag", selected_team_name(), input$selectYear),
+      subtitle = "Der Schweif symbolisiert die Differenz zwischen dem eingesetzten Draftkapital\n(pVARexp) und dem Ertrag (pVAR). Ist das große Ende des Schweifs über dem\nkleinen, haben die Picks das eingesetzte Kapital übertroffen.\nDie Linie zeigt die pVARexp aller originalen Draftpicks des Teams an.\nLiegt der Schweif über der Linie hat der Owner mehr Kapital angesammelt.",
+      x = "Draft Runde",
+      y = "pVAR",
+      color = ""
+    ) +
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank()
+    )
+
+  if (input$selectYear == new_season_march) {
+    plot <- plot +
+      ggplot2::geom_point(data = team_draft_capital_actual, color = color_blue, size = 4.7)
+  } else {
+    plot <- plot +
+      ggforce::geom_link(data = team_draft_capital_actual, aes(xend = round, yend = pvar, linewidth = ggplot2::after_stat(index), color = direction)) +
+      ggplot2::scale_size_continuous(guide = "none") +
+      ggplot2::scale_linewidth_continuous(guide = "none") +
+      ggplot2::geom_point(data = team_draft_capital_actual, ggplot2::aes(y = pvar, color = direction), shape = 21, size = 4.7, fill = color_bg, stroke = 1)
+  }
+
+  plot
+}, height = 500)
+
+## kapital pro positionsgruppe ----
+output$draft_class_capital_positions <- shiny::renderPlot({
+  team_draft_capital_positions <- selected_draft_team() %>%
+    dplyr::group_by(pos_grouped) %>%
+    dplyr::summarise(
+      dplyr::across(c(pvar_exp, pvar), ~ round(sum(.x), 2)),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(color = ifelse(pvar > pvar_exp, "less", pos_grouped))
+
+  max_value <- max(
+    team_draft_capital_positions$pvar,
+    team_draft_capital_positions$pvar_exp,
+    na.rm = TRUE
+  )
+
+  plot <- ggplot2::ggplot(team_draft_capital_positions, ggplot2::aes(x = factor(pos_grouped, levels = positions_grouped), y = pvar_exp, fill = factor(pos_grouped, levels = positions_grouped))) +
+    ggplot2::coord_polar() +
+    ggplot2::scale_fill_manual(values = colors_positions_grouped, guide = "none") +
+    ggplot2::scale_color_manual(values = c(colors_positions_grouped, "less" = color_bg), guide = "none") +
+    ggplot2::scale_x_discrete(expand = c(0, 0)) +
+    ggplot2::scale_y_continuous(limits = c(0, ceiling(max_value)), breaks = c(0, ceiling(max_value))) +
+    plot_defaults +
+    ggplot2::labs(
+      title = paste0("Eingesetztes Draftkapital pro Position\n", paste(selected_team_name(), input$selectYear)),
+      subtitle = paste("Die Segmente zeigen den pVAR, die Linien den pVARexp.\nÜberragt das Segment die Linie, haben die Picks das eingesetzte Kapital übertroffen."),
+      x = "",
+      y = ""
+    ) +
+    ggplot2::theme(
+      plot.title = ggplot2::element_text(hjust = 0.5),
+      plot.subtitle = ggplot2::element_text(hjust = 0.5),
+      #axis.text = ggplot2::element_blank(),
+      panel.grid.major = ggplot2::element_blank()
+    )
+
+  if (input$selectYear < new_season_march) {
+    plot <- plot +
+      ggplot2::geom_col(ggplot2::aes(y = pvar), width = 1) +
+      ggplot2::geom_errorbar(
+        ggplot2::aes(ymin = pvar_exp, ymax = pvar_exp, color = factor(color, levels = c(positions_grouped, "less"))),
+        width = 1, linewidth = 0.5
+      )
+  } else {
+    plot <- plot +
+      ggplot2::geom_col(width = 1, alpha = 1)
+  }
+
+  plot
+}, height = 600)
+
+## picks --scale_fill_discrete()## picks ----
 output$team_draft_class <- ggiraph::renderGirafe({
   type <- input$selectDraftClassCharts
 
@@ -168,7 +277,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
         size = 8
       ) +
       ggplot2::labs(
-        subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren 3 Copies und dem MFL ADP (Dreieck).",
+        subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren 3 Copies und dem MFL ADP (Dreieck).\nDer Value im Tooltip ist die Differenz des Picks zur 2. Copy des Spielers.",
       ) +
       ggplot2::theme(
         panel.grid.major.y = ggplot2::element_line(linewidth = 1, color = color_grey_light)
@@ -193,7 +302,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
         )
       ) +
       ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(min(data$season), max(data$season)), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(2, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihren Wins Above Replacement (WAR) seit dem Draft.",
         x = "WAR"
@@ -221,7 +330,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
         )
       ) +
       ggplot2::scale_alpha_continuous(range = c(0.2, 1), limits = c(min(data$season), max(data$season)), guide = "none") +
-      ggplot2::scale_size_continuous(range = c(4, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
+      ggplot2::scale_size_continuous(range = c(2, 8), limits = c(min(data$season), max(data$season)), guide = "none") +
       ggplot2::labs(
         subtitle = "Abgebildet werden alle Draftpicks der Klasse mit ihrer ELO seit dem Draft.",
         x = "ELO am Ende der Saison"
@@ -372,6 +481,10 @@ output$team_draft_class <- ggiraph::renderGirafe({
 
 # grades ----
 output$team_draft_class_grades <- reactable::renderReactable({
+  shiny::validate(
+    shiny::need(nrow(selected_draft_grades()) > 0, "Noch keine Daten vorhanden")
+  )
+
   assets <- selected_draft_grades() %>%
     dplyr::filter(!is.na(grade)) %>%
     dplyr::select(pick, text, grade, user, asset_name_output, year) %>%
@@ -396,6 +509,7 @@ output$team_draft_class_grades <- reactable::renderReactable({
     player_details <- NULL
     data <- NULL
 
+    ## Spielertabellen ----
     if (selected_asset != "klasse" || startsWith(selected_asset, "trade_")) {
       data <- selected_draft_team()
 
@@ -409,7 +523,16 @@ output$team_draft_class_grades <- reactable::renderReactable({
 
       data <- data %>%
         dplyr::arrange(overall) %>%
-        dplyr::select(round_pick, player_name_with_badge, franchise_name, pvar, voe, pos_team, draft_range_subline)
+        dplyr::select(pick_id, season, round_pick, player_name_with_badge, franchise_name, pvar, voe, pos_team, draft_range_subline, player_count, ppg, best_pos_rank, war_career, war_career_rank, current_player_elo, current_player_elo_rank) %>%
+        dplyr::left_join(
+          selected_draft_grades() %>%
+            dplyr::select(pick, grade_avg, year) %>%
+            dplyr::distinct() %>%
+            dplyr::filter(year == max(year)) %>%
+            dplyr::select(-year),
+          by = c("pick_id" = "pick")
+        ) %>%
+        dplyr::select(-pick_id)
 
       if (input$selectYear == new_season_march) {
         data <- data %>%
@@ -417,12 +540,70 @@ output$team_draft_class_grades <- reactable::renderReactable({
       }
 
       if (nrow(data) > 0) {
-        player_details <- draft_class_players_reactable(
-          data
+        player_details <- htmltools::tagList(
+          htmltools::h5("Pickanalyse"),
+          draft_class_players_reactable(
+            data,
+            col_names = list(
+              ppg = reactable_coldef_bg(
+                name = "PPG",
+                palette_fun = scale_rainbow(5:20),
+                minWidth = 80
+              ),
+              best_pos_rank = reactable_coldef_color(
+                name = "Top Finish",
+                palette_fun = scale_rainbow(48:8, reverse = TRUE),
+                minWidth = 80
+              ),
+              war_career = reactable_coldef_bg(
+                name = "Career",
+                palette_fun = scale_rainbow((-0.5 * (new_season_sept - data$season + 1)):(1.5 * (new_season_sept - data$season + 1))),
+                minWidth = 80
+              ),
+              war_career_rank = reactable_coldef_color(
+                name = "Rank*",
+                palette_fun = scale_red_green(1:data$player_count, reverse = TRUE),
+                minWidth = 50
+              ),
+              current_player_elo = reactable_coldef_bg(
+                name = "Current",
+                palette_fun = scale_rainbow((1500 - (200 * (new_season_sept - data$season + 1))):(1500 + (200 * (new_season_sept - data$season + 1)))),
+                minWidth = 80
+              ),
+              current_player_elo_rank = reactable_coldef_color(
+                name = "Rank*",
+                palette_fun = scale_red_green(1:data$player_count, reverse = TRUE),
+                minWidth = 50
+              ),
+              grade_avg = reactable_coldef_bg(
+                name = "Ø Note",
+                palette_fun = scale_rainbow(1:6, reverse = TRUE),
+                minWidth = 80
+              ),
+              season = reactable::colDef(show = FALSE),
+              player_count = reactable::colDef(show = FALSE)
+            ),
+            col_groups = list(
+              reactable::colGroup(
+                name = "ELO",
+                columns = c("current_player_elo", "current_player_elo_rank")
+              ),
+              reactable::colGroup(
+                name = "FPts",
+                columns = c("ppg", "best_pos_rank")
+              ),
+              reactable::colGroup(
+                name = "WAR",
+                columns = c("war_career", "war_career_rank")
+              )
+            )
+          ),
+          htmltools::div(class="small", "*Rank = Platzierung innerhalb der Positionsgruppe dieser Drafklasse", style="margin-top: 0.5rem; margin-bottom: 1rem;")
         )
       }
     }
 
+    ## Trades ----
     if (grepl("_", selected_asset)) {
       data <- selected_draft_trades()
 
@@ -430,9 +611,11 @@ output$team_draft_class_grades <- reactable::renderReactable({
         data <- data %>%
           dplyr::filter(trade_id == stringr::str_split_i(selected_asset, "_", 2))
       } else {
-        #selected_asset <- "2_23"
+        #asset_id <- paste0("DP_", stringr::str_replace(selected_asset, "_", "."))
+        #selected_asset <- "2_01"
+
         data <- data %>%
-          dplyr::filter(season == input$selectYear & grepl(stringr::str_replace(selected_asset, "_", "."), asset_positions))
+          dplyr::filter(grepl(paste("DP", selected_asset, input$selectYear, sep = "_"), asset_ids))
       }
 
       data <- data %>%
@@ -445,15 +628,18 @@ output$team_draft_class_grades <- reactable::renderReactable({
         tidyr::pivot_wider(names_from = trade_side, values_from = asset_names_with_draft_info_badge)
 
       if (nrow(data) > 0) {
-        trade_details <- reactable::reactable(
-          data,
-          columns = list(
-            date = reactable::colDef(name = "Datum"),
-            Geholt = reactable::colDef(
-              html = TRUE
-            ),
-            Abgegeben = reactable::colDef(
-              html = TRUE
+        trade_details <- htmltools::tagList(
+          htmltools::h5("Tradeübersicht"),
+          reactable::reactable(
+            data,
+            columns = list(
+              date = reactable::colDef(name = "Datum"),
+              Geholt = reactable::colDef(
+                html = TRUE
+              ),
+              Abgegeben = reactable::colDef(
+                html = TRUE
+              )
             )
           )
         )
@@ -501,6 +687,8 @@ output$team_draft_class_grades <- reactable::renderReactable({
   )
 })
 
-# TODO: tabelle um war, elo & FPTs (wie bei draftboard mit %) avg grade in tabelle erweitern (auch mit ranks als vergleich zur bewertung)
+# TODO: tabelle um FPTs (wie bei draftboard mit %) avg grade in tabelle erweitern (auch mit ranks als vergleich zur bewertung)
 
 # TODO: Charts von Draftklassen seite (Investment Returns), Draftkapital
+# TODO: bei trades von spielern, die kein Pick waren, auch spieler infos zeigen
+# TODO: html widgets für ELO (sparkline) und WAR (bar): https://glin.github.io/reactable/articles/examples.html#grouped-cell-rendering
