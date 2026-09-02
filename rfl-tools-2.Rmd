@@ -1,0 +1,1227 @@
+---
+title: "RFL Tools"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    css: styles.css
+    theme:
+      version: 4
+      bg: "#ffffff"
+      fg: "#485460"
+      primary: "#808e9b"
+      base_font: 
+        google: Poppins
+      heading_font:
+        google: Poppins
+      code_font:
+        google: 
+          family: JetBrains Mono
+          local: false
+runtime: shiny
+---
+
+```{js}
+$("body").on("shown.bs.tab", "a[data-toggle='tab']", function(e) {
+  Shiny.setInputValue("active_tab", $(this).attr('href'));
+   console.log($(this).attr('href'));
+})
+
+```
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(feather)
+library(nflreadr)
+#library(nflplotR)
+library(ffscrapr)
+library(DT)
+library(ggplot2)
+library(ggbump)
+library(gt)
+library(formattable)
+library(gtExtras)
+library(svglite)
+#library(webshot2)
+library(emoji)
+library(ggrepel)
+library(plotly)
+library(ggiraph)
+library(ggraph)
+library(ggalt)
+library(shinyWidgets)
+library(waffle)
+library(shinycssloaders)
+library(ggforce)
+library(ggchicklet) # runde Ecken bei Balken
+library(hexbin)
+library(ggimage)
+library(reactable)
+library(sparkline)
+library(gdtools)
+library(gfonts)
+#library(shinyjs)
+```
+
+```{r global, message=TRUE, warning=TRUE, include=FALSE}
+#profvis({
+source("R new/base_data/base_data.R", local = TRUE)
+
+loaded_data_rfl_matchup_data <- shiny::reactiveVal(FALSE)
+#})
+
+options(spinner.color = color_grey_dark)
+tags$head(tags$meta(charset = "UTF-8"))
+```
+
+# Sidebar {.sidebar}
+
+```{r inputs, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/base_data/inputs.R", local = TRUE)
+
+#textOutput("active_tab")
+
+shiny::sliderInput(
+  "selectYears",
+  "Saisons",
+  min = 2016,
+  max = new_season_sept,
+  value = c(new_season_sept, new_season_sept),
+  step = 1,
+  sep = ""
+)
+
+shiny::sliderInput(
+  "selectYear",
+  "Saison",
+  min = 2016,
+  max = new_season_sept,
+  value = new_season_sept,
+  step = 1,
+  sep = ""
+)
+
+shiny::sliderInput(
+  "selectWeek",
+  "Woche",
+  min = 1,
+  max = current_week_thu,
+  value = current_week_thu,
+  step = 1,
+  sep = ""
+)
+
+shiny::sliderInput(
+  "selectDraftRounds",
+  "Draft Runden",
+  min = 1,
+  max = 7,
+  value = c(1, 7),
+  step = 1,
+  sep = ""
+)
+
+shiny::checkboxInput("showHistoricTeamNames", "Zeige alte RFL Teamnamen", value = FALSE)
+
+shinyWidgets::pickerInput(
+  "selectRflTeams",
+  "RFL Teams",
+  choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
+  #selected = franchises$franchise_id,
+  #selected = "0007",
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options-text" = "Es können nicht mehr Teams gewählt werden", "none-selected-text" = "Team wählen"),
+  multiple = TRUE
+)
+
+shinyWidgets::pickerInput(
+  "selectRflTeam",
+  "RFL Team",
+  choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)]),
+  multiple = FALSE,
+  selected = NULL,  
+  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "RFL Team wählen"),
+)
+
+shiny::selectizeInput(
+  "selectRflConference",
+  "RFL Conferences",
+  choices = unique(rfl_franchise_data$conference_name[order(rfl_franchise_data$conference_name)]),
+  selected = "BFC",
+  options = list(
+    placeholder = "Conference wählen"
+  ),
+  multiple = FALSE,
+)
+
+shinyWidgets::pickerInput(
+  "selectRflDivisionsdd",
+  "RFL Divisions",
+  choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
+  options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
+  multiple = TRUE,
+)
+
+# TODO: genutzt in magic number - evtl löschen, dafür selectRflTeams dynamisch setzen
+#shinyWidgets::pickerInput(
+#  "selectRflConferenceTeams",
+#  "RFL Teams",
+#  choices = NULL,
+#  #selected = franchises$franchise_id,
+#  #selected = "0007",
+#  options = list("actions-box" = TRUE, "none-selected-text" = "Team wählen"),
+#  multiple = TRUE
+#)
+
+#mfl_teams_preselection_conf <- shiny::reactive({
+#  rfl_franchise_data %>% 
+#    dplyr::filter(conference_name == input$selectRflConference)
+#})
+
+#shiny::observe({
+#  req(mfl_players_preselection())
+#  req(nrow(mfl_players_preselection()) > 0) # Prüfen, ob Daten vorhanden sind
+
+#  shinyWidgets::updatePickerInput(
+#    session,
+#    "selectRflConferenceTeams",
+#    choices = mfl_teams_preselection_conf()$franchise_name[order(mfl_teams_preselection_conf()$franchise_name)],
+#    selected = mfl_teams_preselection_conf()$franchise_name
+#  )
+#})
+
+shinyWidgets::pickerInput(
+  "selectPosition",
+  "Position",
+  choices = positions_grouped,
+  selected = NULL,
+  options = list("actions-box" = TRUE, "none-selected-text" = "Position wählen"),
+  multiple = FALSE
+)
+
+shinyWidgets::pickerInput(
+  "selectPositions",
+  "Positionen",
+  choices = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+  selected = list("QB", "RB", "WR", "TE", "DT", "DE", "LB", "CB", "S"),
+  options = list("actions-box" = TRUE, "none-selected-text" = "Position wählen"),
+  multiple = TRUE
+)
+
+shinyWidgets::pickerInput(
+  "selectPlayers",
+  "NFL Spieler",
+  choices = NULL,
+  multiple = TRUE,
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options" = 6, "max-options-text" = "Es können nicht mehr Spieler gewählt werden", "none-selected-text" = "Spieler wählen"),
+)
+
+shiny::markdown("<small>**Tipp:** Wenn du oben ein RFL Team auswählst,<br>werden dir nur Spieler aus dessen Roster angezeigt.</small>")
+
+shiny::sliderInput(
+  "selectRflGames",
+  "Anzahl Spiele",
+  min = 0,
+  max = current_week - 1,
+  value = ifelse(current_week >= 13, 8, floor(current_week * 0.5)),
+  step = 1,
+  ticks = FALSE,
+  sep = ""
+)
+
+shinyWidgets::pickerInput(
+  "selectRflMatchup",
+  "RFL Team",
+  choices = NULL,
+  multiple = TRUE,
+  options = list("actions-box" = TRUE, "live-search" = TRUE, "max-options-text" = "Es können nicht mehr Matches gewählt werden", "none-selected-text" = "Matchup wählen"),
+)
+
+shinyWidgets::prettySwitch("showOnlyRookies", "Nur Rookies anzeigen", value = TRUE, fill = TRUE, status = "primary")
+
+shiny::actionButton("filterData", "Filtern", icon = icon("arrows-rotate"))
+
+htmltools::div(
+  htmltools::HTML("Das ELO Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst."),
+  htmltools::HTML("<a href=\"https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf\" target=\"_blank\">Eine ausführliche Erklärung gibt's hier</a>"),
+  class="alert alert-info elo-player"
+)
+
+htmltools::div(
+  htmltools::HTML("WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet."),
+  htmltools::HTML("<a href=\"https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory\" target=\"_blank\">Mehr dazu gibts hier zu lesen</a>"),
+  class="alert alert-info war"
+)
+
+htmltools::div(
+  htmltools::div("pVAR = player Value above Replacement. Wert eines Spielers auf Grundlage seiner durchschnittlichen WAR, seiner gespielten Spiele und seiner Fantasy Finishes."),
+  htmltools::hr(),
+  htmltools::div("pVARexp = Erwartungswert eines Draftpicks."),
+  htmltools::hr(),
+  htmltools::div("VOE = Value over Expected. Performance eines Spielers im Vergleich zu seinem Draftpick."),
+  class="alert alert-info pvar"
+)
+
+htmltools::div(
+  htmltools::div("Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler); mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen"),
+  htmltools::hr(),
+  htmltools::div("Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)"),
+  htmltools::hr(),
+  htmltools::div("Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB"),
+  class = "alert alert-info hitrate"
+)
+
+selected_team_names <- shiny::reactive({
+  rfl_franchise_data %>%
+    dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
+    dplyr::pull(franchise_name)
+})
+
+selected_team_name <- shiny::reactive({
+  rfl_franchise_data %>%
+    dplyr::filter(franchise_id == input$selectRflTeam) %>%
+    dplyr::pull(franchise_name)
+})
+```
+
+> Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
+
+> WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet. [Mehr dazu gibts hier zu lesen](https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory)
+
+> Das ELO Rating basiert auf einer Methode von [FiveThirtyEight](https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work/). Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst. [Ausführliche Erklärung gibt's hier](https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf)
+
+> Die "Magic Number" ist die Summe an Siegen des führenden Teams und den Niederlagen des Verfolgerteams in den verbleibenden Spielen, die das Verfolgerteam aus dem entsprechendem Platzierungskampf eliminiert. **Faustregel:** je kleiner der Wert, desto unwahrscheinlicher ist es, für das obere Team auf das an der Seite aufzuholen.
+
+> Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler); mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
+Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)<br><br>
+Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
+
+> Es gab einen Datenverlust, so dass Trades aus der 2016er Saison z.T. fehlen
+
+# Conference Ranking {data-navmenu="Liga"}
+
+## 
+
+```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-conference-ranking" & !loaded_data_conference_stanging()) {
+    source("R new/rankings/standing.R", local = TRUE)
+    source("R new/rankings/standing_output.R", local = TRUE)
+    
+    loaded_data_conference_stanging(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("conf_standing_table")),
+      width = 12
+    )
+  )
+)
+```
+
+# Magic Number {data-navmenu="Liga"}
+
+## 
+
+```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_magic_number <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-magic-number" & !loaded_data_magic_number()) {
+    source("R new/rankings/magic_number.R", local = TRUE)
+    
+    loaded_data_magic_number(TRUE)
+  }
+})
+
+if (rfl_current_standing$week[1] < 13) {
+  shiny::fluidPage(
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(gt::gt_output("magic_number_table")),
+        width = 12
+        )
+      )
+    )
+} else {
+  div(
+    style = "text-align: center; font-size: 18px; color: #f53b57; margin-top: 20px; padding-left: 30px;",
+    "Die Saison ist vorbei, hier gibt es nichts mehr zu sehen. Schau dir stattdessen das Conference Standing an."
+  )
+}
+```
+
+# Power Ranking {data-navmenu="Liga"}
+
+##
+
+```{r power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_power_ranking <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-power-ranking" & !loaded_data_power_ranking()) {
+    source("R new/rankings/power_ranking.R", local = TRUE)
+    
+    loaded_data_power_ranking(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("power_ranking")),
+      width = 12
+    ),
+    style = "height: 1030px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("power_ranking_table")),
+      width = 12
+    )
+  )
+)
+```
+
+# Wochenbericht {data-navmenu="Liga"}
+
+## 
+
+```{r weekly-report, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_weekly_report <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-wochenbericht" & !loaded_data_weekly_report()) {
+    source("R new/reports/weekly_report.R", local = TRUE)
+    
+    loaded_data_weekly_report(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      #shiny::tableOutput("test"),
+      shinycssloaders::withSpinner(shiny::plotOutput("weeklyReportTeams")),
+      width = 12
+    ),
+    style = "height: 1200px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("weeklyReportPlayers")),
+      width = 12
+    ),
+    style = "height: 1200px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(DT::DTOutput("weeklyReportPlayersTable")),
+      width = 12
+    )
+  )
+)
+```
+
+# WAR {data-navmenu="Teams"}
+
+## 
+
+```{r team-war, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_war <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-war" & !loaded_data_war()) {
+    source("R new/roster/war.R", local = TRUE)
+    
+    loaded_data_war(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("roster_war")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("roster_war_transactions")),
+      width = 12
+    )
+  )
+)
+```
+
+# ELO Ranking {data-navmenu="Teams"}
+
+##
+
+```{r team-elo, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_team_elo <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-elo-ranking" & !loaded_data_team_elo()) {
+    source("R new/rankings/elo.R", local = TRUE)
+    
+    loaded_data_team_elo(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("running_elo")),
+          width = 12
+        ),
+        style = "height: 830px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("elo_change")),
+          width = 12
+        ),
+        style = "height: 1230px"
+      ),
+      width = 8
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("elo_ranking_table")),
+      width = 4
+    ),
+    style = "height: 830px"
+  )
+)
+```
+
+# Roster Tiefe {data-navmenu="Teams"}
+
+##
+
+```{r team-depth, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_team_depth <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-roster-tiefe" & !loaded_data_team_depth()) {
+    source("R new/roster/depth.R", local = TRUE)
+    
+    loaded_data_team_depth(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(plotly::plotlyOutput("roster_depth_season", height = "600px")),
+      width = 6
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_weekly")),
+      width = 6
+    ),
+    style = "height: 600px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("depthChart")),
+      width = 3
+    ),
+    shiny::column(
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("elo_vs_war")),
+          width = 12
+        ),
+        style = "height: 600px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("fptsByAge")),
+          width = 12
+        ),
+        style = "height: 1200px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          tags$h4("Roster nach Alter"),
+          shinycssloaders::withSpinner(gt::gt_output("rosterByAge")),
+          width = 12
+        )
+      ),
+      width = 9
+    )
+  )
+)
+```
+
+# IR Analyse {data-navmenu="Teams"}
+
+## 
+
+```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_ir <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-ir-analyse" & !loaded_data_ir()) {
+    source("R new/roster/ir.R", local = TRUE)
+    
+    loaded_data_ir(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shiny::plotOutput("ir_weekly") %>% 
+        shinycssloaders::withSpinner(),
+      width = 12
+    ),
+    style = "height: 830px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shiny::plotOutput("ir_player"),
+      width = 6
+    ),
+    shiny::column(
+      shiny::fluidRow(
+        shiny::plotOutput("ir_fpts"),
+        style = "height: 1000px"
+      ),
+      shiny::fluidRow(
+        shiny::plotOutput("ir_roster"),
+        style = "height: 1500px"
+      ),
+      width = 6
+    ),
+    style = "height: 2525px"
+  )
+)
+```
+
+# Punktehistorie {data-navmenu="Teams"}
+
+##
+
+```{r team-point-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_team_point_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-punktehistorie" & !loaded_data_team_point_history()) {
+    source("R new/roster/point_history.R", local = TRUE)
+    
+    loaded_data_team_point_history(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("roster_point_history")),
+      width = 12
+    )
+  )
+)
+```
+
+# Report {data-navmenu="Teams"}
+
+```{r team-report, echo=FALSE, message=FALSE, warning=FALSE}
+team_report_data_loaded <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-report" & !team_report_data_loaded()) {
+    #source("R new/draft/hit_rates.R", local = TRUE)
+    source("R new/reports/team_report.R", local = TRUE)
+    
+    team_report_data_loaded(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::uiOutput("team_report")
+)
+```
+
+# Wins above Replacement {data-navmenu="Spieler"}
+
+##
+
+```{r player-war, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_player_war <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-wins-above-replacement" & !loaded_data_player_war()) {
+    source("R new/players/war.R", local = TRUE)
+    
+    loaded_data_player_war(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("player_war")),
+      width = 8
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("war_best_players")),
+      width = 4
+    ),
+    style = "height: 1030px"
+  )
+)
+```
+
+# ELO {data-navmenu="Spieler"}
+
+## 
+
+```{r player-elo, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_player_elo <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-elo" & !loaded_data_player_elo()) {
+    source("R new/players/elo.R", local = TRUE)
+    
+    loaded_data_player_elo(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("running_player_elo")),
+          width = 12
+        ),
+        style = "height: 680px"
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(gt::gt_output("player_elo_peaks_table")),
+          width = 12
+        ),
+        style = "height: 700px"
+      ),
+      width = 6
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("player_elo_ranking_table")),
+      width = 6
+    ),
+    style = "height: 800px"
+  )
+)
+```
+
+
+# FPts Zusammensetzung {data-navmenu="Spieler"}
+
+## 
+
+```{r player-fpts-zusammensetzung, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_fpts_zusammensetzung <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-fpts-zusammensetzung" & !loaded_data_fpts_zusammensetzung()) {
+    source("R new/players/ftps_zusammensetzung.R", local = TRUE)
+    
+    loaded_data_fpts_zusammensetzung(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shiny::sliderInput(
+        "selectPositionRank",
+        "Positions Rang",
+        min = 12,
+        max = 120,
+        value = 12,
+        step = 12,
+        sep = ""
+      ),
+      shinycssloaders::withSpinner(gt::gt_output("bigPlayPoints")),
+      width = 12
+    )
+  )
+)
+```
+
+# Fantasy Finishes {data-navmenu="Spieler"}
+
+## 
+
+```{r player-fantasy-finishes, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_player_fantasy_finishes <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-fantasy-finishes" & !loaded_data_player_fantasy_finishes()) {
+    source("R new/players/fantasy_finishes_output.R", local = TRUE)
+    
+    loaded_data_player_fantasy_finishes(TRUE)
+  }
+})
+
+# TODO: reset selectYears to 2016
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(reactable::reactableOutput("fantasy_finishes_weekly")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(reactable::reactableOutput("fantasy_finishes_yearly")),
+      width = 12
+    )
+  )
+)
+```
+
+
+# Advance Rates {data-navmenu="Spieler"}
+
+## 
+
+```{r player-advance-rates, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_player_advance_rates <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-advance-rates" & !loaded_data_player_advance_rates()) {
+    source("R new/players/advance-rates.R", local = TRUE)
+    
+    loaded_data_player_advance_rates(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("advanceRates")),
+      width = 12
+    )
+  )
+)
+```
+
+# Trade Bait {data-navmenu="Spieler"}
+
+## 
+
+```{r trade-bait, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_trade_bait <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-trade-bait" & !loaded_data_trade_bait()) {
+    source("R new/players/elo.R", local = TRUE)
+    source("R new/players/trade_bait.R", local = TRUE)
+
+    loaded_data_trade_bait(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    #shiny::column(
+      #shinycssloaders::withSpinner(shiny::plotOutput("running_player_elo")),
+    #  width = 6
+    #),
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("trade_bait")),
+      width = 6
+    ),
+    style = "height: 680px"
+  )
+)
+```
+
+# Trade History {data-navmenu="Spieler"}
+
+## 
+
+```{r trade-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_trade_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-trade-history" & !loaded_data_trade_history()) {
+    source("R new/players/trades.R", local = TRUE)
+
+    loaded_data_trade_history(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Trade History"),
+      shinyWidgets::pickerInput(
+        "selectTradeAsset",
+        "Filter nach Asset",
+        choices = "",
+        options = list("actions-box" = TRUE, "none-selected-text" = "Asset wählen", "live-search" = TRUE),
+        multiple = TRUE
+      ),
+      shinycssloaders::withSpinner(DT::DTOutput("trade_history")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Am meisten getradete Spieler seit 2016"),
+      shinycssloaders::withSpinner(DT::DTOutput("most_tradet_players")),
+      width = 6
+    ),
+    shiny::column(
+      tags$h5("Anzahl von Trades zwischen zwei Teams seit 2016"),
+      shinycssloaders::withSpinner(DT::DTOutput("trades_between_teams")),
+      width = 6
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      tags$h5("Team-Trades je Jahr"),
+      shinycssloaders::withSpinner(DT::DTOutput("trades_by_franchise")),
+      width = 12
+    )
+  )
+)
+```
+
+# Awards {data-navmenu="Spieler"}
+
+## 
+
+```{r player-awards, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_awards <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-awards" & !loaded_data_awards()) {
+    source("R new/players/awards.R", local = TRUE)
+
+    loaded_data_awards(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::uiOutput("player_awards")),
+      shinycssloaders::withSpinner(shiny::uiOutput("best_players")),
+      shinycssloaders::withSpinner(shiny::uiOutput("league_mvps")),
+      width = 12
+    )
+  )
+)
+```
+
+# Übersicht {data-navmenu="Matchups"}
+
+##
+
+```{r matchup-overview, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_overview <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-übersicht" & !loaded_data_matchup_overview()) {
+    source("R new/matchups/overview.R", local = TRUE)
+
+    loaded_data_matchup_overview(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("matchupTable")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("matchupOverview")),
+      width = 12
+    ),
+    style = "height: 2600px"
+  )
+)
+```
+
+# Projections {data-navmenu="Matchups"}
+
+##
+
+```{r matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_projections <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-projections" & !loaded_data_matchup_projections()) {
+    source("R new/matchups/projections.R", local = TRUE)
+
+    loaded_data_matchup_projections(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("matchup_projections_home_table")),
+      width = 6
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("matchup_projections_away_table")),
+      width = 6
+    )
+  )
+)
+```
+
+# Alle Matchups {data-navmenu="Matchups"}
+
+##
+
+```{r matchup-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-alle-matchups" & !loaded_data_matchup_history()) {
+    source("R new/matchups/history.R", local = TRUE)
+
+    loaded_data_matchup_history(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_matchup_history_table")),
+      width = 12
+    )
+  )
+)
+```
+
+# Upsets {data-navmenu="Matchups"}
+
+##
+
+```{r upsets, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_matchup_upsets <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-upsets" & !loaded_data_matchup_upsets()) {
+    source("R new/matchups/history.R", local = TRUE)
+
+    loaded_data_matchup_upsets(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_matchup_upsets_table")),
+      width = 12
+    )
+  )
+)
+```
+
+# Strength of Schedule {data-navmenu="Matchups"}
+
+##
+
+```{r sos, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/matchups/sos.R", local = TRUE)
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("rfl_schedule")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(plotly::plotlyOutput("rfl_fpts_abv_avg", height = "800px")),
+      width = 12
+    ),
+    style = "height: 800px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
+      width = 12
+    ),
+    style = "height: 600px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
+      width = 12
+    ),
+    style = "height: 800px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
+      width = 12
+    ),
+    style = "height: 800px"
+  )
+)
+```
+
+# Draft History {data-navmenu="Draft"}
+
+```{r draft-history, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_draft_history <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draft-history" & !loaded_data_draft_history()) {
+    source("R new/draft/history.R", local = TRUE)
+
+    loaded_data_draft_history(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::uiOutput("draft_history")
+)
+```
+
+
+
+```{r draft-boards, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+
+# Draftboards {data-navmenu="Draft"}
+
+##
+
+loaded_data_draft_boards <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draftboards" & !loaded_data_draft_boards()) {
+    source("R new/draft/draft_boards.R", local = TRUE)
+
+    loaded_data_draft_boards(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_board", height = "2600px")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_voe")),
+      width = 12
+    )
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      h4("Spielerkategorisierungen"),
+      shinycssloaders::withSpinner(reactable::reactableOutput("pick_categories")),
+      width = 12
+    )
+  )
+)
+```
+
+# Draftklassen {data-navmenu="Draft"}
+
+```{r draft-classes, echo=FALSE, message=FALSE, warning=FALSE}
+draft_classes_data_loaded <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draftklassen" & !draft_classes_data_loaded()) {
+    #source("R new/draft/hit_rates.R", local = TRUE)
+    source("R new/draft/classes.R", local = TRUE)
+    
+    draft_classes_data_loaded(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::uiOutput("draft_class")
+)
+```
+
+# Hit Rates {data-navmenu="Draft"}
+
+```{r draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_draft_hit_rates <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-hit-rates" & !loaded_data_draft_hit_rates()) {
+    source("R new/draft/hit_rates.R", local = TRUE)
+
+    loaded_data_draft_hit_rates(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::uiOutput("draft_hit_rates")
+)
+```
+
+# Draft Reihenfolge {data-navmenu="Draft"}
+
+##
+
+```{r draft-order, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_draft_order <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-draft-reihenfolge" & !loaded_data_draft_order()) {
+    source("R new/rankings/ranking_tables.R", local = TRUE)
+    source("R new/rankings/draft_order.R", local = TRUE)
+
+    loaded_data_draft_order(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_order")),
+      width = 12
+    ),
+    style = "height: 1030px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(gt::gt_output("draft_order_table")),
+      width = 12
+    ),
+    style = "height: 1650px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      shinycssloaders::withSpinner(shiny::plotOutput("draft_order_history")),
+      width = 12
+    )
+  )
+)
+```

@@ -1,5 +1,6 @@
 rfl_draft_elo <- reactive({
   rfl_drafts_data %>%
+    dplyr::select(-franchise_name) %>%
     dplyr::left_join(
       player_elo %>%
         dplyr::group_by(mfl_id) %>%
@@ -51,10 +52,10 @@ rfl_draft_elo <- reactive({
     dplyr::left_join(
       franchises %>%
         dplyr::select(franchise_id, franchise_name),
-      by = c("franchise" = "franchise_id")
+      by = "franchise_id"
     ) %>%
     dplyr::mutate_at(c("player_elo_post", "elo_peak"), .funs = ~ tidyr::replace_na(as.numeric(.x), 1200)) %>%
-    dplyr::select(franchise_name, season, round, pick, overall, player_name, position, team, player_elo_post, elo_peak, dplyr::starts_with("nfl_")) %>%
+    dplyr::select(franchise_name, season, round, pick, overall, player_name, pos, team, player_elo_post, elo_peak, dplyr::starts_with("nfl_")) %>%
     dplyr::rename(
       "RFL Team" = franchise_name,
       DY = season,
@@ -62,7 +63,7 @@ rfl_draft_elo <- reactive({
       DP = pick,
       OVRL = overall,
       Spieler = player_name,
-      Pos = position,
+      Pos = pos,
       Team = team,
       ELO = player_elo_post,
       "ELO Peak" = elo_peak,

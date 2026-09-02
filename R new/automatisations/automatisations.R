@@ -1,0 +1,15 @@
+source("R new/automatisations/elo.R", local = TRUE)
+source("R new/automatisations/league.R", local = TRUE)
+source("R new/automatisations/mfl_players.R", local = TRUE)
+source("R new/automatisations/player_scores.R", local = TRUE)
+source("R new/automatisations/roster.R", local = TRUE)
+source("R new/automatisations/standings.R", local = TRUE)
+source("R new/automatisations/sos.R", local = TRUE) # nach standings
+source("R new/automatisations/starter.R", local = TRUE) # nach player_scores
+source("R new/automatisations/war.R", local = TRUE) # nach player_scores
+source("R new/automatisations/draft.R", local = TRUE) # nach elo, war
+source("R new/automatisations/postseason.R", local = TRUE)
+source("R new/automatisations/fpts_zusammensetzung.R", local = TRUE)
+source("R new/automatisations/draftpick-values.R", local = TRUE) # nach draft und war
+source("R new/automatisations/transactions.R", local = TRUE) # nach draft, war und draftpick values
+source("R new/automatisations/draft-grades.R", local = TRUE) # nach transactions

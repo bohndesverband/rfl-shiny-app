@@ -75,6 +75,7 @@ if (nflreadr::get_current_week(TRUE) < 2) {
 
 var.mflApiBase <- paste0("https://www45.myfantasyleague.com/", var.season)
 var.mflApiBaseEarlyNewYear <- paste0("https://www45.myfantasyleague.com/", var.seasonNewYear)
+var.posOrder <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP")
 
 var.colorBlue <- "#00183C"
 var.colorRed <- "#D03324"
@@ -250,16 +251,31 @@ renderPlot({
   running_elo %>% 
     ggplot(aes(x = game, y = franchise_elo_postgame, color = franchise_name)) +
       plotDefaults +
-      geom_hline(yintercept = 1500, color = var.colorRed, size = 0.5, alpha = 0.75) + # default elo
+      geom_hline(yintercept = 1500, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # default elo
       
-      geom_vline(xintercept = 13, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2017
-      geom_vline(xintercept = 25, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2018
-      geom_vline(xintercept = 37, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2019
-      geom_vline(xintercept = 49, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2020
-      geom_vline(xintercept = 61, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2021
-      geom_vline(xintercept = 74, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2022
-      geom_vline(xintercept = 87, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2023
-      geom_vline(xintercept = 100, color = var.colorRed, size = 0.5, alpha = 0.75) + # start 2024
+      geom_vline(xintercept = 13, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2017
+      geom_text(label = "2017", x = 13, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 25, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2018
+      geom_text(label = "2018", x = 25, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 37, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2019
+      geom_text(label = "2019", x = 37, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 49, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2020
+      geom_text(label = "2020", x = 49, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 61, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2021
+      geom_text(label = "2021", x = 61, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 74, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2022
+      geom_text(label = "2022", x = 74, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 87, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2023
+      geom_text(label = "2023", x = 87, y = 1300, color = var.colorRed, size = 3.5) +
+    
+      geom_vline(xintercept = 100, color = var.colorRed, linewidth = 0.5, alpha = 0.75) + # start 2024
+      geom_text(label = "2024", x = 100, y = 1300, color = var.colorRed, size = 3.5) +
       
       geom_point(color = var.colorAccent, alpha = 0.3) +
       geom_line(data = subset(running_elo, division_name == input$eloSelectDivision | franchise_name %in% input$eloSelectTeam), size = 1) +
@@ -276,7 +292,7 @@ renderPlot({
         legend.position = "top",
         legend.text = element_text(size = 12)
       ) +
-      scale_x_discrete(limits = c(1, 76))
+      scale_x_discrete(limits = c(1, 113))
 })
 ```
 
@@ -328,7 +344,7 @@ DT::renderDataTable({
     dplyr::group_by(franchise_name) %>% 
     dplyr::arrange(week) %>% 
     dplyr::mutate(
-      # franchise_elo_pregame = ifelse(week == 1, franchise_elo_pregame, dplyr::lag(franchise_elo_pregame)), TODO: zeile checken. versteh ich nicht mehr
+      franchise_elo_pregame = ifelse(week == 1, franchise_elo_pregame, dplyr::lag(franchise_elo_pregame)), # setze pregame elo der letzten woche auf die der ersten
       elo_diff = franchise_elo_postgame - franchise_elo_pregame
     ) %>% 
     dplyr::ungroup() %>% 
@@ -953,38 +969,80 @@ DT::renderDataTable({
 })
 ```
 
+# Transaction History {data-navmenu="Spieler"}
+
+## Sidebar {.sidebar}
+```{r inputs-player-transaction-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+source("R/transactions/player-transaction-history.R", local = T)
+
+selectizeInput(
+  "playerTransactionSelectTeam",
+  "Filter nach Team",
+  choices = setNames(franchises$franchise_id, franchises$franchise_name),
+  multiple = false,
+  options = list(
+    placeholder = "Team wählen",
+    onInitialize = I('function() { this.setValue(""); }')
+  )
+)
+
+playerList <- reactive({
+  player_transaction_history %>% 
+    dplyr::filter(franchise_id == input$playerTransactionSelectTeam)
+})
+
+#selectizeInput(
+#  "playerTransactionSelectPlayer",
+#  "Filter nach Spielern",
+#  choices = setNames(playerList()$player_identifier, playerList()$player_identifier),
+#  multiple = false,
+#  options = list(
+#    placeholder = "Spieler wählen",
+#    onInitialize = I('function() { this.setValue(""); }')
+#  )
+#)
+```
+
+```{r player-transaction-history, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+plot_data <- flow %>% 
+  dplyr::filter(player_identifier == player_id)
+  
+plot_data %>% 
+  dplyr::group_by(mfl_id) %>% 
+  gt::gt()
+
+```
 
 # Projections {data-navmenu="Matchups"}
 ## Inputs {.sidebar}
 
 ```{r inputs-matchup-projections, echo=FALSE, message=FALSE, warning=FALSE}
+#weeks <- c(1:var.week)
+
+#selectizeInput(
+#  "matchupProjectionsSelectWeek",
+#  "Filter nach Woche",
+#  choices = weeks,
+#  selected = max(weeks),
+#  multiple= FALSE,
+#  options = list(
+#    placeholder = "Woche wählen"
+#  )
+#)
+
 source("R/matchups/projections.R")
 
-weeks <- c(1:var.week)
-
 selectizeInput(
-  "matchupProjectionsSelectWeek",
-  "Filter nach Woche",
-  choices = weeks,
-  selected = max(weeks),
+  "matchupProjectionsSelectMatchup",
+  "Filter nach Matchup",
+  choices = matchups$matchup,
+  selected = matchups$matchup[1],
   multiple= FALSE,
   options = list(
-    placeholder = "Woche wählen"
+    placeholder = "Matchup wählen"
   )
 )
 
-renderUI({
-  selectizeInput(
-    "matchupProjectionsSelectMatchup",
-    "Filter nach Matchup",
-    choices = matchups()$matchup,
-    selected = matchups()$matchup[1],
-    multiple= FALSE,
-    options = list(
-      placeholder = "Matchup wählen"
-    )
-  )
-})
 ```
 
 ## Main
@@ -992,7 +1050,7 @@ renderUI({
 
 ```{r matchup-projections-home, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 home_team <- reactive({
-  matchups() %>% 
+  matchups %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(home_name)
 })
@@ -1012,7 +1070,7 @@ gt::render_gt({
 
 ```{r matchup-projections-away, echo=FALSE, fig.height=9, message=FALSE, warning=FALSE}
 away_team <- reactive({
-  matchups() %>% 
+  matchups %>% 
     dplyr::filter(matchup == input$matchupProjectionsSelectMatchup) %>% 
     dplyr::pull(away_name)
 })
@@ -1146,7 +1204,7 @@ trade_history <- reactive({
           TRUE
       ) %>%
       dplyr::filter(
-        date >= input$tradeHistoryDate[1] & date <= input$tradeHistoryDate[2]
+        date >= input$tradeHistoryDate[1] & date <= (input$tradeHistoryDate[2] + 1)
       ) %>%
       dplyr::filter(
         if(input$tradeHistoryType == "Picks")
@@ -1477,7 +1535,7 @@ renderPlot({
 ## Inputs {.sidebar}
 
 ```{r inputs-draft-elo, echo=FALSE, message=FALSE, warning=FALSE}
-sliderInput("draftEloSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season), sep = "")
+sliderInput("draftEloSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season), sep = "", step = 1)
 
 sliderInput("draftEloSelectRounds", "Draftrunde", min = 1, max = 7, value = c(1, 7), sep = "")
 
@@ -1542,7 +1600,7 @@ DT::renderDataTable({
 ## Inputs {.sidebar}
 
 ```{r inputs-draft-hit-rates, echo=FALSE, message=FALSE, warning=FALSE}
-sliderInput("draftHitRatesSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season - 2), sep = "")
+sliderInput("draftHitRatesSelectSeason", "Saison", min = 2017, max = var.season, value = c(2017, var.season - 2), sep = "", step = 1)
 
 sliderInput("draftHitRatesSelectRounds", "Draftrunde", min = 1, max = 7, value = c(1, 7), sep = "")
 
@@ -1560,8 +1618,8 @@ selectizeInput(
 source("R/drafts/rfl-draft-hit-rates.R", local = TRUE)
 ```
 
-Hit = mind. 3 Top 8 oder 1 Top 12 Finish für QB, TE und PK und mind. 1 Top 36 Finish (oder 1 Top 24 Finish für junge Spieler) für alle anderen Positionen<br><br>
-Home Run = mind. 2 (1 für junge Spieler) Top 5 Finishes, mind. 3 Top 3 Finishes für QB, TE und PK oder mind. 3 Top 12 Finishes für alle anderen Positionen<br><br>
+Home Run = mind. 2 Top 5 (1 Top 8 für junge Spieler; mind. 3 Top 5 oder 6 Top 12 Finishes für QB, TE und PK; mind. 3 Top 12 oder 6 Top 24 Finishes für alle anderen Positionen<br><br>
+Hit = mind. 2 Top 8 oder 4 Top 12 für QB, TE und PK (1 Top 12 für junge Spieler); 2 Top 24 oder 4 Top 36 für alle anderen Positionen (1 Top 24 für junge Spieler)<br><br>
 Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und DB und kein Top 60 Finish für WR und LB
 
 ## Row
@@ -1576,24 +1634,24 @@ renderPlot({
     ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit"), position = position_nudge(x = -0.3)) +
     ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run")) +
     ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss"), position = position_nudge(x = 0.3)) +
-    ggplot2::scale_color_manual(values = c("#10ac84", var.colorYellow, "#ee5253")) +
-    ggplot2::scale_fill_manual(values = c("#10ac84", var.colorYellow, "#ee5253"), guide = "none") +
+    ggplot2::scale_color_manual(values = c(var.colorYellow, "#10ac84", "#ee5253")) +
+    ggplot2::scale_fill_manual(values = c(var.colorYellow, "#10ac84", "#ee5253"), guide = "none") +
   
-    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = -0.3), color = var.colorAccent, size = 9) +
-    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Hit" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = -0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Hit" & franchise_id == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = -0.3), color = var.colorAccent, size = 12) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Hit" & franchise_id == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = -0.3), size = 5, show.legend = FALSE, fontface = "bold") +
     
-    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), group = 1, color = var.colorAccent, size = 9) +
-    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Home Run" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), size = 5, show.legend = FALSE, fontface = "bold") +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Home Run" & franchise_id == input$draftHitRatesSelectTeam), group = 1, color = var.colorAccent, size = 12) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Home Run" & franchise_id == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), size = 5, show.legend = FALSE, fontface = "bold") +
     
-    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = 0.3), color = var.colorAccent, size = 9) +
-    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Miss" & franchise == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = 0.3), size = 5, show.legend = FALSE, fontface = "bold") +
+    ggplot2::geom_point(data = subset(team_hit_rates(), category == "Miss" & franchise_id == input$draftHitRatesSelectTeam), group = 1, position = position_nudge(x = 0.3), color = var.colorAccent, size = 12) +
+    ggplot2::geom_text(data = subset(team_hit_rates(), category == "Miss" & franchise_id == input$draftHitRatesSelectTeam), ggplot2::aes(label = paste(picks, total_picks_in_round, sep = "/")), position = position_nudge(x = 0.3), size = 5, show.legend = FALSE, fontface = "bold") +
     
     ggplot2::scale_x_continuous(limits = c(min(draft_hit_rates()$round) - 0.5, max(draft_hit_rates()$round) + 0.5), breaks = seq(1, max(draft_hit_rates()$round), 1)) +
     ggplot2::scale_y_continuous(limits = c(0,1), labels = scales::percent_format()) +
 
     ggplot2::labs(
       title = paste(franchises %>% filter(franchise_id == input$draftHitRatesSelectTeam) %>% pull(franchise_name), "Hit and Miss Rates im Draft", input$draftHitRatesSelectSeason[1], "-", input$draftHitRatesSelectSeason[2]),
-      subtitle = "Balken = Ligadurchschnitt, Punkte = Franchises (Text im Kreis = Anzahal an Picks in Runde)",
+      subtitle = "Balken = Ligadurchschnitt, Punkte = Franchises (Text im Kreis = Anzahl an Picks in Runde)",
       x = "Draft Round",
       y = "",
       color = ""
@@ -1618,8 +1676,6 @@ gt::render_gt({
 ## Inputs {.sidebar}
 
 ```{r inputs-draft-reaches-steals, echo=FALSE, message=FALSE, warning=FALSE}
-
-
 source("R/drafts/rfl-draft-steals-reaches.R")
 ```
 
@@ -1629,7 +1685,6 @@ Die Berechnung von Steals und Reaches ist die Differenz des eigenen Picks zum er
 ### Die Größten Steals
 
 ```{r echo=FALSE, fig.height=6}
-
 renderPlot({
   ggplot(biggest_draft_steals, aes(y = reorder(label, desc(score)), x = score)) +
     geom_bar(stat = "identity", fill = var.colorAccent) +
