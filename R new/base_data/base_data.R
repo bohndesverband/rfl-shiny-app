@@ -3,6 +3,7 @@ source("R new/base_data/plots.R", local = TRUE)
 source("R new/base_data/reactables.R", local = TRUE)
 
 rfl_franchise_data <- feather::read_feather("data/rfl_franchises.feather")
+rfl_matchups_history <- feather::read_feather("data/rfl_matchups_data.feather")
 
 source("R new/base_data/elo.R", local = TRUE)
 
@@ -23,8 +24,6 @@ source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes, elo und
 source("R new/base_data/transactions.R", local = TRUE) # nach Draft und WAR
 
 source("R new/base_data/mfl-players.R", local = TRUE) # nach ELO & rosters
-
-source("R new/base_data/matchups.R", local = TRUE) # nach ELO & standing & starter
 
 rfl_postseason_data <- feather::read_feather("data/rfl_postseason_data.feather")
 

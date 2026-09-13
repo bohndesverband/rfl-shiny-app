@@ -12,7 +12,7 @@ league <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=league&L=
   purrr::pluck("league")
 
 ## franchise data ----
-franchises <- league %>%
+rfl_franchise_data <- league %>%
   purrr::pluck("franchises", "franchise") %>%
   dplyr::tibble() %>%
   tidyr::unnest_wider(1) %>%
@@ -43,4 +43,4 @@ franchises <- league %>%
     by = c("conference_id" = "id")
   )
 
-feather::write_feather(franchises, "data/rfl_franchises.feather")
+feather::write_feather(rfl_franchise_data, "data/rfl_franchises.feather")

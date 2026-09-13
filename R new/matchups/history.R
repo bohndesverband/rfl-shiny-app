@@ -44,7 +44,7 @@ matchup_table <- function(df) {
 }
 
 output$rfl_matchup_history_table <- gt::render_gt({
-  rfl_matchups_with_standing %>%
+  rfl_matchups_history %>%
     dplyr::select(-label, -dplyr::ends_with("_pctl")) %>%
     matchup_table() %>%
     gt::cols_move(win, franchise_name) %>%

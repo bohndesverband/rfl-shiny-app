@@ -448,7 +448,7 @@ output$draft_history_picks_by_round <- shiny::renderPlot({
 
 ## grades ----
 rfl_draft_class_grades <- rfl_draft_grades %>%
-  dplyr::filter(pick == "klasse") %>%
+  dplyr::filter(pick == "klasse" & draftclass == 2025) %>%
   dplyr::group_by(team_id, franchise_name, draft_class) %>%
   dplyr::filter(year == max(year)) %>%
   dplyr::summarise(

@@ -1,5 +1,6 @@
 league_id <- 63018
-new_season_sept <- nflreadr::get_current_season()
+#new_season_sept <- nflreadr::get_current_season()
+new_season_sept <- 2026
 new_season_march <- nflreadr::get_current_season(TRUE)
 current_week <- nflreadr::get_current_week()
 current_week_thu <- nflreadr::get_current_week(TRUE)
@@ -179,8 +180,7 @@ reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
       footerStyle = list(fontWeight = "bold", textAlign = "center")
     ),
     theme = reactableTheme(
-      borderColor = color_grey_light,
-      stripedColor = color_bg
+      borderColor = color_grey_light
     ),
     striped = TRUE,
     wrap = FALSE,

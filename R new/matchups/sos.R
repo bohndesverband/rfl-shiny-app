@@ -88,15 +88,15 @@ output$rfl_sos_matchups <- shiny::renderPlot({
 rfl_sos_data_filtered <- shiny::reactive({
   rfl_sos_data_filtered <- rfl_sos_data %>%
     dplyr::filter(
-      #season >= input$selectYears[1] & season <= input$selectYears[2]
-      season == 2025
+      season >= input$selectYears[1] & season <= input$selectYears[2]
+      #season == 2025
     ) %>%
-    #dplyr::filter(
-    #  if(isTruthy(input$selectRflTeams))
-    #    franchise_id %in% input$selectRflTeams
-    #  else
-    #    TRUE
-    #) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectRflTeams))
+        franchise_id %in% input$selectRflTeams
+      else
+        TRUE
+    ) %>%
     #dplyr::filter(
     #  if(isTruthy(input$selectRflDivisions))
     #    division %in% input$selectRflDivisions
@@ -327,21 +327,47 @@ add_data_color <- function(df, color, data) {
 output$rfl_schedule <- gt::render_gt({
   #req(new_season_march != new_season_sept)
 
-  latest_week <- ifelse(input$selectYears[2] == new_season_sept, current_week - 1, max(data$week))
+  #latest_week <- ifelse(input$selectYears[2] == new_season_sept, current_week - 1, max(data$week))
+  latest_week <- 1
 
-  #latest_week <- 12
+  if (latest_week == 1) {
+    last_season_elo_data <- rfl_team_elo %>%
+      dplyr::select(season, week, franchise_id, franchise_elo_pregame = franchise_elo_postgame) %>%
+      dplyr::filter(
+        season == new_season_march - 1 & week == max(week)
+      ) %>%
+      dplyr::mutate(
+        season = new_season_march,
+        week = 1
+      ) %>%
+      dplyr::distinct()
+
+    elo_data <- last_season_elo_data %>%
+      dplyr::left_join(
+        rfl_schedule_data %>%
+          dplyr::filter(week == 1),
+        by = c("season", "week", "franchise_id")
+      ) %>%
+      dplyr::left_join(
+        last_season_elo_data %>%
+          dplyr::rename(opponent_elo_pregame = franchise_elo_pregame),
+        by = c("season", "week", "opponent_id" = "franchise_id")
+      )
+  } else {
+    elo_data <- rfl_team_elo %>%
+      dplyr::select(season, week, franchise_id, opponent_id, franchise_elo_pregame, opponent_elo_pregame)
+  }
 
   data <- rfl_schedule_data %>%
     dplyr::filter(
-      season == input$selectYears[2]
-      #season == 2025
+      #season == input$selectYears[2]
+      season == 2026
     ) %>%
     dplyr::mutate(
       type = ifelse(week <= latest_week, "bisher", "kommend")
     ) %>%
     dplyr::left_join(
-      rfl_team_elo %>%
-        dplyr::select(season, week, franchise_id, opponent_id, franchise_elo_pregame, opponent_elo_pregame),
+      elo_data,
       by = c("season", "week", "franchise_id", "opponent_id")
     ) %>%
     # carry last known pregame elo forward for teams and opponents within each season
@@ -389,12 +415,12 @@ output$rfl_schedule <- gt::render_gt({
   #latest_week <- 7
 
   data %>%
-    dplyr::filter(
-      if(isTruthy(input$selectRflTeams))
-        franchise_id %in% input$selectRflTeams
-      else
-        TRUE
-    ) %>%
+    #dplyr::filter(
+    #  if(isTruthy(input$selectRflTeams))
+    #    franchise_id %in% input$selectRflTeams
+    #  else
+    #    TRUE
+    #) %>%
     gt::gt() %>%
     gt::tab_header(
       title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYears[2], ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">einfachere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">schwerere</span> Gegner in den verbleibendenen Wochen?")),
@@ -481,8 +507,7 @@ output$rfl_schedule <- gt::render_gt({
       data_row.padding.horizontal = gt::px(5),
       column_labels.padding.horizontal = gt::px(5)
     )
-}) %>%
-  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+})
 
 # matchup over/underachievments ----
 output$rfl_fpts_abv_avg <- plotly::renderPlotly({
@@ -509,10 +534,10 @@ output$rfl_fpts_abv_avg <- plotly::renderPlotly({
       ltr = "Eigene Starter überperformen,\nGegnerische Starter überperformen",
       lbr = "Eigene Starter überperformen,\nGegnerische Starter unterperformen",
       lbl = "Eigene Starter unterperformen,\nGegnerische Starter unterperformen",
-      col_tl = color_red,
-      col_tr = color_yellow,
-      col_br = color_blue,
-      col_bl = color_yellow
+      ctl = color_red,
+      ctr = color_yellow,
+      cbr = color_blue,
+      cbl = color_yellow
     ) +
     ggplot2::geom_point(ggplot2::aes(text = franchise_name), color = color_grey_mid, alpha = 0.8, size = 4) +
     ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6) +

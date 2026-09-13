@@ -21,7 +21,7 @@ rfl_draft_grades <- readr::read_csv("../rfl-data/data/rfl-draft-grades.csv") %>%
       pick == "klasse" ~ 0,
       pick == "laterounds" ~ 20,
       grepl("trade", pick) ~ 30,
-      TRUE ~ dplyr::row_number()
+      TRUE ~ 10
     ),
     year = draft_class + as.double(year)
   ) %>%

@@ -391,6 +391,7 @@ draft_grades_reactable <- function(
       col_groups,
       writers_col_groups
     ),
+    striped = TRUE,
     ...
   )
 }

@@ -32,7 +32,7 @@ shiny::observeEvent(active_tab(), {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   } else if (active_tab() == "#section-strength-of-schedule") {
     # sos
-    #shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2025, value = c(2025, 2025))
+    shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2026, value = c(2026, 2026))
   } else if (active_tab() == "#section-wochenbericht") {
     shiny::updateSliderInput(session, "selectWeek", value = current_week - 1)
   } else {

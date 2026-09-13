@@ -22,7 +22,7 @@ selected_draft_grades <- shiny::reactive({
   selected_draft_grades <- rfl_draft_grades %>%
     dplyr::select(-asset_id_new) %>%
     dplyr::filter(draft_class == input$selectYear & team_id == input$selectRflTeam)
-    #dplyr::filter(draft_class == 2025 & team_id == "0027")
+    #dplyr::filter(draft_class == 2025 & team_id == "0033")
 })
 
 selected_draft_trades <- shiny::reactive({
@@ -487,8 +487,17 @@ output$team_draft_class_grades <- reactable::renderReactable({
 
   assets <- selected_draft_grades() %>%
     dplyr::filter(!is.na(grade)) %>%
-    dplyr::select(pick, text, grade, user, asset_name_output, year) %>%
-    tidyr::pivot_wider(names_from = c(user), values_from = c(text, grade))
+    dplyr::select(pick, text, grade, user, asset_name_output, year, order) %>%
+    tidyr::pivot_wider(names_from = c(user), values_from = c(text, grade)) %>%
+    dplyr::arrange(pick, year) %>%
+    dplyr::group_by(pick) %>%
+    tidyr::fill(
+      dplyr::matches("^(text_|grade_)"),
+      .direction = "down"
+    ) %>%
+    dplyr::ungroup() %>%
+    dplyr::arrange(order, pick) %>%
+    dplyr::select(-order)
 
   assets_latest <- assets %>%
     dplyr::group_by(pick) %>%
