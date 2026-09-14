@@ -31,8 +31,9 @@ $("body").on("shown.bs.tab", "a[data-toggle='tab']", function(e) {
 
 ```{r setup, include=FALSE}
 library(flexdashboard)
+library(DBI)
+library(duckdb)
 library(tidyverse)
-library(feather)
 library(nflreadr)
 #library(nflplotR)
 library(ffscrapr)
