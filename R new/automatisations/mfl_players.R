@@ -17,7 +17,7 @@ mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=play
     ),
   ) %>%
   dplyr::left_join(
-    feather::read_feather("data/rfl_player_elo.feather") %>%
+    player_elo %>%
       dplyr::group_by(mfl_id) %>%
       dplyr::slice_tail(n = 1) %>%
       dplyr::select(mfl_id, player_elo_post, season, gsis_id),

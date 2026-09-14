@@ -32,9 +32,12 @@ elo_change <- running_elo %>%
   dplyr::filter(dplyr::row_number() == 1) %>%
   dplyr::ungroup()
 
-output$running_elo <- shiny::renderPlot({
-  ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
-    ggplot2::geom_hex(bins = 70) +
+output$running_elo <- ggiraph::renderGirafe({
+  plot <- ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
+    ggiraph::geom_line_interactive(
+      ggplot2::aes(group = franchise_id, tooltip = franchise_name, data_id = franchise_id),
+      alpha = 0.5, color = color_grey_mid, linewidth = 0.5
+    ) +
 
     ggplot2::geom_vline(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(xintercept = game), color = color_grey_light, linewidth = 0.5) +
     ggplot2::geom_text(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(label = season, x = game), nudge_x = 3, y = 1300, color = color_grey_dark, size = 4) +
@@ -51,7 +54,15 @@ output$running_elo <- shiny::renderPlot({
       title = paste("RFL ELO Rating"),
       #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
     )
-}, height = 800) %>%
+
+  ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 13) %>%
+    ggiraph::girafe_options(
+      ggiraph::opts_hover(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_hover_inv(css = "opacity:0.2"),
+      ggiraph::opts_selection(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_selection_inv(css = "opacity:0.2")
+    )
+}) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 top_pctl <- elo_change %>%

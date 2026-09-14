@@ -25,7 +25,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   ) %>%
   dplyr::select(-franchise_name) %>%
   dplyr::left_join(
-    feather::read_feather("data/rfl_franchises.feather") %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
   ) %>%
@@ -50,7 +50,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
 
   # add player elo
   dplyr::left_join(
-    feather::read_feather("data/rfl_player_elo.feather") %>%
+    player_elo %>%
       dplyr::group_by(season, mfl_id) %>%
       dplyr::mutate(
         ppg = round(mean(score, na.rm = TRUE), 2)
@@ -76,7 +76,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
 
   # add fantasy finish
   dplyr::left_join(
-    feather::read_feather("data/rfl_fantasy_finishes_season.feather") %>%
+    rfl_fantasy_finishes_season %>%
       dplyr::select(player_id, dplyr::starts_with("top"), pos_rank) %>%
       dplyr::rename_with(~ gsub("_season", "", .x)) %>%
       dplyr::group_by(player_id) %>%

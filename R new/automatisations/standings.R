@@ -23,7 +23,7 @@ rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
 DBI::dbWriteTable(con, "rfl_standing_data", rfl_standing_data, overwrite = TRUE)
 
 # create weekly rankings ----
-rfl_weekly_standing <- feather::read_feather("data/rfl_team_elo.feather") %>%
+rfl_weekly_standing <- rfl_team_elo %>%
   dplyr::filter(season == max(season)) %>%
   dplyr::mutate(
     winloss = ifelse(score_diff > 0, 1, 0)

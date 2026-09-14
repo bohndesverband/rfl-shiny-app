@@ -26,5 +26,5 @@ jobs:
            SHINY_USERNAME: 'katherinehebert' # put your own username here!
            SHINY_TOKEN: ${{ secrets.TOKEN }}
            SHINY_SECRET: ${{ secrets.SECRET }}
-           APP_NAME: 'myApp' # this will show in the app's url
-           APP_DIR: ''
+           APP_NAME: 'rfl-tools' # this will show in the app's url
+           APP_DIR: 'rfl-shiny-app'

@@ -50,7 +50,7 @@ create_ranks <- function(df, group, colname) {
     dplyr::ungroup()
 }
 
-rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.feather") %>%
+rfl_fantasy_finishes_weekly <- rfl_player_scores %>%
   dplyr::distinct() %>%
   dplyr::mutate(
     pos = dplyr::case_when(

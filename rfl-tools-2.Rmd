@@ -1,24 +1,26 @@
 ---
 title: "RFL Tools"
-output: 
+output:
   flexdashboard::flex_dashboard:
     orientation: rows
     vertical_layout: scroll
     css: styles.css
     theme:
       version: 4
-      bg: "#ffffff"
-      fg: "#485460"
-      primary: "#808e9b"
-      base_font: 
+      bg: '#ffffff'
+      fg: '#485460'
+      primary: '#808e9b'
+      base_font:
         google: Poppins
       heading_font:
         google: Poppins
       code_font:
-        google: 
+        google:
           family: JetBrains Mono
           local: false
 runtime: shiny
+resource_files:
+- data/data.duckdb
 ---
 
 ```{js}
@@ -480,7 +482,7 @@ shiny::fluidPage(
     shiny::column(
       shiny::fluidRow(
         shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput("running_elo")),
+          shinycssloaders::withSpinner(ggiraph::girafeOutput("running_elo")),
           width = 12
         ),
         style = "height: 830px"

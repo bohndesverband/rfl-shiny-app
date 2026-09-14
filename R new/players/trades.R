@@ -74,8 +74,8 @@ trade_history <- reactive({
     #    TRUE
     #) %>%
 
-    dplyr::select(trade_id, date, trade_side, asset_names) %>%
-    tidyr::spread(trade_side, asset_names) %>%
+    dplyr::select(trade_id, date, trade_side, description) %>%
+    tidyr::spread(trade_side, description) %>%
     dplyr::arrange(dplyr::desc(trade_id)) %>%
     dplyr::select(-trade_id) %>%
     dplyr::mutate(

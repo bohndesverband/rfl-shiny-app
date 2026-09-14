@@ -16,10 +16,11 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
     )
   ) %>%
   dplyr::left_join(
-    feather::read_feather("data/rfl_franchises.feather") %>%
+    rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = c("team" = "franchise_id")
   ) %>%
+
   dplyr::ungroup() %>%
   dplyr::mutate(
     pick_round = ifelse(grepl("DP_", asset_id), as.numeric(pick_round) + 1, as.numeric(pick_round)),
@@ -62,10 +63,13 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   # füge getätigte draftpicks an
   dplyr::left_join(
     rfl_drafts_data %>%
-      dplyr::select(pick_year = season, pick_round = round, draft_pick = pick, player_name_with_info, pick_cat_badge),
+      dplyr::select(pick_year = season, pick_round = round, draft_pick = pick, asset_name_with_info = asset_name),
     by = c("pick_year", "pick_round", "draft_pick")
   ) %>%
-  dplyr::select(season:asset_name, trade_asset_name:pick_year, pick_round, everything())
+  dplyr::mutate(
+    asset_name = ifelse(!is.na(asset_name_with_info), asset_name_with_info, asset_name)
+  ) %>%
+  dplyr::select(season:asset_name, trade_asset_name:pick_year, pick_round, everything(), -asset_name_with_info)
 
 DBI::dbWriteTable(con, "rfl_trades_data", rfl_trades_data, overwrite = TRUE)
 
