@@ -774,7 +774,9 @@ observeEvent(active_tab(), {
   }
 })
 
-# TODO: reset selectYears to 2016
+shiny::fluidPage(
+  shiny::uiOutput("fantasy_finishes")
+)
 
 shiny::fluidPage(
   shiny::fluidRow(
