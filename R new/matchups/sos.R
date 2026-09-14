@@ -1,14 +1,7 @@
-rfl_sos <- feather::read_feather("data/rfl_sos.feather") %>%
-  dplyr::mutate(
-    above_avg = round(Total - mean(Total), 3),
-    SOS = round(SOS, 3),
-  ) %>%
-  dplyr::left_join(rfl_franchise_data %>% dplyr::rename(div_id = division) %>% select(franchise_id, franchise_name, div_id), by = "franchise_id")
-
 rfl_sos_filtered <- shiny::reactive({
   req(input$selectYears[1] >= 2024)
 
-  rfl_sos_filtered <- rfl_sos %>%
+  rfl_sos_filtered <- read_data_table("sos") %>%
     dplyr::filter(
       season >= input$selectYears[1] & season <= input$selectYears[2]
       #season == 2025
@@ -327,48 +320,21 @@ add_data_color <- function(df, color, data) {
 output$rfl_schedule <- gt::render_gt({
   #req(new_season_march != new_season_sept)
 
-  #latest_week <- ifelse(input$selectYears[2] == new_season_sept, current_week - 1, max(data$week))
-  latest_week <- 1
+  latest_week <- dplyr::case_when(
+    current_week_thu == 0 ~ 1,
+    current_week_thu > 13 ~ 13,
+    TRUE ~ current_week
+  )
 
-  if (latest_week == 1) {
-    last_season_elo_data <- rfl_team_elo %>%
-      dplyr::select(season, week, franchise_id, franchise_elo_pregame = franchise_elo_postgame) %>%
-      dplyr::filter(
-        season == new_season_march - 1 & week == max(week)
-      ) %>%
-      dplyr::mutate(
-        season = new_season_march,
-        week = 1
-      ) %>%
-      dplyr::distinct()
-
-    elo_data <- last_season_elo_data %>%
-      dplyr::left_join(
-        rfl_schedule_data %>%
-          dplyr::filter(week == 1),
-        by = c("season", "week", "franchise_id")
-      ) %>%
-      dplyr::left_join(
-        last_season_elo_data %>%
-          dplyr::rename(opponent_elo_pregame = franchise_elo_pregame),
-        by = c("season", "week", "opponent_id" = "franchise_id")
-      )
-  } else {
-    elo_data <- rfl_team_elo %>%
-      dplyr::select(season, week, franchise_id, opponent_id, franchise_elo_pregame, opponent_elo_pregame)
-  }
+  #latest_week <- 1
 
   data <- rfl_schedule_data %>%
     dplyr::filter(
-      #season == input$selectYears[2]
-      season == 2026
+      season == new_season_sept
+      #season == 2026
     ) %>%
     dplyr::mutate(
       type = ifelse(week <= latest_week, "bisher", "kommend")
-    ) %>%
-    dplyr::left_join(
-      elo_data,
-      by = c("season", "week", "franchise_id", "opponent_id")
     ) %>%
     # carry last known pregame elo forward for teams and opponents within each season
     dplyr::group_by(season, franchise_id) %>%
@@ -398,18 +364,8 @@ output$rfl_schedule <- gt::render_gt({
       matchup = paste(type, paste0("WK", week), paste0("m_", dplyr::row_number()), sep = ".")
     ) %>%
     dplyr::ungroup() %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name, abbrev),
-      by = c("franchise_id")
-    ) %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, opponent_abbrev = abbrev),
-      by = c("opponent_id" = "franchise_id")
-    ) %>%
     dplyr::arrange(win_difficulty_delta, dplyr::desc(win_difficulty_avg)) %>%
-    dplyr::select(-week, -p_win, -difficulty_raw, -dplyr::ends_with("_elo_pregame"), -type, -opponent_id, -win_difficulty_avg) %>%
+    dplyr::select(season, franchise_id, franchise_name, abbrev, opponent_abbrev, matchup, win_difficulty, win_difficulty_delta) %>%
     tidyr::pivot_wider(names_from = matchup, values_from = c(opponent_abbrev, win_difficulty), names_glue = "{matchup}_{.value}")
 
   #latest_week <- 7
@@ -423,7 +379,7 @@ output$rfl_schedule <- gt::render_gt({
     #) %>%
     gt::gt() %>%
     gt::tab_header(
-      title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYears[2], ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">einfachere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">schwerere</span> Gegner in den verbleibendenen Wochen?")),
+      title = gt::html(paste0("RFL Schedule Difficulty ", new_season_sept, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
       subtitle = "Anhand der Pregame-ELO wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Hier wird die Stärke des eigenen Teams und die relative Stärke des Gegners zum eigenen Team berücksichtigt. Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
     ) %>%
 
@@ -521,6 +477,10 @@ output$rfl_fpts_abv_avg <- plotly::renderPlotly({
       avg_opponent_fpts_diff = sum(opponent_points_ppg_diff, na.rm = TRUE),
       .groups = "drop"
     )
+
+  shiny::validate(
+    shiny::need(nrow(plot_data) > 0, "Es sind für diesen Zeitraum keine Daten vorhanden")
+  )
 
   plot <- ggplot2::ggplot(plot_data, aes(x = avg_franchise_fpts_diff, y = avg_opponent_fpts_diff)) +
     plot_quadrants(
