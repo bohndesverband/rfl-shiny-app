@@ -90,7 +90,10 @@ ggplot(curve_clean, aes(pick, final_ev)) +
   theme_minimal()
 
 # zusammenführen ----
-rfl_drafts_data <- feather::read_feather("data/rfl_drafts_data.feather") %>%
+rfl_drafts_data <- dbGetQuery(
+  con,
+  "SELECT * FROM rfl_drafts_data"
+) %>%
   #dplyr::select(-pvar, -pvar_exp, -voe) %>%
   #dplyr::select(-first_pick:-side) %>%
 
@@ -140,7 +143,7 @@ rfl_drafts_data <- feather::read_feather("data/rfl_drafts_data.feather") %>%
   #filter(season == 2024 & franchise_id == "0007")
   dplyr::select(-dplyr::starts_with("threshold"))
 
-feather::write_feather(rfl_drafts_data, "data/rfl_drafts_data.feather")
+DBI::dbWriteTable(con, "rfl_drafts_data", rfl_drafts_data, overwrite = TRUE)
 
 # historische trades ----
 # TODO: Tradevalues

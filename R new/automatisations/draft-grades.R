@@ -59,4 +59,4 @@ rfl_draft_grades <- readr::read_csv("../rfl-data/data/rfl-draft-grades.csv") %>%
   ) %>%
   dplyr::ungroup()
 
-feather::write_feather(rfl_draft_grades, "data/rfl_draft_grades_data.feather")
+DBI::dbWriteTable(con, "rfl_draft_grades", rfl_draft_grades, overwrite = TRUE)

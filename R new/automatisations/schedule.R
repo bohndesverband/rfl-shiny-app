@@ -48,7 +48,7 @@ rfl_matchups_history <- rfl_team_elo %>%
   ) %>%
   dplyr::arrange(dplyr::desc(season), dplyr::desc(week))
 
-feather::write_feather(rfl_matchups_history, "data/rfl_matchups_data.feather")
+DBI::dbWriteTable(con, "rfl_matchups_history", rfl_matchups_history, overwrite = TRUE)
 
 # schedule ----
 rfl_schedule_data <- readr::read_csv("https://raw.githubusercontent.com/bohndesverband/rfl-data/refs/heads/main/data/rfl-schedules.csv", col_types = "dicc") %>%
@@ -111,7 +111,7 @@ rfl_schedule_data <- readr::read_csv("https://raw.githubusercontent.com/bohndesv
   ) %>%
   dplyr::select(-opponent_div, -division, -opponent_conf, -conference_id)
 
-feather::write_feather(rfl_schedule_data, "data/rfl_schedule_data.feather")
+DBI::dbWriteTable(con, "rfl_schedule_data", rfl_schedule_data, overwrite = TRUE)
 
 # preseason
 sos <- rfl_drafts_data <- purrr::map_df(2024:var_season, function(x) {
@@ -122,7 +122,7 @@ sos <- rfl_drafts_data <- purrr::map_df(2024:var_season, function(x) {
     dplyr::mutate(season = x)
 })
 
-feather::write_feather(sos, "data/rfl_sos.feather")
+DBI::dbWriteTable(con, "sos", sos, overwrite = TRUE)
 
 # inseason
 schedule <- rfl_schedule_data %>%
@@ -181,5 +181,5 @@ if (current_week <= 13) {
       by = "franchise_id"
     )
 
-  feather::write_feather(sos_inseason, "data/rfl_sos_inseason.feather")
+  DBI::dbWriteTable(con, "sos_inseason", sos_inseason, overwrite = TRUE)
 }

@@ -27,4 +27,4 @@ rfl_starter_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     by = c("season", "week", "player_id")
   )
 
-feather::write_feather(rfl_starter_data, "data/rfl_starter_data.feather")
+DBI::dbWriteTable(con, "rfl_starter_data", rfl_starter_data, overwrite = TRUE)

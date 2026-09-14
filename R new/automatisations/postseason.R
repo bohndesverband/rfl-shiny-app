@@ -12,4 +12,4 @@ rfl_postseason_data <- purrr::map_df(2017:var_season, function(x) {
     by = "franchise_id"
   )
 
-feather::write_feather(rfl_postseason_data, "data/rfl_postseason_data.feather")
+DBI::dbWriteTable(con, "rfl_postseason_data", rfl_postseason_data, overwrite = TRUE)

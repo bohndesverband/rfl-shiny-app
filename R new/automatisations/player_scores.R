@@ -27,7 +27,7 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
     points_ppg_diff = round(points - ppg, 2)
   )
 
-feather::write_feather(rfl_player_scores, "data/rfl_player_scores.feather")
+DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
 
 # fantay finishes ----
 
@@ -67,7 +67,7 @@ rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_player_scores.fea
   ) %>%
   create_ranks(c("season", "pos", "week"), "weekly")
 
-feather::write_feather(rfl_fantasy_finishes_weekly, "data/rfl_fantasy_finishes_weekly.feather")
+DBI::dbWriteTable(con, "rfl_fantasy_finishes_weekly", rfl_fantasy_finishes_weekly, overwrite = TRUE)
 
 rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
   #dplyr::filter(reg_season == 1) %>%
@@ -85,4 +85,4 @@ rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
   ) %>%
   create_ranks(c("season", "pos"), "season")
 
-feather::write_feather(rfl_fantasy_finishes_season, "data/rfl_fantasy_finishes_season.feather")
+DBI::dbWriteTable(con, "rfl_fantasy_finishes_season", rfl_fantasy_finishes_season, overwrite = TRUE)

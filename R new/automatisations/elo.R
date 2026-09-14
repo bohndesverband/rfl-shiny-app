@@ -1,4 +1,3 @@
-#after franchises
 library(tidyverse)
 library(nflreadr)
 library(feather)
@@ -24,10 +23,11 @@ rfl_team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
     col_types = "iiccnnnnnnn"
   )
 }) %>%
-  dplyr::left_join(feather::read_feather("data/rfl_franchises.feather") %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
-  dplyr::left_join(feather::read_feather("data/rfl_franchises.feather") %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
+  dplyr::left_join(rfl_franchise_data %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
+  dplyr::left_join(rfl_franchise_data %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
 
-feather::write_feather(rfl_team_elo, "data/rfl_team_elo.feather")
+DBI::dbWriteTable(con, "rfl_team_elo", rfl_team_elo, overwrite = TRUE)
+#DBI::dbWriteTable(con, "rfl_team_elo", rfl_team_elo, overwrite = TRUE)
 
 # spieler ----
 player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
@@ -41,4 +41,4 @@ player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
   dplyr::ungroup()
 
-feather::write_feather(player_elo, "data/rfl_player_elo.feather")
+DBI::dbWriteTable(con, "rfl_player_elo", player_elo, overwrite = TRUE)

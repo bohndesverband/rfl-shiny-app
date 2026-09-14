@@ -67,7 +67,7 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   ) %>%
   dplyr::select(season:asset_name, trade_asset_name:pick_year, pick_round, everything())
 
-feather::write_feather(rfl_trades_data, "data/rfl_trades_data.feather")
+DBI::dbWriteTable(con, "rfl_trades_data", rfl_trades_data, overwrite = TRUE)
 
 rfl_trade_history <- rfl_trades_data %>%
   dplyr::left_join(
@@ -117,7 +117,7 @@ rfl_trade_history <- rfl_trades_data %>%
   ) %>%
   dplyr::select(-asset_names)
 
-feather::write_feather(rfl_trade_history, "data/rfl_trade_history_data.feather")
+DBI::dbWriteTable(con, "rfl_trade_history", rfl_trade_history, overwrite = TRUE)
 
 # transactions
 rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
@@ -127,9 +127,9 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
   )
 })
 
-feather::write_feather(rfl_transactions_data, "data/rfl_transactions_data.feather")
+DBI::dbWriteTable(con, "rfl_transactions_data", rfl_transactions_data, overwrite = TRUE)
 
 # draft transactions
 rfl_transactions_draft <- readr::read_csv("https://github.com/bohndesverband/rfl-data/releases/download/trade_data/rfl_draftclass-trades.csv", col_types = "ciTccccccc")
 
-feather::write_feather(rfl_transactions_draft, "data/rfl_transactions_draft_data.feather")
+DBI::dbWriteTable(con, "rfl_transactions_draft", rfl_transactions_draft, overwrite = TRUE)

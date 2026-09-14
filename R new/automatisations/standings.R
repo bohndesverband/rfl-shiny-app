@@ -20,7 +20,7 @@ rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
 })
 
 ## write to feather ----
-feather::write_feather(rfl_standing_data, "data/rfl_standing_data.feather")
+DBI::dbWriteTable(con, "rfl_standing_data", rfl_standing_data, overwrite = TRUE)
 
 # create weekly rankings ----
 rfl_weekly_standing <- feather::read_feather("data/rfl_team_elo.feather") %>%
@@ -80,7 +80,7 @@ rfl_weekly_standing <- feather::read_feather("data/rfl_team_elo.feather") %>%
   )
 
 ## write to feather ----
-feather::write_feather(rfl_weekly_standing, "data/rfl_weekly_standing.feather")
+DBI::dbWriteTable(con, "rfl_weekly_standing", rfl_weekly_standing, overwrite = TRUE)
 
 # create current standing ----
 rfl_current_standing <- rfl_weekly_standing %>%
@@ -142,4 +142,4 @@ rfl_current_standing <- rfl_weekly_standing %>%
   dplyr::arrange(league_rank)
 
 ## write to feather ----
-feather::write_feather(rfl_current_standing, "data/rfl_current_standing.feather")
+DBI::dbWriteTable(con, "rfl_current_standing", rfl_current_standing, overwrite = TRUE)
