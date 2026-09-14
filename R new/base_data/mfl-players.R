@@ -1,5 +1,5 @@
 ## player data ----
-mfl_players <- feather::read_feather("data/mfl_players.feather") %>%
+mfl_players <- read_data_table("mfl_players") %>%
   dplyr::left_join(
     rfl_current_roster %>%
       dplyr::group_by(player_id) %>%

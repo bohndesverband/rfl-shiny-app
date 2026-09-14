@@ -33,7 +33,7 @@ plot_defaults <- list(
 
     panel.background = ggplot2::element_blank(),
     panel.grid.major = ggplot2::element_line(color = color_grey_light, linewidth = 0.35),
-    panel.grid.minor = element_line(color = color_grey_light, linewidth = 0.25)
+    panel.grid.minor = ggplot2::element_line(color = color_grey_light, linewidth = 0.25)
   )
 )
 

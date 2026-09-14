@@ -5,8 +5,11 @@ if (!dir.exists("data")) {
   dir.create("data", recursive = TRUE, showWarnings = FALSE)
 }
 
-con <- DBI::dbConnect(duckdb::duckdb(), dbdir = file.path("data", "data.duckdb"))
-on.exit(DBI::dbDisconnect(con, shutdown = TRUE), add = TRUE)
+if (!exists("con", mode = "any") || !DBI::dbIsValid(con)) {
+  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = file.path("data", "data.duckdb"))
+}
+
+on.exit(DBI::dbDisconnect(con, shutdown = FALSE), add = TRUE)
 
 source("R new/automatisations/elo.R", local = TRUE)
 source("R new/automatisations/league.R", local = TRUE)

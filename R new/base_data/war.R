@@ -1,4 +1,4 @@
-rfl_war_data <- feather::read_feather("data/rfl_war_data.feather")
+rfl_war_data <- read_data_table("rfl_war_data")
 
 roster_war <- rfl_roster_data %>%
   dplyr::filter(week == max(week)) %>%

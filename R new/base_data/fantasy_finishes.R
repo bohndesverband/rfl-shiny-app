@@ -1,6 +1,6 @@
-rfl_fantasy_finishes_weekly <- feather::read_feather("data/rfl_fantasy_finishes_weekly.feather")
+rfl_fantasy_finishes_weekly <- read_data_table("rfl_fantasy_finishes_weekly")
 
-rfl_fantasy_finishes_season <- feather::read_feather("data/rfl_fantasy_finishes_season.feather")
+rfl_fantasy_finishes_season <- read_data_table("rfl_fantasy_finishes_season")
 
 summarize_fantasy_finishes <- function(df) {
   df %>%
