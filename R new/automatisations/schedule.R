@@ -1,5 +1,4 @@
 library(tidyverse)
-library(feather)
 
 var_season <- 2026
 
@@ -94,7 +93,7 @@ rfl_schedule_data <- readr::read_csv("https://raw.githubusercontent.com/bohndesv
   dplyr::select(-dplyr::ends_with("postgame"), -avg_elo) %>%
   dplyr::left_join(
     rfl_franchise_data %>%
-      dplyr::select(franchise_id, franchise_name, abbrev),
+      dplyr::select(franchise_id, franchise_name, abbrev, division_new = division, conference_id_new = conference_id),
     by = c("franchise_id")
   ) %>%
   dplyr::left_join(
@@ -103,13 +102,15 @@ rfl_schedule_data <- readr::read_csv("https://raw.githubusercontent.com/bohndesv
     by = c("opponent_id" = "franchise_id")
   ) %>%
   dplyr::mutate(
+    division = ifelse(is.na(division), division_new, division),
+    conference_id = ifelse(is.na(conference_id), conference_id_new, conference_id),
     matchup = dplyr::case_when(
       division == opponent_div ~ "Div",
       conference_id == opponent_conf ~ "Conf",
       TRUE ~ "Zufällig"
     )
   ) %>%
-  dplyr::select(-opponent_div, -division, -opponent_conf, -conference_id)
+  dplyr::select(-opponent_div, -division, -opponent_conf, -conference_id, -division_new, -conference_id_new)
 
 DBI::dbWriteTable(con, "rfl_schedule_data", rfl_schedule_data, overwrite = TRUE)
 
@@ -120,7 +121,12 @@ sos <- rfl_drafts_data <- purrr::map_df(2024:var_season, function(x) {
     col_types = "cdddddcc"
   ) %>%
     dplyr::mutate(season = x)
-})
+}) %>%
+  dplyr::mutate(
+    above_avg = round(Total - mean(Total), 3),
+    SOS = round(SOS, 3),
+  ) %>%
+  dplyr::left_join(rfl_franchise_data %>% dplyr::rename(div_id = division) %>% select(franchise_id, franchise_name, div_id), by = "franchise_id")
 
 DBI::dbWriteTable(con, "sos", sos, overwrite = TRUE)
 
