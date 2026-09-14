@@ -30,4 +30,4 @@ mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=play
     by = "gsis_id"
   )
 
-feather::write_feather(mfl_players, "data/mfl_players.feather")
+DBI::dbWriteTable(con, "mfl_players", mfl_players, overwrite = TRUE)

@@ -1,8 +1,8 @@
-rfl_trades_data <- feather::read_feather("data/rfl_trades_data.feather")
+rfl_trades_data <- read_data_table("rfl_trades_data")
 
-rfl_trade_history <- feather::read_feather("data/rfl_trade_history_data.feather")
+rfl_trade_history <- read_data_table("rfl_trade_history")
 
-#rfl_transactions_draft <- feather::read_feather("data/rfl_transactions_draft_data.feather")
+#rfl_transactions_draft <- read_data_table("rfl_transactions_draft_data", "rfl_transactions_draft")
 
 # nötig für trades in draftklassen
 #rfl_trade_assets_per_side <- rfl_transactions_draft %>%
@@ -14,4 +14,4 @@ rfl_trade_history <- feather::read_feather("data/rfl_trade_history_data.feather"
 #    .groups = "drop"
 #  )
 
-rfl_transactions_data <- feather::read_feather("data/rfl_transactions_data.feather")
+rfl_transactions_data <- read_data_table("rfl_transactions_data")

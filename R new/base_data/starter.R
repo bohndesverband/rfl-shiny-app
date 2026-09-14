@@ -1,4 +1,4 @@
-rfl_starter_data <- feather::read_feather("data/rfl_starter_data.feather")
+rfl_starter_data <- read_data_table("rfl_starter_data")
 
 rfl_starter_ppg_fpts_diff <- rfl_starter_data %>%
   dplyr::filter(starter_status == "starter") %>%

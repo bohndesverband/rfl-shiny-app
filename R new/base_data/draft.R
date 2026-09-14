@@ -1,4 +1,4 @@
-rfl_drafts_data <- feather::read_feather("data/rfl_drafts_data.feather")
+rfl_drafts_data <- read_data_table("rfl_drafts_data")
   #dplyr::left_join(
   #  rfl_war_data %>%
   #    dplyr::group_by(player_id) %>%
@@ -46,7 +46,7 @@ rfl_draft_classes_sum <- rfl_drafts_data %>%
   dplyr::ungroup() %>%
   dplyr::select(id, season, season_date, franchise_id, franchise_name, class, picks, rank, pvar, pvar_exp, voe, voe_per_pick, voe_pctl, rank_season, voe_pctl_season)
 
-rfl_draft_orders <- feather::read_feather("data/rfl_draft_orders.feather") %>%
+rfl_draft_orders <- read_data_table("rfl_draft_orders") %>%
   #dplyr::mutate(
     #season = as.numeric(season),
     #pick = as.numeric(pick)
@@ -55,24 +55,24 @@ rfl_draft_orders <- feather::read_feather("data/rfl_draft_orders.feather") %>%
     rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name, division),
     by = "franchise_id"
-  ) %>%
-  dplyr::left_join(
-    feather::read_feather("data/rfl_franchises_history.feather") %>%
-      dplyr::select(season, franchise_id, franchise_name) %>%
-      dplyr::group_by(franchise_id) %>%
-      dplyr::arrange(season) %>%
-      dplyr::mutate(
-        new_name = ifelse(franchise_name != lag(franchise_name) | season == 2017, 1, 0)
-      ) %>%
-      dplyr::rename(historic_name = franchise_name),
-    by = c("season", "franchise_id")
   )
+  #dplyr::left_join(
+  #  read_data_table("rfl_franchises_history") %>%
+  #    dplyr::select(season, franchise_id, franchise_name) %>%
+  #    dplyr::group_by(franchise_id) %>%
+  #    dplyr::arrange(season) %>%
+  #    dplyr::mutate(
+  #      new_name = ifelse(franchise_name != lag(franchise_name) | season == 2017, 1, 0)
+  #    ) %>%
+  #    dplyr::rename(historic_name = franchise_name),
+  #  by = c("season", "franchise_id")
+  #)
 
-mfl_adp_data <- feather::read_feather("data/mfl_adp_data.feather")
+mfl_adp_data <- read_data_table("mfl_adp_data")
 
-nfl_drafts_data <- feather::read_feather("data/nfl_drafts_data.feather")
+nfl_drafts_data <- read_data_table("nfl_drafts")
 
-rfl_draft_grades <- feather::read_feather("data/rfl_draft_grades_data.feather")
+rfl_draft_grades <- read_data_table("rfl_draft_grades")
 
 # reactable paletten
 pal_pvar <- scale_rainbow(range(rfl_drafts_rookies$pvar, na.rm = TRUE))

@@ -1,5 +1,5 @@
 # teams ----
-rfl_team_elo <- feather::read_feather("data/rfl_team_elo.feather")
+rfl_team_elo <- read_data_table("rfl_team_elo")
 
 # spieler ----
-player_elo <- feather::read_feather("data/rfl_player_elo.feather")
+player_elo <- read_data_table("rfl_player_elo")

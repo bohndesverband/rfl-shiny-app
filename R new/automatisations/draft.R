@@ -7,7 +7,7 @@ var_season <- 2026
 mfl_adp_data <- vroom::vroom("https://github.com/bohndesverband/rfl-data/releases/download/draft_data/adp_data.csv", col_types = "icidii") %>%
   dplyr::mutate(adp_range = paste(rfl_min, rfl_max, sep = "-"))
 
-feather::write_feather(mfl_adp_data, "data/mfl_adp_data.feather")
+DBI::dbWriteTable(con, "mfl_adp_data", mfl_adp_data, overwrite = TRUE)
 
 rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   vroom::vroom(
@@ -142,7 +142,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   dplyr::rename(date = timestamp) %>%
   dplyr::select(-dplyr::ends_with("pick_new"), -text_rfl, -text_adp)
 
-feather::write_feather(rfl_drafts_data, "data/rfl_drafts_data.feather")
+DBI::dbWriteTable(con, "rfl_drafts_data", rfl_drafts_data, overwrite = TRUE)
 
 rfl_draft_orders <- purrr::map_df(2017:var_season, function(x) {
   vroom::vroom(
@@ -151,10 +151,10 @@ rfl_draft_orders <- purrr::map_df(2017:var_season, function(x) {
   )
 })
 
-feather::write_feather(rfl_draft_orders, "data/rfl_draft_orders.feather")
+DBI::dbWriteTable(con, "rfl_draft_orders", rfl_draft_orders, overwrite = TRUE)
 
 nfl_drafts <- nflreadr::load_draft_picks(2017:var_season) %>%
   dplyr::select(gsis_id, round) %>%
   dplyr::rename(nfl_round = round)
 
-feather::write_feather(nfl_drafts, "data/nfl_drafts_data.feather")
+DBI::dbWriteTable(con, "nfl_drafts", nfl_drafts, overwrite = TRUE)

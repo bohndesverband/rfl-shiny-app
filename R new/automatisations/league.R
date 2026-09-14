@@ -43,4 +43,4 @@ rfl_franchise_data <- league %>%
     by = c("conference_id" = "id")
   )
 
-feather::write_feather(rfl_franchise_data, "data/rfl_franchises.feather")
+DBI::dbWriteTable(con, "rfl_franchise_data", rfl_franchise_data, overwrite = TRUE)
