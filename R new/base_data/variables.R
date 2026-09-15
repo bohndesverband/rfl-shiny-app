@@ -169,10 +169,9 @@ gt_pctl_bar <- function(df, value, pctl) {
 }
 
 # reactable ----
-reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
+reactable_default <- function(data, ...) {
   defaults <- list(
     data = data,
-    columns = columns,
     defaultColDef = colDef(
       headerStyle = list(background = color_bg),
       vAlign = "center",
@@ -183,8 +182,7 @@ reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
       borderColor = color_grey_light
     ),
     striped = TRUE,
-    wrap = FALSE,
-    pagination = pagination
+    wrap = FALSE
   )
 
   args <- c(defaults, list(...))

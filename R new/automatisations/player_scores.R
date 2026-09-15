@@ -75,10 +75,8 @@ rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
   #filter(player_id == "14842") %>%
   dplyr::group_by(season, player_id) %>%
   dplyr::summarise(
-    player_id = dplyr::first(player_id),
-    pos = dplyr::last(pos),
-    player_name = dplyr::last(player_name),
-    team = dplyr::last(team),
+    dplyr::across(c(player_name, pos, player_name, team), ~ last(.x)),
+    points_season = list(points),
     points = sum(as.numeric(points), na.rm = TRUE),
     games = n(),
     .groups = "drop"
