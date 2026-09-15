@@ -169,7 +169,7 @@ gt_pctl_bar <- function(df, value, pctl) {
 }
 
 # reactable ----
-reactable_default <- function(data, ..., columns = NULL, pagination = FALSE) {
+reactable_default <- function(data, columns = NULL, pagination = FALSE, ...) {
   defaults <- list(
     data = data,
     columns = columns,
