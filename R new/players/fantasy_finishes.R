@@ -4,8 +4,10 @@ fantasy_finishes_sum <- shiny::reactive({
     dplyr::arrange(season) %>%
     dplyr::summarise(
       dplyr::across(c(player_name, pos, team), ~ last(.x)),
-      dplyr::across(c(games, points, dplyr::ends_with("_season")), ~ round(sum(.x, na.rm = TRUE), 2)),
-      years = n()
+      dplyr::across(c(games, points, dplyr::starts_with("top")), ~ round(sum(.x, na.rm = TRUE), 2)),
+      points_season = list(unlist(points_season)),
+      years = n(),
+      .groups = "drop"
     ) %>%
     dplyr::mutate(
       ppg = round(points / games, 2)
@@ -21,7 +23,10 @@ fantasy_finishes_sum <- shiny::reactive({
     ) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(
-      across(c(dplyr::ends_with("_season")), ~ round(.x / years, 2))
+      across(c(dplyr::starts_with("top")), ~ round(.x / years, 2))
+    ) %>%
+    dplyr::filter(
+      fpts_rank <= 24
     )
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
@@ -31,22 +36,28 @@ output$fantasy_finishes_yearly <- reactable::renderReactable({
     selected_player <- fantasy_finishes_sum[index, ]$player_id
 
     player_data <- rfl_fantasy_finishes_weekly %>%
-      #filter(player_id == "15281")
-      dplyr::filter(player_id == selected_player)
+      #filter(player_id == "15281") %>%
+      dplyr::filter(player_id == selected_player) %>%
+      dplyr::select(-player_id:-team, -points_ppg_diff, -reg_season)
 
-    ggplot2::ggplot(player_data, ggplot2::aes(x = points)) +
-      ggplot2::geom_density(data = subset(rfl_fantasy_finishes_weekly, pos == player_data$pos & points > 0), fill = color_grey_light, color = NA) +
-      ggplot2::geom_density(ggplot2::aes(color = pos), size = 1) +
-      ggplot2::scale_x_continuous(limits = c(-10, 70), breaks = c(-10, 0, 10, 20, 30, 40, 50, 60), expand = c(0, 0)) +
-      ggplot2::scale_color_discrete(guide = "none") +
-      plot_defaults +
-      ggplot2::theme(
-        panel.grid.minor = ggplot2::element_blank(),
-        axis.text.y = ggplot2::element_blank()
-      ) +
-      ggplot2::labs(
-        y = ""
-      )
+    reactable_default(
+      player_data,
+      columns = list(
+        points = reactable::colDef(name = "FPts", aggregate = "sum"),
+        ppg = reactable::colDef(name = "PPG", aggregate = "mean"),
+        top3_weekly = reactable::colDef(name = "Top 3", width = 75, aggregate = "sum"),
+        top5_weekly = reactable::colDef(name = "Top 5", width = 75, aggregate = "sum"),
+        top8_weekly = reactable::colDef(name = "Top 8", width = 75, aggregate = "sum"),
+        top12_weekly = reactable::colDef(name = "Top 12", width = 75, aggregate = "sum"),
+        top24_weekly = reactable::colDef(name = "Top 24", width = 75, aggregate = "sum"),
+        top36_weekly = reactable::colDef(name = "Top 36", width = 75, aggregate = "sum"),
+        top48_weekly = reactable::colDef(name = "Top 48", width = 75, aggregate = "sum"),
+        top60_weekly = reactable::colDef(name = "Top 60", width = 75, aggregate = "sum")
+      ),
+      defaultSorted = c("season", "week"),
+      defaultSortOrder = "desc",
+      groupBy = "season"
+    )
   }
 
   reactable_default(
@@ -57,6 +68,21 @@ output$fantasy_finishes_yearly <- reactable::renderReactable({
       pos = reactable::colDef(name = "Pos", width = 50),
       team = reactable::colDef(name = "Team", width = 75),
       points = reactable::colDef(name = "FPts", width = 100),
+      points_season = reactable::colDef(
+        cell = function(value, index) {
+          sparkline(fantasy_finishes_sum$points_season[[index]],
+                    type = "box",
+                    showOutliers = TRUE,
+                    lineColor = color_grey_light,
+                    boxLineColor = color_grey_light,
+                    boxFillColor = color_grey_light,
+                    whiskerColor = color_grey_mid,
+                    outlierLineColor = color_grey_mid,
+                    outlierFillColor = color_grey_mid,
+                    medianColor = color_red
+          )
+        }
+      ),
       fpts_rank = reactable::colDef(name = "Rank", width = 75),
       years = reactable::colDef(name = "Jahre", width = 75),
       games = reactable::colDef(name = "Spiele", width = 75),
@@ -72,7 +98,7 @@ output$fantasy_finishes_yearly <- reactable::renderReactable({
       top60_season = reactable::colDef(name = "Top 60", width = 75, format = reactable::colFormat(digits = 0, percent = TRUE))
     ),
     columnGroups = list(
-      colGroup(name = "Total", columns = c("years", "games", "points", "fpts_rank")),
+      colGroup(name = "Total", columns = c("years", "games", "points", "points_season", "fpts_rank")),
       colGroup(name = "Per Game", columns = c("ppg", "ppg_rank")),
       colGroup(name = "Elite", columns = c("top3_season", "top5_season")),
       colGroup(name = "Stud", columns = c("top8_season", "top12_season")),
@@ -83,19 +109,44 @@ output$fantasy_finishes_yearly <- reactable::renderReactable({
     defaultSorted = c("points"),
     defaultSortOrder = "desc",
     filterable = TRUE,
-    pagination = TRUE,
-    defaultPageSize = 12
+    pagination = FALSE,
+    virtual = TRUE,
+    height = 600,
+    selection = "multiple",
+    borderless = TRUE,
+    onClick = "select"
   )
 })
 
 
 
 
+row_details <- function(index) {
+  selected_player <- fantasy_finishes_sum[index, ]$player_id
 
-reactable(
-  columnGroups =
-)
+  player_data <- rfl_fantasy_finishes_weekly %>%
+    #filter(player_id == "15281")
+    dplyr::filter(player_id == selected_player)
 
+
+  htmltools::tagList(
+
+  )
+
+  ggplot2::ggplot(player_data, ggplot2::aes(x = points)) +
+    ggplot2::geom_density(data = subset(rfl_fantasy_finishes_weekly, pos == player_data$pos & points > 0), fill = color_grey_light, color = NA) +
+    ggplot2::geom_density(ggplot2::aes(color = pos), size = 1) +
+    ggplot2::scale_x_continuous(limits = c(-10, 70), breaks = c(-10, 0, 10, 20, 30, 40, 50, 60), expand = c(0, 0)) +
+    ggplot2::scale_color_discrete(guide = "none") +
+    plot_defaults +
+    ggplot2::theme(
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.text.y = ggplot2::element_blank()
+    ) +
+    ggplot2::labs(
+      y = ""
+    )
+}
 
 
 
