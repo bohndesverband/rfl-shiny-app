@@ -46,13 +46,17 @@ output$running_elo <- ggiraph::renderGirafe({
     ggplot2::aes(lwd = 1.2) +
     ggplot2::scale_linewidth_identity() +
 
-    ggplot2::geom_point(data = subset(running_elo, (franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions)) & (game == min(game) | game == max(game))), ggplot2::aes(color = franchise_name), size = 5) +
+    ggiraph::geom_point_interactive(
+      data = subset(running_elo, (franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions)) & (game == min(game) | game == max(game))),
+      ggplot2::aes(tooltip = paste("Aktuelle ELO:", franchise_elo_postgame), color = franchise_name),
+      size = 5
+    ) +
 
     plot_elo_defaults +
 
     ggplot2::labs(
       title = paste("RFL ELO Rating"),
-      #subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
+      subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
     )
 
   ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 13) %>%
@@ -64,6 +68,8 @@ output$running_elo <- ggiraph::renderGirafe({
     )
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# TODO: toggle einbauen, um nur ELO veränderung anzusehen ohne den jährlichen reset
 
 top_pctl <- elo_change %>%
   dplyr::filter(elo_shift > 0) %>%

@@ -172,7 +172,7 @@ gt_pctl_bar <- function(df, value, pctl) {
 reactable_default <- function(data, ...) {
   defaults <- list(
     data = data,
-    defaultColDef = colDef(
+    defaultColDef = reactable::colDef(
       headerStyle = list(background = color_bg),
       vAlign = "center",
       headerVAlign = "bottom",

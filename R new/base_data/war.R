@@ -1,6 +1,7 @@
 rfl_war_data <- read_data_table("rfl_war_data")
 
 roster_war <- rfl_roster_data %>%
+  dplyr::filter(season == season_before_wk_2) %>%
   dplyr::filter(week == max(week)) %>%
   dplyr::left_join(
     rfl_war_data %>%

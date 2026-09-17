@@ -471,7 +471,7 @@ loaded_data_team_elo <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
   if (active_tab() == "#section-elo-ranking" & !loaded_data_team_elo()) {
-    source("R new/rankings/elo.R", local = TRUE)
+    source("R new/roster/elo.R", local = TRUE)
     
     loaded_data_team_elo(TRUE)
   }
@@ -567,8 +567,6 @@ shiny::fluidPage(
 
 # IR Analyse {data-navmenu="Teams"}
 
-## 
-
 ```{r ir, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_ir <- shiny::reactiveVal(FALSE)
 
@@ -581,32 +579,7 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shiny::plotOutput("ir_weekly") %>% 
-        shinycssloaders::withSpinner(),
-      width = 12
-    ),
-    style = "height: 830px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shiny::plotOutput("ir_player"),
-      width = 6
-    ),
-    shiny::column(
-      shiny::fluidRow(
-        shiny::plotOutput("ir_fpts"),
-        style = "height: 1000px"
-      ),
-      shiny::fluidRow(
-        shiny::plotOutput("ir_roster"),
-        style = "height: 1500px"
-      ),
-      width = 6
-    ),
-    style = "height: 2525px"
-  )
+  shiny::uiOutput("injured_reserve")
 )
 ```
 

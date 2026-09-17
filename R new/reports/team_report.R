@@ -103,3 +103,4 @@ output$team_report <- shiny::renderUI({
   )
 })
 
+# TODO: Tabs für verschiedene phasen (offseason, inseason...)

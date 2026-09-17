@@ -78,7 +78,10 @@ output$elo_ranking_table <- gt::render_gt({
     gt::cols_hide(c(conference_name:pf_sparkline, pp_total:pf_total, pf_rank:seed_emoji)) %>%
 
     gtDefaults()
-})
+}) %>%
+shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# TODO: checkbox einfügen um auswahl zu ändern (wie bei spielern)
 
 # draft order ----
 current_draft_order_week <- rfl_current_standing$week[1]

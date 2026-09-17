@@ -108,8 +108,3 @@ output$roster_war_transactions <- gt::render_gt({
       ihtml.use_filters = TRUE
     )
 })
-
-
-
-
-

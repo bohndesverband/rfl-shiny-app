@@ -3,6 +3,7 @@ source("R new/players/fpts.R", local = TRUE)
 
 # create base data ----
 ir_players <- rfl_roster_data %>%
+  dplyr::filter(season == season_before_wk_1) %>%
   dplyr::select(player_id) %>%
   dplyr::distinct() %>%
   dplyr::left_join(
@@ -30,6 +31,7 @@ ir_players <- rfl_roster_data %>%
 
 # create data for weekly IR analysis ----
 team_ir_weekly <- rfl_roster_data %>%
+  filter(season == season_before_wk_1) %>%
   #filter(franchise_id == "0007" & week == 5) %>%
   dplyr::left_join(
     ir_players,
@@ -83,12 +85,11 @@ team_ir <- team_ir_weekly %>%
   )
 
 ## plot data ----
-output$ir_weekly <- shiny::renderPlot({
-  ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = ppg_median, color = franchise_name)) +
+output$ir_weekly <- ggiraph::renderGirafe({
+  plot <- ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = ppg_median, color = franchise_name)) +
     ggplot2::geom_boxplot(ggplot2::aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
-    ggplot2::geom_jitter(ggplot2::aes(size = player_count, alpha = player_count), width = 0.25, color = color_grey_mid) +
+    ggiraph::geom_jitter_interactive(data = subset(team_ir, !franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(tooltip = franchise_name, size = player_count, alpha = player_count, data_id = franchise_id), width = 0.25, color = color_grey_mid) +
 
-    ggalt::geom_xspline(data = subset(team_ir, franchise_id %in% c(input$selectRflTeams)), spline_shape = -0.5) +
     ggplot2::aes(lwd = 1.2) +
     ggplot2::scale_linewidth_identity() +
 
@@ -114,7 +115,21 @@ output$ir_weekly <- shiny::renderPlot({
       legend.position = "inside",
       legend.position.inside = c(0.09, 0.8)
     )
-}, height = 800)
+
+  if (current_week > 2) {
+    plot <- plot +
+      ggalt::geom_xspline(data = subset(team_ir, franchise_id %in% c(input$selectRflTeams)), spline_shape = -0.5)
+  }
+
+  ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 9) %>%
+    ggiraph::girafe_options(
+      ggiraph::opts_hover(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_hover_inv(css = "opacity:0.2"),
+      ggiraph::opts_selection(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_selection_inv(css = "opacity:0.2")
+    )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 # create data for IR players by team ----
 team_ir_players <- team_ir_weekly %>%
@@ -144,7 +159,8 @@ output$ir_player <- shiny::renderPlot({
     ) +
     plot_defaults +
     plot_clean
-}, height = 2500)
+}, height = 2500) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 # create data for lost FPTS ----
 team_ir_fpts <- team_ir_players %>%
@@ -173,10 +189,11 @@ output$ir_fpts <- shiny::renderPlot({
       y = "",
       fill = ""
     )
-}, height = 1000)
+}, height = 1000) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-team_ir_weekly_filteres <- shiny::reactive({
-  team_ir_weekly %>%
+team_ir_weekly_filtered <- shiny::reactive({
+  team_ir_weekly_filtered <- team_ir_weekly %>%
     dplyr::filter(franchise_id %in% c(input$selectRflTeams)) %>%
     dplyr::arrange(dplyr::desc(ppg))
 })
@@ -190,7 +207,7 @@ output$ir_roster <- shiny::renderPlot({
     shiny::need(length(input$selectRflTeams) <= 1, "Bitte wähle  nur ein Team aus. Die Daten werden sonst nicht korrekt dargestellt.")
   )
 
-  ggplot2::ggplot(team_ir_weekly_filteres(), ggplot2::aes(values = 1, fill = status)) +
+  ggplot2::ggplot(team_ir_weekly_filtered(), ggplot2::aes(values = 1, fill = status)) +
     waffle::geom_waffle(color = color_bg, size = 1.5, n_rows = 10) +
     ggplot2::facet_wrap(~week, ncol = 3) +
     ggplot2::scale_fill_discrete(type = c(color_grey_light, color_red), guide = "none") +
@@ -198,7 +215,7 @@ output$ir_roster <- shiny::renderPlot({
     plot_defaults +
     plot_clean +
     ggplot2::labs(
-      title = paste(team_ir_weekly_filteres()$franchise_name[1], "Roster\nmit ausgefallenen Spielern je Woche"),
+      title = paste(team_ir_weekly_filtered()$franchise_name[1], "Roster\nmit ausgefallenen Spielern je Woche"),
       subtitle = "Die Spieler sind nach ihrer FPts/G sortiert. Die meisten unten links, die wenigsten oben rechts.\n10 Spieler pro Spalte.",
       x = "",
       y = ""
@@ -206,6 +223,34 @@ output$ir_roster <- shiny::renderPlot({
     ggplot2::theme(
       axis.text = ggplot2::element_blank()
     )
-}, height = 1500)
+}, height = 1500) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
+# ui output ----
+output$injured_reserve <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1(paste("RFL Injured Reserve", input$selectYear)),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("ir_weekly")),
+        width = 12
+      )
+    ),
+    htmltools::hr(style = "margin-block: 2rem"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shiny::plotOutput("ir_fpts")),
+        width = 6
+      ),
+      shiny::column(
+        shiny::plotOutput("ir_roster"),
+        width = 6
+      )
+    )
+  )
+})
 
+# TODO: Durch IR verlorene Punkte als reactable
+# TODO: alle IR Spieler als Tabelle anzeigen
+# TODO: filterung nach Jahr ermöglichen
+# TODO: filter zu nur einem Team ändern

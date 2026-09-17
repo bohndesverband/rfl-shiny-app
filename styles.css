@@ -27,7 +27,8 @@
 .sidebar:has(~ #dashboard-container #section-strength-of-schedule.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-magic-number.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData {
+.sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData{
   display: inline-block;
 }
 
