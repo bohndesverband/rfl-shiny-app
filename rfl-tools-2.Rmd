@@ -700,12 +700,9 @@ shiny::fluidPage(
 )
 ```
 
-
+```{r player-fpts-zusammensetzung, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # FPts Zusammensetzung {data-navmenu="Spieler"}
 
-## 
-
-```{r player-fpts-zusammensetzung, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_fpts_zusammensetzung <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
