@@ -40,7 +40,7 @@ ranking_table_base <- function(df) {
 
 ## standing ----
 ranking_table_standing <- function(df) {
-  df %>%
+  df <- df %>%
     gt::tab_spanner(
       label = "Standing",
       columns = c(wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total)
@@ -51,17 +51,27 @@ ranking_table_standing <- function(df) {
       max_wins = 26,
       palette = c(color_green, color_red, color_yellow),
       type = "pill"
-    ) %>%
+    )
 
-    gtExtras::gt_plt_sparkline(
-      pf_sparkline,
-      type = "default",
-      fig_dim = c(8, 35),
-      palette = c(color_grey_dark, color_grey_dark, color_red, color_green, color_grey_light),
-      label = TRUE,
-      same_limit = FALSE
-    ) %>%
+  if (current_week > 2) {
+    df <- df %>%
+      gtExtras::gt_plt_sparkline(
+        pf_sparkline,
+        type = "default",
+        fig_dim = c(8, 35),
+        palette = c(color_grey_dark, color_grey_dark, color_red, color_green, color_grey_light),
+        label = TRUE,
+        same_limit = FALSE
+      ) %>%
+      gt::cols_label(
+        pf_sparkline = "Points For"
+      )
+  } else {
+    df <- df %>%
+      gt::cols_hide(pf_sparkline)
+  }
 
+  df <- df %>%
     gtExtras::gt_plt_bullet(
       pp_total,
       target = pf_total,
@@ -78,14 +88,15 @@ ranking_table_standing <- function(df) {
       wins_total = "W",
       losses_total = "L",
       winloss = "Ergebnisse",
-      pf_sparkline = "Points For",
       pp_total = "Potential Points"
     )
+
+  df
 }
 
 ## elo ----
 ranking_table_elo <- function(df) {
-  df %>%
+  df <- df %>%
     gtExtras::gt_plt_sparkline(
       elo_sparkline,
       type = "default",
@@ -102,58 +113,75 @@ ranking_table_elo <- function(df) {
       palette = c(color_text, color_grey_mid),
       #font_size = c("14px", "10px"),
       font_weight = c("normal", "normal")
-    ) %>%
-
-    gt::tab_spanner(
-      label = "ELO",
-      columns = c(franchise_elo_postgame, elo_sparkline)
-    ) %>%
-
-    gt::cols_move(franchise_elo_postgame, elo_sparkline) %>%
-
-    gt::data_color(
-      elo_shift,
-      palette = c(color_red, color_blue)
-    ) %>%
-
-    gt::cols_width(
-      franchise_elo_postgame ~ gt::px(100)
-    ) %>%
-
-    gt::cols_label(
-      elo_sparkline = "Saisonverlauf",
-      franchise_elo_postgame = paste("WK", rfl_current_standing$week[1]),
-      elo_shift = "+/-"
-    ) %>%
-
-    gt::tab_footnote(
-      footnote = "in klein ELO zum Start der Saison",
-      locations = gt::cells_column_labels(
-        columns = franchise_elo_postgame
-      ),
-      placement = "left"
-    ) %>%
-    gt::tab_footnote(
-      footnote = "ELO Veränderung zur Vorwoche",
-      locations = gt::cells_column_labels(
-        columns = elo_shift
-      ),
-      placement = "left"
     )
+
+    if (current_week > 2) {
+      df <- df %>%
+        gt::tab_spanner(
+          label = "ELO",
+          columns = c(franchise_elo_postgame, elo_sparkline)
+        ) %>%
+        gt::cols_label(
+          elo_sparkline = "Saisonverlauf",
+          franchise_elo_postgame = paste("WK", rfl_current_standing$week[1]),
+          elo_shift = "+/-"
+        )
+    } else {
+      df <- df %>%
+        gt::cols_hide(elo_sparkline) %>%
+        gt::cols_label(
+          franchise_elo_postgame = "ELO",
+        )
+    }
+
+    df <- df %>%
+      gt::cols_move(franchise_elo_postgame, elo_sparkline) %>%
+
+      gt::data_color(
+        elo_shift,
+        palette = c(color_red, color_blue)
+      ) %>%
+
+      gt::cols_width(
+        franchise_elo_postgame ~ gt::px(100)
+      ) %>%
+
+      gt::tab_footnote(
+        footnote = "in klein ELO zum Start der Saison",
+        locations = gt::cells_column_labels(
+          columns = franchise_elo_postgame
+        ),
+        placement = "left"
+      ) %>%
+      gt::tab_footnote(
+        footnote = "ELO Veränderung zur Vorwoche",
+        locations = gt::cells_column_labels(
+          columns = elo_shift
+        ),
+        placement = "left"
+      )
+
+    df
 }
 
 ## power rank ----
 ranking_table_power_rank <- function(df) {
-  df %>%
+  df <- df %>%
     gt::tab_spanner(
       label = "Power Rank",
       columns = c(dplyr::ends_with("_rank"))
-    ) %>%
+    )
+  if (current_week > 2) {
+    df <- df %>%
+      gt::cols_merge(
+        c(power_rank, power_rank_emoji)
+      )
+  } else {
+    df <- df %>%
+      gt::cols_hide(power_rank_emoji)
+  }
 
-    gt::cols_merge(
-      c(power_rank, power_rank_emoji)
-    ) %>%
-
+  df <- df %>%
     gt::data_color(
       c(pf_rank:elo_rank),
       palette = c(color_blue, color_green, color_yellow, color_orange, color_red),
@@ -196,6 +224,8 @@ ranking_table_power_rank <- function(df) {
       eff_rank = "Eff",
       power_rank = "Ovrl",
     )
+
+  df
 }
 
 ## bowl ----

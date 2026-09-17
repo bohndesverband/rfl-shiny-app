@@ -68,7 +68,7 @@ output$magic_number_table <- gt::render_gt({
       dplyr::any_of(selected_teams)
     ) %>%
     dplyr::mutate(
-      across(23:last_team, as.numeric)
+      dplyr::across(23:dplyr::all_of(last_team), as.numeric)
     ) %>%
     dplyr::mutate(
       franchise_name = franchise_name_status
@@ -89,7 +89,7 @@ output$magic_number_table <- gt::render_gt({
       na_color = color_grey_mid
     ) %>%
     gt::fmt_markdown(columns = franchise_name) %>%
-    gt::fmt_missing(columns = everything(), missing_text = "") %>%
+    gt::sub_missing(columns = everything(), missing_text = "") %>%
     gt::cols_hide(conference_name)
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
