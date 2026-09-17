@@ -45,7 +45,7 @@ matchup_table <- function(df) {
 
 output$rfl_matchup_history_table <- gt::render_gt({
   rfl_matchups_history %>%
-    dplyr::select(-label, -dplyr::ends_with("_pctl")) %>%
+    dplyr::select(-label, -dplyr::ends_with("_pctl"), -franchise_elo_postgame, -division, -conference_id) %>%
     matchup_table() %>%
     gt::cols_move(win, franchise_name) %>%
     gt::cols_move(c(pp, eff), franchise_score) %>%
@@ -98,7 +98,7 @@ output$rfl_matchup_history_table <- gt::render_gt({
 
 output$rfl_matchup_upsets_table <- gt::render_gt({
   rfl_matchups_history %>%
-    dplyr::select(-win, -total_elo_shift, -total_points, -total_elo, -score_diff, -score_diff_pct, -label, -dplyr::ends_with("ppg_score"), -dplyr::ends_with("ppg_diff"), -dplyr::ends_with("_pctl"), -pp, -eff, -all_play_wins) %>%
+    dplyr::select(-win, -total_elo_shift, -total_points, -total_elo, -score_diff, -score_diff_pct, -label, -dplyr::ends_with("ppg_score"), -dplyr::ends_with("ppg_diff"), -dplyr::ends_with("_pctl"), -pp, -eff, -all_play_wins, -franchise_elo_postgame, -division, -conference_id) %>%
     dplyr::filter(upset == 1 & elo_diff < -100) %>%
     dplyr::arrange(elo_diff) %>%
     matchup_table() %>%

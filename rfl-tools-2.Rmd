@@ -732,11 +732,8 @@ shiny::fluidPage(
 )
 ```
 
+```{r player-fantasy-finishes, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # Fantasy Finishes {data-navmenu="Spieler"}
-
-## 
-
-```{r player-fantasy-finishes, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_player_fantasy_finishes <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -765,12 +762,8 @@ shiny::fluidPage(
 )
 ```
 
-
+```{r player-advance-rates, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 # Advance Rates {data-navmenu="Spieler"}
-
-## 
-
-```{r player-advance-rates, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_player_advance_rates <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {

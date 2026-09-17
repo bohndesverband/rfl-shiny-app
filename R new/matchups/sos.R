@@ -317,13 +317,14 @@ add_data_color <- function(df, color, data) {
     )
 }
 
+# schedule ----
 output$rfl_schedule <- gt::render_gt({
   #req(new_season_march != new_season_sept)
 
   latest_week <- dplyr::case_when(
     current_week_thu == 0 ~ 1,
     current_week_thu > 13 ~ 13,
-    TRUE ~ current_week
+    TRUE ~ current_week - 1
   )
 
   #latest_week <- 1
@@ -467,6 +468,10 @@ output$rfl_schedule <- gt::render_gt({
 
 # matchup over/underachievments ----
 output$rfl_fpts_abv_avg <- plotly::renderPlotly({
+  shiny::validate(
+    shiny::need(current_week >= 3, "Es sind für diesen Zeitraum keine Daten vorhanden")
+  )
+
   plot_data <- rfl_matchups_history %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     #dplyr::filter(season == 2025) %>%

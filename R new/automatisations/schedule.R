@@ -132,7 +132,7 @@ DBI::dbWriteTable(con, "sos", sos, overwrite = TRUE)
 
 # inseason
 schedule <- rfl_schedule_data %>%
-  #filter(season == 2025) %>%
+  #filter(season == 2026) %>%
   # add standing
   dplyr::left_join(
     rfl_standing_data %>%
