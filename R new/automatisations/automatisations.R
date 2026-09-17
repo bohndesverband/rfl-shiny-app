@@ -3,8 +3,8 @@ library(duckdb)
 
 con <- DBI::dbConnect(duckdb::duckdb(), dbdir = file.path("data", "data.duckdb"))
 
-source("R new/automatisations/elo.R", local = TRUE)
 source("R new/automatisations/league.R", local = TRUE)
+source("R new/automatisations/elo.R", local = TRUE)
 source("R new/automatisations/mfl_players.R", local = TRUE) # nach elo
 source("R new/automatisations/player_scores.R", local = TRUE)
 source("R new/automatisations/roster.R", local = TRUE) # nach elo
