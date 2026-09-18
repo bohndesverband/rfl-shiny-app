@@ -640,9 +640,9 @@ hr {
   padding-inline: 2rem;
 
   /*&:has(.girafe),*/
-  &:has(.shiny-plot-output) {
+  /*&:has(.shiny-plot-output) {
     padding-inline: 0;
-  }
+  }*/
 }
 
 .gt_table {

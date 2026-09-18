@@ -464,8 +464,6 @@ shiny::fluidPage(
 
 # ELO Ranking {data-navmenu="Teams"}
 
-##
-
 ```{r team-elo, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_team_elo <- shiny::reactiveVal(FALSE)
 
@@ -478,30 +476,7 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shiny::fluidRow(
-        shiny::column(
-          shinycssloaders::withSpinner(ggiraph::girafeOutput("running_elo")),
-          width = 12
-        ),
-        style = "height: 830px"
-      ),
-      shiny::fluidRow(
-        shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput("elo_change")),
-          width = 12
-        ),
-        style = "height: 1230px"
-      ),
-      width = 8
-    ),
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("elo_ranking_table")),
-      width = 4
-    ),
-    style = "height: 830px"
-  )
+  shiny::uiOutput("team_elo")
 )
 ```
 

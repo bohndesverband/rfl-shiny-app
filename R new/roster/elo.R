@@ -33,6 +33,7 @@ elo_change <- running_elo %>%
   dplyr::ungroup()
 
 output$running_elo <- ggiraph::renderGirafe({
+
   plot <- ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
     ggiraph::geom_line_interactive(
       ggplot2::aes(group = franchise_id, tooltip = franchise_name, data_id = franchise_id),
@@ -51,25 +52,60 @@ output$running_elo <- ggiraph::renderGirafe({
       ggplot2::aes(tooltip = paste("Aktuelle ELO:", franchise_elo_postgame), color = franchise_name),
       size = 5
     ) +
-
     plot_elo_defaults +
-
     ggplot2::labs(
       title = paste("RFL ELO Rating"),
-      subtitle = paste("Total Avg Opp Win % - maximale Total Avg Opp Win % der Liga.\nJe niedriger der Wert, desto leichter ist der SOS im Vergleich zum Rest der Liga."),
     )
 
-  ggiraph::girafe(ggobj = plot, width_svg = 16, height_svg = 13) %>%
-    ggiraph::girafe_options(
-      ggiraph::opts_hover(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
-      ggiraph::opts_hover_inv(css = "opacity:0.2"),
-      ggiraph::opts_selection(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
-      ggiraph::opts_selection_inv(css = "opacity:0.2")
-    )
+  girafe_default_output(plot, height = 12)
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-# TODO: toggle einbauen, um nur ELO veränderung anzusehen ohne den jährlichen reset
+output$elo_leaders <- ggiraph::renderGirafe({
+  data <- rfl_team_elo %>%
+    dplyr::group_by(season, week) %>%
+    dplyr::filter(franchise_elo_postgame == max(franchise_elo_postgame)) %>%
+    dplyr::select(season, week, franchise_id, franchise_name, franchise_elo_postgame) %>%
+    dplyr::distinct() %>%
+    dplyr::left_join(
+      rfl_standing_data %>%
+        dplyr::select(season, week, franchise_id, pp_total, all_play_wins_total) %>%
+        dplyr::distinct(),
+      by = c("season", "week", "franchise_id")
+    ) %>%
+    dplyr::filter(pp_total == max(pp_total)) %>%
+    dplyr::filter(all_play_wins_total == max(all_play_wins_total)) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(week = dplyr::row_number()) %>%
+    dplyr::group_by(franchise_id) %>%
+    dplyr::mutate(count = n()) %>%
+    dplyr::ungroup()
+
+  plot <- ggplot2::ggplot(data, ggplot2::aes(x = week, y = 1)) +
+    ggiraph::geom_col_interactive(
+      ggplot2::aes(tooltip = paste0(franchise_name, "\n", count, " Wochen"), fill = franchise_name, data_id = franchise_id)
+    ) +
+    ggplot2::scale_fill_discrete(guide = "none") +
+    ggplot2::scale_x_continuous(expand = c(0, 0)) +
+    ggplot2::scale_y_continuous(expand = c(0, 0)) +
+    plot_defaults +
+    ggplot2::theme(
+      panel.grid.major = ggplot2::element_blank(),
+      panel.grid.minor = ggplot2::element_blank(),
+      axis.text = ggplot2::element_blank()
+    ) +
+    ggplot2::labs(
+      title = "RFL ELO Leader pro Woche",
+      x = "Woche",
+      y = "",
+      fill = ""
+    )
+
+  girafe_default_output(plot, height = 2)
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# TODO: auswahl iwie hervorheben
 
 top_pctl <- elo_change %>%
   dplyr::filter(elo_shift > 0) %>%
@@ -105,3 +141,37 @@ output$elo_change <- shiny::renderPlot({
     )
 }, height = 1200) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# ui output ----
+output$team_elo <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1("RFL Team ELO"),
+    shiny::fluidRow(
+      shiny::column(
+        shiny::fluidRow(
+          shiny::column(
+            shinycssloaders::withSpinner(ggiraph::girafeOutput("running_elo")),
+            width = 12
+          )
+        ),
+        shiny::fluidRow(
+          shiny::column(
+            shinycssloaders::withSpinner(ggiraph::girafeOutput("elo_leaders")),
+            width = 12
+          )
+        ),
+        shiny::fluidRow(
+          shiny::column(
+            shinycssloaders::withSpinner(shiny::plotOutput("elo_change")),
+            width = 12
+          )
+        ),
+        width = 8
+      ),
+      shiny::column(
+        shinycssloaders::withSpinner(gt::gt_output("elo_ranking_table")),
+        width = 4
+      )
+    )
+  )
+})
