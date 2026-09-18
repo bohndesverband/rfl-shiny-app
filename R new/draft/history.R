@@ -3,7 +3,7 @@
 ## helper ----
 draft_history_best_picks_helper <- function(df, group) {
   df %>%
-    dplyr::filter(season > 2016 & season < new_season_march) %>%
+    dplyr::filter(season > 2016 & season <= season_before_wk_2) %>%
     dplyr::group_by({{group}}, franchise_id) %>%
     dplyr::summarise(
       franchise_name = dplyr::last(franchise_name),
@@ -85,7 +85,7 @@ highlight_selected_teams <- function(tbl_data, tbl, selected_teams) {
 # best picks ----
 output$draft_history_top_picks <- gt::render_gt({
   tbl_data <- rfl_drafts_rookies %>%
-    dplyr::filter(season < new_season_march) %>%
+    dplyr::filter(season <= season_before_wk_2) %>%
     #dplyr::filter(pos_grouped %in% c("QB")) %>%
     dplyr::group_by(season, pos_grouped) %>%
     dplyr::mutate(
@@ -273,7 +273,7 @@ output$draft_history_ranking <- gt::render_gt({
 ## picks ----
 output$draft_history_voe <- ggiraph::renderGirafe({
   data <- rfl_drafts_data %>%
-    dplyr::filter(season > 2016 & season < new_season_march & pos != "PK" & !is.na(player_name))
+    dplyr::filter(season > 2016 & season <= season_before_wk_2 & pos != "PK" & !is.na(player_name))
 
   plot <- ggplot2::ggplot(data, ggplot2::aes(x = overall, y = voe, size = pvar_exp)) +
     plot_voe_defaults(
@@ -294,7 +294,7 @@ output$draft_history_voe <- ggiraph::renderGirafe({
         data = subset(data, franchise_id %in% input$selectRflTeams),
         ggplot2::aes(
           tooltip = paste(
-            player_name, paste0("(", pos_grouped, ", ", team, ")"),
+            season, player_name, paste0("(", pos_grouped, ", ", team, ")"),
             "\n", franchise_name,
             "\nPick: ", paste0(round, ".", pick, season, " (#", overall, ")"),
             "\npVAR:", pvar,
@@ -315,7 +315,7 @@ output$draft_history_voe <- ggiraph::renderGirafe({
       ggiraph::geom_point_interactive(
         ggplot2::aes(
           tooltip = paste(
-            player_name, paste0("(", pos_grouped, ", ", team, ")"),
+            season, player_name, paste0("(", pos_grouped, ", ", team, ")"),
             "\n", franchise_name,
             "\nPick: ", paste0(round, ".", pick, " ", season, " (#", overall, ")"),
             "\npVAR:", pvar,
@@ -348,7 +348,7 @@ output$draft_history_voe_classes <- ggiraph::renderGirafe({
 # pVARexp ----
 output$draft_history_voe_exp <- reactable::renderReactable({
   drafts_data <- rfl_drafts_data %>%
-    dplyr::filter(season > 2016 & season < new_season_march & !is.na(player_name) & pos_grouped != "PK") %>%
+    dplyr::filter(season > 2016 & season <= season_before_wk_2 & !is.na(player_name) & pos_grouped != "PK") %>%
     dplyr::select(franchise_id, franchise_name, pos_grouped, voe, pvar_exp, asset_name_with_subline, pick_cat_badge)
 
   render_draft_history_table(
@@ -361,7 +361,7 @@ output$draft_history_voe_exp <- reactable::renderReactable({
 # reaches / steals nach RFL Picks
 output$draft_reaches <- ggiraph::renderGirafe({
   plot <- rfl_drafts_data %>%
-    dplyr::filter(season > 2016 & season < new_season_march & !is.na(player_name)) %>%
+    dplyr::filter(season > 2016 & season <= season_before_wk_2 & !is.na(player_name)) %>%
     #dplyr::filter(pick_value >= input$selectDraftStealTreshold) %>%
     dplyr::select(season, mfl_id, player_name_with_info, min_pick, max_pick, voe) %>%
     dplyr::distinct() %>%
@@ -374,7 +374,7 @@ output$draft_reaches <- ggiraph::renderGirafe({
     ggiraph::geom_point_interactive(
       ggplot2::aes(
         tooltip = paste(
-          player_name_with_info,
+          season, player_name_with_info,
           "\n1. Copy:", min_pick,
           "\n3. Copy:", max_pick
         ),
@@ -448,7 +448,7 @@ output$draft_history_picks_by_round <- shiny::renderPlot({
 
 ## grades ----
 rfl_draft_class_grades <- rfl_draft_grades %>%
-  dplyr::filter(pick == "klasse" & draftclass == 2025) %>%
+  dplyr::filter(pick == "klasse") %>%
   dplyr::group_by(team_id, franchise_name, draft_class) %>%
   dplyr::filter(year == max(year)) %>%
   dplyr::summarise(
@@ -553,7 +553,7 @@ output$draft_grades_overview_plot <- ggiraph::renderGirafe({
 # ui output ----
 output$draft_history <- shiny::renderUI({
   shiny::fluidPage(
-    htmltools::h1(paste0("RFL Draft History 2017-", new_season_march - 1)),
+    htmltools::h1(paste0("RFL Draft History 2017-", season_before_wk_2)),
     shiny::fluidRow(
       shiny::column(
         # TODO: link zu pVAR

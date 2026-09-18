@@ -41,7 +41,7 @@ rfl_draft_classes_sum_filtered <- shiny::reactive({
 # draftpicks ----
 output$draft_classes_picks <- reactable::renderReactable({
   shiny::validate(
-    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+    shiny::need(input$selectYear <= season_before_wk_2, "Noch keine Daten vorhanden")
   )
 
   data <- rfl_draft_classes_filtered() %>%
@@ -62,14 +62,14 @@ output$draft_classes_picks <- reactable::renderReactable({
     ),
     sortable = TRUE,
     filterable = TRUE,
-    height = 745
+    height = 775
   )
 })
 
 # impact ----
 output$draft_classes_impact <- ggiraph::renderGirafe({
   shiny::validate(
-    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+    shiny::need(input$selectYear <= season_before_wk_2, "Noch keine Daten vorhanden")
   )
 
   plot <- rfl_draft_classes_sum_filtered() %>%
@@ -81,7 +81,7 @@ output$draft_classes_impact <- ggiraph::renderGirafe({
 # draftklassen ----
 output$draft_classes_teams <- reactable::renderReactable({
   shiny::validate(
-    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+    shiny::need(input$selectYear <= season_before_wk_2, "Noch keine Daten vorhanden")
   )
 
   data <- rfl_draft_classes_sum_filtered() %>%
@@ -126,7 +126,7 @@ rfl_draft_voe <- shiny::reactive({
 
 output$draft_classes_voe <- ggiraph::renderGirafe({
   shiny::validate(
-    shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
+    shiny::need(input$selectYear <= season_before_wk_2, "Noch keine Daten vorhanden")
   )
 
   plot <- ggplot2::ggplot(rfl_draft_classes_filtered(), ggplot2::aes(x = overall, y = pvar, color = factor(pos_grouped, positions_grouped))) +
