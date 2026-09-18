@@ -23,6 +23,7 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
 }) %>%
   dplyr::group_by(season, player_id) %>%
   dplyr::mutate(
+    games = n(),
     ppg = round(mean(points, na.rm = TRUE), 2),
     points_ppg_diff = round(points - ppg, 2)
   )

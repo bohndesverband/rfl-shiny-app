@@ -1,10 +1,9 @@
 rfl_roster_data <- read_data_table("rfl_roster_data")
 
-rfl_current_roster <- ffscrapr::ff_rosters(mfl_connection) %>%
-  dplyr::mutate(
-    pos = dplyr::case_when(
-      pos %in% c("DT", "DE") ~ "DL",
-      pos %in% c("CB", "S") ~ "DB",
-      TRUE ~ pos
-    )
-  )
+rfl_current_roster <- rfl_roster_data %>%
+  dplyr::filter(
+    season == new_season_march
+  ) %>%
+  dplyr::filter(week == max(week))
+
+# rfl_ir_data <- read_data_table("rfl_ir_data")

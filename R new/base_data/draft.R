@@ -13,13 +13,13 @@ rfl_drafts_rookies <- rfl_drafts_data %>%
   dplyr::filter(season > 2016 & is_rookie) # nur rookie drafts & rookies
 
 rfl_draft_pvar_exp <- rfl_drafts_data %>%
-  dplyr::filter(season > 2016 & season < new_season_march - 1) %>%
+  dplyr::filter(season > 2016 & season <= season_before_wk_2) %>%
   dplyr::select(overall, pvar_exp) %>%
   dplyr::distinct()
 
 ## berechne werte für gesamte klasse ----
 rfl_draft_classes_sum <- rfl_drafts_data %>%
-  dplyr::filter(season > 2016 & season < new_season_march) %>%
+  dplyr::filter(season > 2016 & season <= season_before_wk_2) %>%
   #filter(season == 2025) %>%
   dplyr::group_by(season, franchise_id, franchise_name, class) %>%
   dplyr::summarise(

@@ -115,7 +115,7 @@ rfl_schedule_data <- readr::read_csv("https://raw.githubusercontent.com/bohndesv
 DBI::dbWriteTable(con, "rfl_schedule_data", rfl_schedule_data, overwrite = TRUE)
 
 # preseason
-sos <- rfl_drafts_data <- purrr::map_df(2024:var_season, function(x) {
+sos <- purrr::map_df(2024:var_season, function(x) {
   vroom::vroom(
     glue::glue("https://raw.githubusercontent.com/bohndesverband/rfl-data/refs/heads/main/data/schedule/rfl-sos-{x}.csv"),
     col_types = "cdddddcc"
