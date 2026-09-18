@@ -304,8 +304,9 @@ girafe_default_output <- function(plot, width = 16, height = 9) {
   ggiraph::girafe(ggobj = plot, width_svg = width, height_svg = height) %>%
     ggiraph::girafe_options(
       ggiraph::opts_sizing(rescale = TRUE),
-      ggiraph::opts_hover(css = paste0("fill:", color_grey_dark, ";stroke:", color_bg, ";")),
-      ggiraph::opts_hover_inv(css = "opacity:0.4"),
-      ggiraph::opts_hover_key(css = "opacity:1")
+      ggiraph::opts_hover(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_hover_inv(css = "opacity:0.2"),
+      ggiraph::opts_selection(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),
+      ggiraph::opts_selection_inv(css = "opacity:0.2")
     )
 }

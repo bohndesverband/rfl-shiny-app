@@ -310,6 +310,48 @@ scale_rainbow_text <- function(domain_values) {
   )
 }
 
+scale_red_white <- function(domain_values, reverse = FALSE) {
+  pal <- scales::col_numeric(
+    palette = c(color_red, color_bg),
+    domain = domain_values,
+    na.color = "transparent",
+    reverse = reverse
+  )
+
+  function(x) {
+    result <- pal(x)
+
+    low_color <- if (reverse) color_blue else color_red
+    high_color <- if (reverse) color_red else color_blue
+
+    result[x < min(domain_values)] <- low_color
+    result[x > max(domain_values)] <- high_color
+
+    result
+  }
+}
+
+scale_blue_white <- function(domain_values, reverse = FALSE) {
+  pal <- scales::col_numeric(
+    palette = c(color_blue, color_bg),
+    domain = domain_values,
+    na.color = "transparent",
+    reverse = reverse
+  )
+
+  function(x) {
+    result <- pal(x)
+
+    low_color <- if (reverse) color_blue else color_red
+    high_color <- if (reverse) color_red else color_blue
+
+    result[x < min(domain_values)] <- low_color
+    result[x > max(domain_values)] <- high_color
+
+    result
+  }
+}
+
 scale_red_green <- function(domain_values, reverse = FALSE) {
   pal <- scales::col_numeric(
     palette = c(color_red, color_green),
@@ -339,10 +381,11 @@ scale_green_red <- function(domain_values) {
   )
 }
 
-scale_red_blue <- function(domain_values) {
-  scales::col_numeric(
+scale_red_blue <- function(domain_values, reverse = FALSE) {
+  pal <- scales::col_numeric(
     palette = c(color_red, color_blue),
     domain = domain_values,
-    na.color = "transparent"
+    na.color = "transparent",
+    reverse = reverse
   )
 }

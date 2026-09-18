@@ -507,61 +507,19 @@ shiny::fluidPage(
 
 # Roster Tiefe {data-navmenu="Teams"}
 
-##
-
-```{r team-depth, echo=FALSE, message=FALSE, warning=FALSE}
-loaded_data_team_depth <- shiny::reactiveVal(FALSE)
+```{r roster-depth, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_roster_depth <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
-  if (active_tab() == "#section-roster-tiefe" & !loaded_data_team_depth()) {
+  if (active_tab() == "#section-roster-tiefe" & !loaded_data_roster_depth()) {
     source("R new/roster/depth.R", local = TRUE)
     
-    loaded_data_team_depth(TRUE)
+    loaded_data_roster_depth(TRUE)
   }
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(plotly::plotlyOutput("roster_depth_season", height = "600px")),
-      width = 6
-    ),
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("roster_depth_weekly")),
-      width = 6
-    ),
-    style = "height: 600px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("depthChart")),
-      width = 3
-    ),
-    shiny::column(
-      shiny::fluidRow(
-        shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput("elo_vs_war")),
-          width = 12
-        ),
-        style = "height: 600px"
-      ),
-      shiny::fluidRow(
-        shiny::column(
-          shinycssloaders::withSpinner(shiny::plotOutput("fptsByAge")),
-          width = 12
-        ),
-        style = "height: 1200px"
-      ),
-      shiny::fluidRow(
-        shiny::column(
-          tags$h4("Roster nach Alter"),
-          shinycssloaders::withSpinner(gt::gt_output("rosterByAge")),
-          width = 12
-        )
-      ),
-      width = 9
-    )
-  )
+  shiny::uiOutput("roster_depth")
 )
 ```
 

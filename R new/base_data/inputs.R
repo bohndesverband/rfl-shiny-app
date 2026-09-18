@@ -106,6 +106,34 @@ shiny::observeEvent(active_tab(), {
   }
 })
 
+shiny::observeEvent(
+  list(active_tab(), input$selectYear),
+  {
+    tab <- active_tab()
+    year <- input$selectYear
+
+    if (length(tab) == 0 || length(year) == 0 || is.null(year) || is.na(year)) {
+      return()
+    }
+
+    if (tab == "#section-roster-tiefe" && year < season_before_wk_2) {
+      shiny::updateSliderInput(
+        session,
+        "selectRflGames",
+        max = 13,
+        value = 7
+      )
+    } else if (tab == "#section-roster-tiefe" && year == season_before_wk_2) {
+      shiny::updateSliderInput(
+        session,
+        "selectRflGames",
+        max = current_week - 1,
+        value = ifelse(current_week >= 13, 8, floor(current_week * 0.5))
+      )
+    }
+  }
+)
+
 # create preselection of mfl players ----
 mfl_players_preselection <- shiny::reactive({
   req(input$selectPosition)

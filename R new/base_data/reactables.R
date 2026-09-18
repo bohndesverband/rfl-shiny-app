@@ -341,12 +341,12 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
     sortable = TRUE,
     defaultSorted = "voe",
     defaultSortOrder = "desc",
-    height = 745,
+    height = 775,
     ...
   )
 }
 
-## draft grades defauls -----
+## draft grades defaults -----
 draft_grades_reactable <- function(
     data,
     writers,

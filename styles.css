@@ -28,7 +28,8 @@
 .sidebar:has(~ #dashboard-container #section-magic-number.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData{
+.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData{
   display: inline-block;
 }
 
@@ -79,7 +80,8 @@
   }
 }
 
-.sidebar:has(~ #dashboard-container #section-report.active) {
+.sidebar:has(~ #dashboard-container #section-report.active),
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active){
   .alert.war,
   .alert.elo-player{
     display: block;
@@ -120,7 +122,7 @@
 
 /* Roster Depth */
 /* IR Analyse */
-.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflGames-label)),
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflGames-label)):not(:has(#selectYear)),
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
   display: none;
 }
@@ -457,6 +459,11 @@
   color: var(--color__grey--mid);
 }
 
+.Reactable > .rt-table > .rt-tbody:has(> .rt-tr-group > .rt-tr-details) > .rt-tr-group:not(:has(> .rt-tr-details)) {
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+  }
+
 /* tabellen header zentrieren */
 .rt-th {
   &[aria-label*="Pick"],
@@ -478,7 +485,11 @@
   &[aria-label*="Rank"],
   &[aria-label*="PPG"],
   &[aria-label*="Finish"],
-  &[aria-label*="Career"] {
+  &[aria-label*="Career"],
+  &[aria-label*="Alter"],
+  &[aria-label*="ELO"],
+  &[aria-label*="WAR"],
+  &[aria-label*="Gestartet"] {
     .rt-th-inner > * {
         justify-content: center !important;
 
