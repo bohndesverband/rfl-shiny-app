@@ -123,7 +123,7 @@
 /* Roster Depth */
 /* IR Analyse */
 .sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectRflGames-label)):not(:has(#selectYear)),
-.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)) {
+.sidebar:has(~ #dashboard-container #section-ir-analyse.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectYears-label)) {
   display: none;
 }
 

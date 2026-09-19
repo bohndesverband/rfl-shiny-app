@@ -82,6 +82,7 @@ rfl_fantasy_finishes_season <- rfl_fantasy_finishes_weekly %>%
     games = n(),
     .groups = "drop"
   ) %>%
+  dplyr::mutate(ppg = round(points / games, 2)) %>%
   create_ranks(c("season", "pos"), "season")
 
 DBI::dbWriteTable(con, "rfl_fantasy_finishes_season", rfl_fantasy_finishes_season, overwrite = TRUE)

@@ -6,4 +6,4 @@ rfl_current_roster <- rfl_roster_data %>%
   ) %>%
   dplyr::filter(week == max(week))
 
-# rfl_ir_data <- read_data_table("rfl_ir_data")
+rfl_ir_data <- read_data_table("rfl_ir_data")
