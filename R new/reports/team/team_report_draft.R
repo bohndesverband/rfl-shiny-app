@@ -63,7 +63,7 @@ output$draft_classes_team <- reactable::renderReactable({
       )
     ),
     column_groups = list(
-      reactable::colGroup(name = paste0("2017-", new_season_march - 1), columns = c("rank", "voe_pctl")),
+      reactable::colGroup(name = paste0("2017-", season_before_wk_2), columns = c("rank", "voe_pctl")),
       reactable::colGroup(name = "VOE", columns = c("rank_season", "voe"))
     ),
     rowStyle = function(index) {
@@ -99,7 +99,7 @@ output$draft_classes_team_chart <- ggiraph::renderGirafe({
 
     plot_defaults +
     plot_clean+
-    ggplot2::scale_y_continuous(labels = c(2017:new_season_march - 1), breaks = c(2017:new_season_march - 1)) +
+    ggplot2::scale_y_continuous(labels = c(2017:season_before_wk_2), breaks = c(2017:season_before_wk_2)) +
     ggplot2::labs(
       title = paste0("Total VOE aller RFL Draftklassen von 2017-", new_season_march - 1),
       subtitle = "Jeder Punkt ist eine RFL Draftklasse.\nJe größer der Punkt, desto mehr Picks hatte die Draftklasse.",

@@ -1,68 +1,30 @@
 source("R new/rankings/standing.R", local = TRUE)
 source("R new/rankings/ranking_tables.R", local = TRUE)
 
-running_elo <- rfl_team_elo %>%
-  dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_pregame, franchise_elo_postgame) %>%
-  dplyr::distinct() %>%
-  dplyr::group_by(franchise_id) %>%
-  dplyr::arrange(season, week) %>%
-  dplyr::mutate(game = dplyr::row_number()) %>%
-  dplyr::ungroup()
+# running elo----
+## data ----
+running_elo <- shiny::reactive({
+  running_elo <- rfl_team_elo %>%
+    dplyr::filter(season <= input$selectYear) %>%
+    dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_pregame, franchise_elo_postgame) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(franchise_id) %>%
+    dplyr::arrange(season, week) %>%
+    dplyr::mutate(game = dplyr::row_number()) %>%
+    dplyr::ungroup()
+})
 
-running_elo_vlines <- running_elo %>%
-  dplyr::select(season, game) %>%
-  dplyr::distinct() %>%
-  dplyr::group_by(season) %>%
-  dplyr::arrange(game) %>%
-  dplyr::mutate(vline = ifelse(dplyr::row_number() == 1 & season != 2016, 1, 0))
+running_elo_vlines <- shiny::reactive({
+  running_elo_vlines <- running_elo() %>%
+    dplyr::select(season, game) %>%
+    dplyr::distinct() %>%
+    dplyr::group_by(season) %>%
+    dplyr::arrange(game) %>%
+    dplyr::mutate(vline = ifelse(dplyr::row_number() == 1 & season != 2016, 1, 0))
+})
 
-elo_change <- running_elo %>%
-  dplyr::filter(season == max(season)) %>%
-  dplyr::filter(week == min(week) | week == max(week)) %>%
-  dplyr::group_by(franchise_id) %>%
-  dplyr::arrange(week) %>%
-  dplyr::mutate(
-  #  xmax = max(game),
-  #  xmin = min(game),
-      elo_start = ifelse(week == min(week), franchise_elo_pregame, dplyr::lag(franchise_elo_postgame)),
-      elo_end = ifelse(week == max(week), franchise_elo_postgame, dplyr::lead(franchise_elo_postgame)),
-      elo_shift = elo_end - elo_start,
-      elo_shift_label = sprintf("%+d", elo_shift)
-  ) %>%
-  dplyr::filter(dplyr::row_number() == 1) %>%
-  dplyr::ungroup()
-
-output$running_elo <- ggiraph::renderGirafe({
-
-  plot <- ggplot2::ggplot(running_elo, ggplot2::aes(x = game, y = franchise_elo_postgame)) +
-    ggiraph::geom_line_interactive(
-      ggplot2::aes(group = franchise_id, tooltip = franchise_name, data_id = franchise_id),
-      alpha = 0.5, color = color_grey_mid, linewidth = 0.5
-    ) +
-
-    ggplot2::geom_vline(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(xintercept = game), color = color_grey_light, linewidth = 0.5) +
-    ggplot2::geom_text(data = subset(running_elo_vlines, vline == 1), ggplot2::aes(label = season, x = game), nudge_x = 3, y = 1300, color = color_grey_dark, size = 4) +
-
-    ggalt::geom_xspline(data = subset(running_elo, franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions)), ggplot2::aes(color = franchise_name), spline_shape = -0.5) +
-    ggplot2::aes(lwd = 1.2) +
-    ggplot2::scale_linewidth_identity() +
-
-    ggiraph::geom_point_interactive(
-      data = subset(running_elo, (franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions)) & (game == min(game) | game == max(game))),
-      ggplot2::aes(tooltip = paste("Aktuelle ELO:", franchise_elo_postgame), color = franchise_name),
-      size = 5
-    ) +
-    plot_elo_defaults +
-    ggplot2::labs(
-      title = paste("RFL ELO Rating"),
-    )
-
-  girafe_default_output(plot, height = 12)
-}) %>%
-  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
-
-output$elo_leaders <- ggiraph::renderGirafe({
-  data <- rfl_team_elo %>%
+elo_leaders_weekly <- shiny::reactive({
+  elo_leaders_weekly <- rfl_team_elo %>%
     dplyr::group_by(season, week) %>%
     dplyr::filter(franchise_elo_postgame == max(franchise_elo_postgame)) %>%
     dplyr::select(season, week, franchise_id, franchise_name, franchise_elo_postgame) %>%
@@ -76,44 +38,80 @@ output$elo_leaders <- ggiraph::renderGirafe({
     dplyr::filter(pp_total == max(pp_total)) %>%
     dplyr::filter(all_play_wins_total == max(all_play_wins_total)) %>%
     dplyr::ungroup() %>%
-    dplyr::mutate(week = dplyr::row_number()) %>%
+    dplyr::mutate(game = dplyr::row_number()) %>%
     dplyr::group_by(franchise_id) %>%
     dplyr::mutate(count = n()) %>%
     dplyr::ungroup()
+})
 
-  plot <- ggplot2::ggplot(data, ggplot2::aes(x = week, y = 1)) +
-    ggiraph::geom_col_interactive(
-      ggplot2::aes(tooltip = paste0(franchise_name, "\n", count, " Wochen"), fill = franchise_name, data_id = franchise_id)
+#output ----
+output$running_elo <- ggiraph::renderGirafe({
+  plot <- ggplot2::ggplot(running_elo(), ggplot2::aes(x = game, y = franchise_elo_postgame)) +
+    ggiraph::geom_tile_interactive(
+      data = elo_leaders_weekly(),
+      ggplot2::aes(y = max(franchise_elo_postgame) + 50, tooltip = paste0(franchise_name, "\n", count, " Wochen"), fill = franchise_name, data_id = franchise_id),
+      height = 20
     ) +
+
     ggplot2::scale_fill_discrete(guide = "none") +
-    ggplot2::scale_x_continuous(expand = c(0, 0)) +
-    ggplot2::scale_y_continuous(expand = c(0, 0)) +
-    plot_defaults +
-    ggplot2::theme(
-      panel.grid.major = ggplot2::element_blank(),
-      panel.grid.minor = ggplot2::element_blank(),
-      axis.text = ggplot2::element_blank()
+
+    ggiraph::geom_line_interactive(
+      ggplot2::aes(group = franchise_id, tooltip = franchise_name, data_id = franchise_id),
+      alpha = 0.5, color = color_grey_mid, linewidth = 0.5
     ) +
+
+    geom_hline(ggplot2::aes(yintercept = mean(franchise_elo_postgame)), color = color_grey_mid, linetype = "dashed", linewidth = 0.5, alpha = 0.75) +
+    ggplot2::geom_vline(data = subset(running_elo_vlines(), vline == 1), ggplot2::aes(xintercept = game), color = color_grey_light, linewidth = 0.5) +
+    ggplot2::geom_text(data = subset(running_elo_vlines(), vline == 1), ggplot2::aes(label = season, x = game), nudge_x = 3, y = 1300, color = color_grey_dark, size = 4) +
+
+    ggalt::geom_xspline(data = subset(running_elo(), franchise_id %in% c(input$selectRflTeams)), ggplot2::aes(color = franchise_name), spline_shape = -0.5) +
+    ggplot2::aes(lwd = 1.2) +
+    ggplot2::scale_linewidth_identity() +
+
+    ggiraph::geom_point_interactive(
+      data = subset(running_elo(), (franchise_id %in% c(input$selectRflTeams)) & (game == min(game) | game == max(game))),
+      ggplot2::aes(tooltip = paste("Aktuelle ELO:", franchise_elo_postgame), color = franchise_name),
+      size = 5
+    ) +
+    plot_elo_defaults +
     ggplot2::labs(
-      title = "RFL ELO Leader pro Woche",
-      x = "Woche",
-      y = "",
-      fill = ""
+      title = paste("RFL ELO Rating", input$selectYear),
     )
 
-  girafe_default_output(plot, height = 2)
+  girafe_default_output(plot, height = 12)
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-# TODO: auswahl iwie hervorheben
+# TODO: auswahl elo leader iwie hervorheben
 
-top_pctl <- elo_change %>%
-  dplyr::filter(elo_shift > 0) %>%
-  dplyr::summarise(top_pctl = quantile(elo_end, 0.8)) %>%
-  dplyr::pull(top_pctl)
+# elo change ----
+## data ----
+elo_change <- shiny::reactive({
+  elo_change <- running_elo() %>%
+    dplyr::filter(season == max(season)) %>%
+    dplyr::filter(week == min(week) | week == max(week)) %>%
+    dplyr::group_by(franchise_id) %>%
+    dplyr::arrange(week) %>%
+    dplyr::mutate(
+      #  xmax = max(game),
+      #  xmin = min(game),
+      elo_start = ifelse(week == min(week), franchise_elo_pregame, dplyr::lag(franchise_elo_postgame)),
+      elo_end = ifelse(week == max(week), franchise_elo_postgame, dplyr::lead(franchise_elo_postgame)),
+      elo_shift = elo_end - elo_start,
+      elo_shift_label = sprintf("%+d", elo_shift)
+    ) %>%
+    dplyr::filter(dplyr::row_number() == 1) %>%
+    dplyr::ungroup()
+})
 
+## output ----
 output$elo_change <- shiny::renderPlot({
-  ggplot2::ggplot(elo_change, ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +
+  top_pctl <- elo_change() %>%
+    dplyr::filter(elo_shift > 0) %>%
+    dplyr::summarise(top_pctl = quantile(elo_end, 0.8)) %>%
+    dplyr::pull(top_pctl)
+
+  ggplot2::ggplot(elo_change(), ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +
     ggplot2::geom_vline(xintercept = top_pctl, color = color_grey_mid) +
     ggplot2::geom_text(label = "Contender", x = top_pctl + 5, y = 1, color = color_grey_mid, hjust = 0) +
     ggforce::geom_link(aes(x = elo_start, xend = elo_end, yend = franchise_name, linewidth = ggplot2::after_stat(index))) +
@@ -125,11 +123,11 @@ output$elo_change <- shiny::renderPlot({
     ggplot2::scale_color_discrete(type = c(color_grey_mid, color_red), guide = "none") +
     ggplot2::scale_linewidth_continuous(guide = "none") +
 
-    ggplot2::scale_x_continuous(limits = c(min(elo_change$elo_end) - 100, max(elo_change$elo_end) + 100)) +
+    ggplot2::scale_x_continuous(limits = c(min(elo_change()$elo_end) - 100, max(elo_change()$elo_end) + 100)) +
 
     plot_defaults +
     ggplot2::labs(
-      title = "ELO Veränderung zum Saisonbeginn",
+      title = paste("ELO Veränderung zum Saisonbeginn", input$selectYear),
       subtitle = "Der Schweif symbolisiert die ELO Veränderung vom Saisonbeginn zum aktuellen Stand,\nwobei das große Ende des Schweifs den Ist-Stand darstellt.",
       x = "ELO"
     ) +
@@ -151,12 +149,6 @@ output$team_elo <- shiny::renderUI({
         shiny::fluidRow(
           shiny::column(
             shinycssloaders::withSpinner(ggiraph::girafeOutput("running_elo")),
-            width = 12
-          )
-        ),
-        shiny::fluidRow(
-          shiny::column(
-            shinycssloaders::withSpinner(ggiraph::girafeOutput("elo_leaders")),
             width = 12
           )
         ),

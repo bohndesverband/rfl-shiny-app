@@ -1,4 +1,5 @@
 #source("R new/reports/team/team_report_offseason.R", local = TRUE)
+source("R new/reports/team/team_report_roster.R", local = TRUE)
 source("R new/reports/team/team_report_schedule.R", local = TRUE)
 source("R new/reports/team/team_report_draft.R", local = TRUE)
 
@@ -35,6 +36,14 @@ source("R new/reports/team/team_report_draft.R", local = TRUE)
 output$team_report <- shiny::renderUI({
   shiny::fluidPage(
     htmltools::h1("Teambericht", paste(selected_team_name())),
+    htmltools::h2("Roster"),
+    shiny::fluidRow(
+      htmltools::h3("Schedule"),
+      shiny::column(
+        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_depth_chart")),
+        width = 12
+      )
+    ),
     htmltools::h2("Saison"),
     shiny::fluidRow(
       htmltools::h3("Schedule"),

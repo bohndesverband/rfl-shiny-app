@@ -49,8 +49,6 @@ plot_clean <- list(
 plot_elo_defaults <- list(
   ggplot2::aes(lwd = 1.2),
   ggplot2::scale_linewidth_identity(),
-  ggplot2::scale_fill_continuous(type = "gradient"),
-  ggplot2::scale_fill_gradientn(colors = c("#f1f4f6", color_grey_mid), guide = "none"),
   geom_hline(yintercept = 1500, color = color_grey_light, linewidth = 0.5, alpha = 0.75), # default elo
   ggplot2::scale_color_discrete(type = colors),
   plot_defaults,
@@ -73,7 +71,7 @@ plot_geom_point <- function(...) {
   ggplot2::geom_point(size = 5, ...)
 }
 
-plot_geom_xspline <- function(...) {
+plot_geom_xspline <- function(df, ...) {
   df %>%
     ggalt::geom_xspline(spline_shape = -0.2, ...) +
     ggplot2::aes(lwd = 1) +

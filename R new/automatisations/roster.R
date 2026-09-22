@@ -87,3 +87,101 @@ rfl_ir_data <- rfl_roster_data %>%
   dplyr::select(-roster_status)
 
 DBI::dbWriteTable(con, "rfl_ir_data", rfl_ir_data, overwrite = TRUE)
+
+# depth charts ----
+rfl_depth_chart_data <- rfl_roster_data %>%
+  #filter(franchise_id == "0016" & season == "2026") %>%
+  dplyr::group_by(season) %>%
+  dplyr::filter(week == max(week)) %>%
+  dplyr::group_by(season, franchise_id) %>%
+  dplyr::mutate(
+    war_rank_team = dplyr::dense_rank(dplyr::desc(war)),
+  ) %>%
+  dplyr::group_by(season, franchise_id, pos_grouped) %>%
+  dplyr::arrange(dplyr::desc(war)) %>%
+  dplyr::mutate(
+    depth_chart_rank_pos = dplyr::row_number(),
+    depth_chart = dplyr::case_when(
+      pos_grouped %in% c("QB", "TE", "PK") & depth_chart_rank_pos == 1 ~ paste0(pos_grouped, depth_chart_rank_pos),
+      pos_grouped %in% c("RB", "WR", "DL", "LB", "DB") & depth_chart_rank_pos <= 2 ~ paste0(pos_grouped, depth_chart_rank_pos),
+      pos_grouped %in% c("RB", "WR", "TE") ~ "FLEX",
+      pos_grouped %in% c("DL", "LB", "DB") ~ "IDP"
+    ),
+    coord_h = dplyr::case_when(
+      depth_chart == "QB1" ~ 8,
+      depth_chart == "RB1" ~ 6.5,
+      depth_chart == "RB2" ~ 9.5,
+      depth_chart == "WR1" ~ 3,
+      depth_chart == "WR2" ~ 13,
+      depth_chart == "TE1" ~ 5.5,
+      depth_chart == "PK1" ~ 13,
+      depth_chart == "DL1" ~ 6.5,
+      depth_chart == "DL2" ~ 9.5,
+      depth_chart == "LB1" ~ 8,
+      depth_chart == "LB2" ~ 5.5,
+      depth_chart == "DB1" ~ 5.5,
+      depth_chart == "DB2" ~ 10.5,
+    ),
+    coord_v = dplyr::case_when(
+      depth_chart == "QB1" ~ -3,
+      depth_chart == "PK1" ~ -5,
+      depth_chart %in% c("RB1", "RB2") ~ -5,
+      depth_chart %in% c("WR1", "WR2", "TE1") ~ -1,
+      depth_chart %in% c("DL1", "DL2") ~ 1,
+      depth_chart %in% c("LB1", "LB2") ~ 3,
+      depth_chart %in% c("DB1", "DB2") ~ 5
+    )
+  ) %>%
+  # flex spieler berechnen
+  dplyr::group_by(season, franchise_id, depth_chart) %>%
+  dplyr::mutate(
+    depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
+    depth_chart = dplyr::case_when(
+      is.na(depth_chart_rank_pos) | depth_chart == "FLEX" & depth_chart_rank > 2 | depth_chart == "IDP" & depth_chart_rank > 3 ~ NA,
+      TRUE ~ depth_chart
+    )
+  ) %>%
+  dplyr::group_by(season, franchise_id, depth_chart, pos_grouped) %>%
+  dplyr::mutate(
+    depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
+    depth_chart_pos = dplyr::case_when(
+      depth_chart %in% c("FLEX", "IDP") ~ paste0(depth_chart, pos_grouped, depth_chart_rank),
+      TRUE ~ depth_chart
+    ),
+    coord_h = dplyr::case_when(
+      depth_chart_pos %in% c("FLEXRB1") ~ 5.5,
+      depth_chart_pos %in% c("FLEXWR1", "FLEXTE1", "IDPLB1") ~ 10.5,
+      depth_chart_pos %in% c("FLEXRB2") ~ 10.5,
+      depth_chart_pos %in% c("FLEXTE2", "FLEXWR2", "IDPDB1") ~ 8,
+      depth_chart_pos %in% c("IDPDL1", "IDPLB3", "IDPDB2") ~ 3,
+      depth_chart_pos %in% c("IDPDL2", "IDPLB2", "IDPDB3") ~ 13,
+      TRUE ~ coord_h
+    ),
+    coord_v = dplyr::case_when(
+      depth_chart_pos %in% c("FLEXWR1", "FLEXTE1", "FLEXWR2", "FLEXTE2") ~ -1,
+      depth_chart_pos %in% c("FLEXRB1", "FLEXRB2") ~ -3,
+      depth_chart_pos %in% c("IDPDL1", "IDPDL2", "IDPDL3") ~ 1,
+      depth_chart_pos %in% c("IDPLB1", "IDPLB2", "IDPLB3") ~ 3,
+      depth_chart_pos %in% c("IDPDB1", "IDPDB2", "IDPDB3") ~ 5,
+      TRUE ~ coord_v
+    )
+  ) %>%
+  dplyr::group_by(season, franchise_id, pos_grouped) %>%
+  dplyr::arrange(dplyr::desc(war)) %>%
+  dplyr::mutate(
+    player = ifelse(!is.na(war), paste0(display_name, " (", war, " WAR)"), display_name),
+    pos_players = paste0(player, collapse = "\n")
+  ) %>%
+  dplyr::group_by(season, franchise_id, depth_chart) %>%
+  dplyr::arrange(dplyr::desc(war)) %>%
+  dplyr::mutate(
+    depth_chart = ifelse(depth_chart %in% c("FLEX", "IDP"), paste0(depth_chart, dplyr::row_number()), depth_chart)
+  ) %>%
+  dplyr::group_by(season, depth_chart) %>%
+  dplyr::mutate(
+    war_rank_league = dplyr::dense_rank(dplyr::desc(war))
+  ) %>%
+  dplyr::filter(!is.na(depth_chart)) %>%
+  dplyr::select(-war_rank_team, -depth_chart_rank_pos, -depth_chart_rank, -depth_chart_pos, -player)
+
+DBI::dbWriteTable(con, "rfl_depth_chart_data", rfl_depth_chart_data, overwrite = TRUE)

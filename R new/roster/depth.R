@@ -53,6 +53,9 @@ player_war_reactable <- function(selected_franchise_id, selected_position) {
   )
 }
 
+# TODO: ausgewähltes team hervorheben
+# TODO: auswahl per klick setzen
+
 position_coldef <- function(position) {
   reactable_coldef_bg(
     name = position,

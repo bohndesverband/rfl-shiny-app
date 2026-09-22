@@ -19,10 +19,10 @@ output$ir_weekly <- ggiraph::renderGirafe({
     ) %>%
     dplyr::group_by(franchise_id) %>%
     dplyr::arrange(season, week) %>%
-    dplyr::mutate(week = dplyr::row_number())
+    dplyr::mutate(new_week = dplyr::row_number())
 
-  plot <- ggplot2::ggplot(team_ir, ggplot2::aes(x = week, y = ppg_median, color = franchise_name)) +
-    ggplot2::geom_boxplot(ggplot2::aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
+  plot <- ggplot2::ggplot(team_ir, ggplot2::aes(x = new_week, y = ppg_median, color = franchise_name)) +
+    ggplot2::geom_boxplot(ggplot2::aes(group = new_week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
     ggiraph::geom_jitter_interactive(
       data = subset(team_ir, !franchise_id %in% c(input$selectRflTeams)),
       ggplot2::aes(tooltip = paste0(franchise_name, "\n WK ", week, " ", season), size = player_count, alpha = player_count, data_id = franchise_id),
@@ -42,7 +42,7 @@ output$ir_weekly <- ggiraph::renderGirafe({
 
     plot_defaults +
     plot_clean +
-    ggplot2::scale_x_continuous(limits = c(0.4, max(team_ir$week) + 0.4), labels = c(1:max(team_ir$week)), breaks = c(1:max(team_ir$week))) +
+    ggplot2::scale_x_continuous(limits = c(0.4, max(team_ir$new_week) + 0.4), labels = c(1:max(team_ir$new_week)), breaks = c(1:max(team_ir$new_week))) +
     ggplot2::labs(
       title = "Median FPts/G aller Spieler auf der NFL IR",
       x = "Woche",
@@ -58,7 +58,7 @@ output$ir_weekly <- ggiraph::renderGirafe({
       legend.position.inside = c(0.09, 0.8)
     )
 
-  if (current_week > 2) {
+  if (max(team_ir$new_week) > 1) {
     plot <- plot +
       ggalt::geom_xspline(data = subset(team_ir, franchise_id %in% c(input$selectRflTeams)), spline_shape = -0.5)
   }
@@ -82,7 +82,7 @@ output$lost_fpts <- reactable::renderReactable({
   reactable_default(
     data,
     columns = list(
-      franchise_name = reactable::colDef(name = "Team", width = 250),
+      franchise_name = reactable::colDef(name = "Team", width = 350),
       player_name_with_info = reactable::colDef(
         name = "Spieler",
         width = 250,

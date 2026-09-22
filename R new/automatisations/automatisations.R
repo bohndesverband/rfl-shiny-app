@@ -19,4 +19,4 @@ source("R new/automatisations/fpts_zusammensetzung.R", local = TRUE)
 source("R new/automatisations/transactions.R", local = TRUE) # nach draft, war und draftpick values
 source("R new/automatisations/draft-grades.R", local = TRUE) # nach transactions
 
-DBI::dbDisconnect(con, shutdown = FALSE)
+DBI::dbDisconnect(con, shutdown = TRUE)
