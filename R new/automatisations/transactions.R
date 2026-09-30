@@ -89,8 +89,8 @@ rfl_trade_history <- rfl_trades_data %>%
   dplyr::rowwise() %>%
   dplyr::mutate(
     pos = stringr::str_split(gsub(".*\\(([^)]+)\\).*", "\\1", asset_name), ",")[[1]][1],
-    asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), trade_asset_name),
-    asset_name_with_draft_info_badge= ifelse(!is.na(pick_cat_badge), paste0(asset_name_with_draft_info, pick_cat_badge), asset_name_with_draft_info)
+    #asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), trade_asset_name),
+    #asset_name_with_draft_info_badge= ifelse(!is.na(pick_cat_badge), paste0(asset_name_with_draft_info, pick_cat_badge), asset_name_with_draft_info)
   ) %>%
   dplyr::group_by(trade_id) %>%
   dplyr::mutate(
@@ -111,8 +111,8 @@ rfl_trade_history <- rfl_trades_data %>%
     asset_names = paste(trade_asset_name, collapse = "\n"),
     franchise_id = dplyr::first(franchise_id),
     franchise_name = dplyr::first(franchise_name),
-    asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
-    asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
+    #asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
+    #asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
     .groups = "drop"
   ) %>%
   dplyr::mutate(
@@ -129,7 +129,85 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/transactions_data/rfl_transactions_{x}.csv"),
     col_types = "ddTdcccc"
   )
-})
+}) %>%
+  dplyr::mutate(player_id = as.character(player_id)) %>%
+
+  # füge trades an
+  #dplyr::bind_rows(
+  #  rfl_trades_data %>%
+  #    dplyr::mutate(
+  #      type = "TRADED",
+  #      type_desc = "traded",
+  #    ) %>%
+  #    dplyr::rename(player_id = asset_id) %>%
+  #    dplyr::select(season, timestamp, date, type, type_desc, franchise_id, player_id, trade_partner)
+  #) %>%
+
+  # add fantasy points
+  dplyr::left_join(
+    rfl_player_scores %>%
+      dplyr::select(season, week, player_id, fpts = points_cumsum, ppg = ppg_cummean),
+    by = c("season", "week", "player_id"),
+    relationship = "many-to-many"
+  ) %>%
+
+  # add elo
+  ## add weekly elo
+  dplyr::left_join(
+    player_elo %>%
+      dplyr::select(season, week, mfl_id, position, team, player_elo = player_elo_pre, player_elo_pctl = player_elo_pre_pctl),
+    by = c("season", "week", "player_id" = "mfl_id")
+  ) %>%
+  ## add current elo
+  dplyr::left_join(
+    player_elo %>%
+      dplyr::group_by(mfl_id) %>%
+      dplyr::arrange(season, week) %>%
+      dplyr::summarise(
+        position_last = last(position),
+        player_elo_current = last(player_elo_post),
+        player_elo_current_pctl = last(player_elo_post_pctl),
+        player_elo_max = max(player_elo_post)
+      ),
+    by = c("player_id" = "mfl_id")
+  ) %>%
+  dplyr::mutate(
+    player_elo = ifelse(is.na(player_elo), player_elo_current, player_elo),
+    player_elo_pctl = ifelse(is.na(player_elo_pctl), player_elo_current_pctl, player_elo_pctl)
+  ) %>%
+
+  # add player info
+  dplyr::left_join(
+    nflreadr::load_ff_playerids() %>%
+      dplyr::select(mfl_id, display_name = name, team_latest = team),
+    by = c("player_id" = "mfl_id")
+  ) %>%
+
+  # add war
+  dplyr::left_join(
+    rfl_war_data %>%
+      dplyr::select(season, player_id, war),
+    by = c("season", "player_id")
+  ) %>%
+  # TODO: weekly WAR hinzufügen
+
+  # add franchise info
+  dplyr::left_join(
+    rfl_franchise_data %>%
+      dplyr::select(franchise_id, franchise_name),
+    by = "franchise_id"
+  ) %>%
+
+  # data cleaning
+  dplyr::mutate(
+    position = ifelse(is.na(position), position_last, position),
+    team = ifelse(is.na(team), team_latest, team),
+    player_elo = ifelse(is.na(player_elo), 1500, player_elo),
+    elo_shift = player_elo_current - player_elo,
+    #elo_shift_max = player_elo_max - player_elo
+  ) %>%
+  dplyr::select(season:week, player_id, display_name, position:team, fpts, ppg, war, player_elo:player_elo_max, elo_shift, franchise_id, franchise_name, type, type_desc, -position_last, -team_latest) %>%
+  dplyr::arrange(dplyr::desc(timestamp))
 
 DBI::dbWriteTable(con, "rfl_transactions_data", rfl_transactions_data, overwrite = TRUE)
 

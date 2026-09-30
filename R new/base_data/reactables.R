@@ -241,7 +241,58 @@ draft_class_players_reactable <- function(data, col_names = NULL, col_groups = N
 
 
 
+
 ## bar chart helper ----
+reactable_coldef_bar_bg <- function(width = 1, fill = color_grey_mid, height = "75%",
+                                    align = c("left", "right")) {
+  align <- match.arg(align)
+
+  # width auf 0-1 begrenzen
+  width <- max(0, min(1, width))
+
+  # Farbe anhand des Wertes bestimmen
+  fill <- grDevices::colorRampPalette(
+    c(color_red, color_orange, color_yellow, color_green, color_blue)
+  )(101)[round(width * 100) + 1]
+
+  if (align == "left") {
+    position <- paste0(width * 100, "%")
+    image <- sprintf(
+      "linear-gradient(90deg, %s %s, transparent %s)",
+      fill, position, position
+    )
+  } else {
+    position <- paste0(100 - width * 100, "%")
+    image <- sprintf(
+      "linear-gradient(90deg, transparent %s, %s %s)",
+      position, fill, position
+    )
+  }
+
+  # Schriftfarbe anhand der Helligkeit bestimmen
+  rgb <- grDevices::col2rgb(fill)
+
+  brightness <- (
+    0.299 * rgb[1, 1] +
+      0.587 * rgb[2, 1] +
+      0.114 * rgb[3, 1]
+  ) / 255
+
+  color <- if (brightness < 0.55 & width > 0.8) {
+    color_bg
+  } else {
+    color_black
+  }
+
+  list(
+    backgroundImage = image,
+    backgroundSize = paste("100%", height),
+    backgroundRepeat = "no-repeat",
+    backgroundPosition = "center",
+    color = color
+  )
+}
+
 bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
   bar <- htmltools::div(class="bar-chart--bar", style = list(background = fill, width = width, height = height))
   chart <- htmltools::div(class="bar-chart--chart", style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
@@ -279,7 +330,7 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
       cell = function(value) {
         content <- shiny::tagList(
           htmltools::div(value),
-          htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (season_before_wk_2 - 2017) * 36, "</small>")))
+          htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (season_before_wk_2 + 1 - 2017) * 36, "</small>")))
         )
 
         as.character(content)
