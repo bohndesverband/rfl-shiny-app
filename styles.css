@@ -263,6 +263,10 @@
     display: none;
 }
 
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)) {
+    display: none;
+}
+
 #section-trade-history.active .row:first-of-type .dataTable tbody td {white-space: pre-wrap;}
 #section-trade-history.active .row:first-of-type .dataTable tbody td::first-line { font-weight: bold; }
 #section-trade-history.active .dataTable td span { color: white; text-align: center; }
@@ -462,9 +466,13 @@
 }
 
 .Reactable > .rt-table > .rt-tbody:has(> .rt-tr-group > .rt-tr-details) > .rt-tr-group:not(:has(> .rt-tr-details)) {
-    opacity: 0.3;
-    transition: opacity 0.3s ease;
-  }
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.border-right {
+  border-right: 1px solid var(--color__bg) !important;
+}
 
 /* tabellen header zentrieren */
 .rt-th {

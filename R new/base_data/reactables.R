@@ -330,7 +330,7 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
       cell = function(value) {
         content <- shiny::tagList(
           htmltools::div(value),
-          htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (season_before_wk_2 - 2017) * 36, "</small>")))
+          htmltools::div(htmltools::HTML(paste0("<small>", "aus ", (season_before_wk_2 + 1 - 2017) * 36, "</small>")))
         )
 
         as.character(content)

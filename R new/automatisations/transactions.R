@@ -89,8 +89,8 @@ rfl_trade_history <- rfl_trades_data %>%
   dplyr::rowwise() %>%
   dplyr::mutate(
     pos = stringr::str_split(gsub(".*\\(([^)]+)\\).*", "\\1", asset_name), ",")[[1]][1],
-    asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), trade_asset_name),
-    asset_name_with_draft_info_badge= ifelse(!is.na(pick_cat_badge), paste0(asset_name_with_draft_info, pick_cat_badge), asset_name_with_draft_info)
+    #asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), trade_asset_name),
+    #asset_name_with_draft_info_badge= ifelse(!is.na(pick_cat_badge), paste0(asset_name_with_draft_info, pick_cat_badge), asset_name_with_draft_info)
   ) %>%
   dplyr::group_by(trade_id) %>%
   dplyr::mutate(
@@ -111,8 +111,8 @@ rfl_trade_history <- rfl_trades_data %>%
     asset_names = paste(trade_asset_name, collapse = "\n"),
     franchise_id = dplyr::first(franchise_id),
     franchise_name = dplyr::first(franchise_name),
-    asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
-    asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
+    #asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
+    #asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
     .groups = "drop"
   ) %>%
   dplyr::mutate(
