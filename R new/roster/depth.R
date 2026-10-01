@@ -3,8 +3,13 @@ roster_war_sum <- shiny::reactive({
   roster_war_sum <- rfl_roster_data %>%
     dplyr::filter(
       week < 14 &
-      #season == 2025
-      season == input$selectYear & games_started >= input$selectRflGames
+        #season == 2026
+      season == input$selectYear
+    ) %>%
+    dplyr::filter(week == max(week)) %>%
+    dplyr::filter(
+      #games_started >= 1
+      games_started >= input$selectRflGames
     ) %>%
     dplyr::group_by(franchise_id, pos_grouped) %>%
     dplyr::summarise(
