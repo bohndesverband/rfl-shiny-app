@@ -65,12 +65,15 @@ library(sparkline)
 library(gdtools)
 library(gfonts)
 library(ggnewscale)
+library(echarts4r)
 #library(shinyjs)
 ```
 
 ```{r global, message=TRUE, warning=TRUE, include=FALSE}
 #profvis({
 source("R new/base_data/base_data.R", local = TRUE)
+
+rfl_player_data_loaded <- shiny::reactiveVal(FALSE)
 
 loaded_data_rfl_matchup_data <- shiny::reactiveVal(FALSE)
 #})
@@ -320,6 +323,8 @@ observeEvent(active_tab(), {
     source("R new/rankings/standing.R", local = TRUE)
     source("R new/rankings/standing_output.R", local = TRUE)
     
+    #source("R new/rankings/rankings_reactable.R", local = TRUE)
+    
     loaded_data_conference_stanging(TRUE)
   }
 })
@@ -328,6 +333,7 @@ shiny::fluidPage(
   shiny::fluidRow(
     shiny::column(
       shinycssloaders::withSpinner(gt::gt_output("conf_standing_table")),
+      #shinycssloaders::withSpinner(reactable::reactableOutput("current_standing")),
       width = 12
     )
   )
@@ -634,6 +640,12 @@ shiny::fluidPage(
       width = 6
     ),
     style = "height: 800px"
+  ),
+  shiny::fluidRow(
+    shiny::column(
+      #shinycssloaders::withSpinner(reactable::reactableOutput("player_elo_data")),
+      width = 12
+    )
   )
 )
 ```
@@ -722,86 +734,60 @@ shiny::fluidPage(
 )
 ```
 
-# Trade Bait {data-navmenu="Spieler"}
+# Transaktionen {data-navmenu="Spieler"}
 
-## 
-
-```{r trade-bait, echo=FALSE, message=FALSE, warning=FALSE}
-loaded_data_trade_bait <- shiny::reactiveVal(FALSE)
-
-observeEvent(active_tab(), {
-  if (active_tab() == "#section-trade-bait" & !loaded_data_trade_bait()) {
-    source("R new/players/elo.R", local = TRUE)
-    source("R new/players/trade_bait.R", local = TRUE)
-
-    loaded_data_trade_bait(TRUE)
-  }
-})
-
-shiny::fluidPage(
-  shiny::fluidRow(
-    #shiny::column(
-      #shinycssloaders::withSpinner(shiny::plotOutput("running_player_elo")),
-    #  width = 6
-    #),
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("trade_bait")),
-      width = 6
-    ),
-    style = "height: 680px"
-  )
-)
-```
-
-# Trade History {data-navmenu="Spieler"}
-
-## 
-
-```{r trade-history, echo=FALSE, message=FALSE, warning=FALSE}
+```{r transactions, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_trade_history <- shiny::reactiveVal(FALSE)
+loaded_data_transactions <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
-  if (active_tab() == "#section-trade-history" & !loaded_data_trade_history()) {
-    source("R new/players/trades.R", local = TRUE)
+  if (active_tab() == "#section-transaktionen" & !loaded_data_trade_history()) {
+    #source("R new/players/trades.R", local = TRUE)
+    source("R new/players/transactions.R", local = TRUE)
 
     loaded_data_trade_history(TRUE)
+    loaded_data_transactions(TRUE)
   }
 })
 
+#shiny::fluidPage(
+#  shiny::fluidRow(
+#    shiny::column(
+#      tags$h5("Trade History"),
+#      shinyWidgets::pickerInput(
+#        "selectTradeAsset",
+#        "Filter nach Asset",
+#        choices = "",
+#        options = list("actions-box" = TRUE, "none-selected-text" = "Asset wählen", "live-search" = TRUE),
+#        multiple = TRUE
+#      ),
+#      shinycssloaders::withSpinner(DT::DTOutput("trade_history")),
+#      width = 12
+#    )
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      tags$h5("Am meisten getradete Spieler seit 2016"),
+#      shinycssloaders::withSpinner(DT::DTOutput("most_tradet_players")),
+#      width = 6
+#    ),
+#    shiny::column(
+#      tags$h5("Anzahl von Trades zwischen zwei Teams seit 2016"),
+#      shinycssloaders::withSpinner(DT::DTOutput("trades_between_teams")),
+#      width = 6
+#    )
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      tags$h5("Team-Trades je Jahr"),
+#      shinycssloaders::withSpinner(DT::DTOutput("trades_by_franchise")),
+#      width = 12
+#    )
+#  )
+#)
+
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      tags$h5("Trade History"),
-      shinyWidgets::pickerInput(
-        "selectTradeAsset",
-        "Filter nach Asset",
-        choices = "",
-        options = list("actions-box" = TRUE, "none-selected-text" = "Asset wählen", "live-search" = TRUE),
-        multiple = TRUE
-      ),
-      shinycssloaders::withSpinner(DT::DTOutput("trade_history")),
-      width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      tags$h5("Am meisten getradete Spieler seit 2016"),
-      shinycssloaders::withSpinner(DT::DTOutput("most_tradet_players")),
-      width = 6
-    ),
-    shiny::column(
-      tags$h5("Anzahl von Trades zwischen zwei Teams seit 2016"),
-      shinycssloaders::withSpinner(DT::DTOutput("trades_between_teams")),
-      width = 6
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      tags$h5("Team-Trades je Jahr"),
-      shinycssloaders::withSpinner(DT::DTOutput("trades_by_franchise")),
-      width = 12
-    )
-  )
+  shiny::uiOutput("players_transactions")
 )
 ```
 

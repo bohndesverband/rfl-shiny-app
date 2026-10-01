@@ -468,32 +468,16 @@
 
 /* tabellen header zentrieren */
 .rt-th {
-  &[aria-label*="Pick"],
-  &[aria-label*="pVAR"],
-  &[aria-label*="VOE"],
-  &[aria-label*="Pctl"],
-  &[aria-label*="QB"],
-  &[aria-label*="RB"],
-  &[aria-label*="WR"],
-  &[aria-label*="TE"],
-  &[aria-label*="PK"],
-  &[aria-label*="DL"],
-  &[aria-label*="LB"],
-  &[aria-label*="DB"],
-  &[aria-label*="Total"],
-  &[aria-label*="Note"],
-  &[aria-label*="Peak"],
-  &[aria-label*="Current"],
-  &[aria-label*="Rank"],
-  &[aria-label*="PPG"],
-  &[aria-label*="Finish"],
-  &[aria-label*="Career"],
-  &[aria-label*="Alter"],
-  &[aria-label*="ELO"],
-  &[aria-label*="WAR"],
-  &[aria-label*="Gestartet"] {
+  .rt-th-inner > * {
+      justify-content: center !important;
+  }
+
+  &[aria-label*="Team"],
+  &[aria-label*="Spieler"],
+  &[aria-label*="Gesucht wird"],
+  &[aria-label*="Datum"]{
     .rt-th-inner > * {
-        justify-content: center !important;
+        justify-content: left !important;
 
     }
   }
