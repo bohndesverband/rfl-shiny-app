@@ -5,7 +5,7 @@ source("R new/rankings/ranking_tables.R", local = TRUE)
 ## data ----
 running_elo <- shiny::reactive({
   running_elo <- rfl_team_elo %>%
-    dplyr::filter(season <= input$selectYear) %>%
+    #dplyr::filter(season <= input$selectYear) %>%
     dplyr::select(season, week, franchise_id, franchise_name, division, division_name, conference_id, conference_name, franchise_elo_pregame, franchise_elo_postgame) %>%
     dplyr::distinct() %>%
     dplyr::group_by(franchise_id) %>%
