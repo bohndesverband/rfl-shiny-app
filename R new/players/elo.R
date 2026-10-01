@@ -1,5 +1,5 @@
 # running elo ----
-running_player_elo <- player_elo %>%
+running_player_elo <- rfl_player_elo %>%
   dplyr::select(season, week, mfl_id, display_name, position, team, player_elo_post) %>%
   dplyr::group_by(mfl_id) %>%
   dplyr::arrange(season, week) %>%
@@ -169,4 +169,15 @@ output$player_elo_peaks_table <- gt::render_gt({
       c(position, team) ~ px(70),
       c(week, game) ~ px(100)
     )
+})
+
+# elo data ----
+output$player_elo_data <- reactable::renderReactable({
+  data <- rfl_player_elo %>%
+    dplyr::select(season, week, display_name, position, team, score, player_elo_pre, player_elo_post, elo_shift, opponent_id, opponent_elo_pre, opponent_elo_post)
+
+  reactable_default(
+    data,
+    filterable = TRUE
+  )
 })
