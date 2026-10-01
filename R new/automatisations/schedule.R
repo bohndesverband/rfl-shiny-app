@@ -22,12 +22,28 @@ rfl_matchups_history <- rfl_team_elo %>%
   dplyr::ungroup() %>%
   dplyr::select(season, week, franchise_id, opponent_id, franchise_name, win, elo_shift, total_elo_shift, franchise_elo_pregame, franchise_elo_postgame, franchise_score, elo_diff, opponent_score, opponent_elo_pregame, opponent_name, total_points, total_elo, score_diff, score_diff_pct, upset, label, division, conference_id) %>%
   dplyr::left_join(
-    rfl_starter_ppg_fpts_diff %>%
+    rfl_starter_data %>%
+      dplyr::filter(starter_status == "starter") %>%
+      dplyr::group_by(season, week, franchise_id) %>%
+      dplyr::summarise(
+        franchise_score = sum(player_score, na.rm = TRUE),
+        franchise_ppg_score = sum(ppg, na.rm = TRUE),
+        franchise_points_ppg_diff = round(sum(points_ppg_diff, na.rm = TRUE), 2),
+        .groups = "drop"
+      ) %>%
       dplyr::select(season, week, franchise_id, franchise_ppg_score, franchise_points_ppg_diff),
     by = c("season", "week", "franchise_id")
   ) %>%
   dplyr::left_join(
-    rfl_starter_ppg_fpts_diff %>%
+    rfl_starter_data %>%
+      dplyr::filter(starter_status == "starter") %>%
+      dplyr::group_by(season, week, franchise_id) %>%
+      dplyr::summarise(
+        franchise_score = sum(player_score, na.rm = TRUE),
+        franchise_ppg_score = sum(ppg, na.rm = TRUE),
+        franchise_points_ppg_diff = round(sum(points_ppg_diff, na.rm = TRUE), 2),
+        .groups = "drop"
+      ) %>%
       dplyr::select(season, week, franchise_id, opponent_ppg_score = franchise_ppg_score, opponent_points_ppg_diff = franchise_points_ppg_diff),
     by = c("season", "week", "opponent_id" = "franchise_id")
   ) %>%

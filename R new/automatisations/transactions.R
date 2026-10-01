@@ -124,12 +124,84 @@ rfl_trade_history <- rfl_trades_data %>%
 DBI::dbWriteTable(con, "rfl_trade_history", rfl_trade_history, overwrite = TRUE)
 
 # transactions
-rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
+rfl_transactions_data <- purrr::map_df(2026:2026, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/transactions_data/rfl_transactions_{x}.csv"),
     col_types = "ddTdcccc"
   )
-})
+}) %>%
+  #dplyr::mutate(player_id = as.character(player_id))
+  # helper um zu joinen
+  dplyr::mutate(
+    season_join = dplyr::case_when(
+      week == 0 & season > 2016 ~ season - 1,
+      TRUE ~ season
+    ),
+    week_join = dplyr::case_when(
+      (week == 0 | week == 22) & season < 2020 ~ 12,
+      (week == 0 | week == 22) & season >= 2020 ~ 13,
+      TRUE ~ week
+    ),
+    join_id = paste0(season_join, week_join)
+  ) %>%
+
+
+
+  # füge trades an
+  #dplyr::bind_rows(
+  #  rfl_trades_data %>%
+  #    dplyr::mutate(
+  #      type = "TRADED",
+  #      type_desc = "traded",
+  #    ) %>%
+  #    dplyr::rename(player_id = asset_id) %>%
+  #    dplyr::select(season, timestamp, date, type, type_desc, franchise_id, player_id, trade_partner)
+  #) %>%
+
+  dplyr::left_join(
+    rfl_player_data %>%
+      dplyr::mutate(join_id_new = paste0(season, week)) %>%
+      dplyr::select(join_id_new, player_id, display_name, pos_grouped, team, games_played, games_missed, fpts_running, ppg_running, pos_rank, war, war_pctl, war_end_of_season, player_elo_pre, player_elo_pre_pctl, player_elo_current, player_elo_current),
+    by = dplyr::join_by(
+      player_id,
+      dplyr::closest(join_id >= join_id_new)
+    )
+  ) %>%
+
+  # add player info für nicht vorhandene namen
+  dplyr::left_join(
+    nflreadr::load_ff_playerids() %>%
+      dplyr::mutate(
+        position = dplyr::case_when(
+          position %in% c("DT", "DE") ~ "DL",
+          position %in% c("CB", "S") ~ "DB",
+          TRUE ~ position
+        )
+      ) %>%
+      dplyr::select(player_id = mfl_id, display_name_new = name, team_new = team, position_new = position),
+    by = "player_id"
+  ) %>%
+  dplyr::mutate(
+    display_name = dplyr::coalesce(display_name, display_name_new),
+    pos_grouped = dplyr::coalesce(pos_grouped, position_new),
+    team = dplyr::coalesce(team, team_new)
+  ) %>%
+  dplyr::select(-dplyr::ends_with("_new"), -dplyr::ends_with("_join"), -join_id) %>%
+
+  # add franchise info
+  dplyr::left_join(
+    rfl_franchise_data %>%
+      dplyr::select(franchise_id, franchise_name),
+    by = "franchise_id"
+  ) %>%
+
+  # data cleaning
+  dplyr::mutate(
+    player_elo_pre = ifelse(is.na(player_elo_pre), 1500, player_elo_pre),
+    elo_shift = player_elo_current - player_elo_pre,
+    war_shift = war_end_of_season - war
+  ) %>%
+  dplyr::arrange(dplyr::desc(timestamp))
 
 DBI::dbWriteTable(con, "rfl_transactions_data", rfl_transactions_data, overwrite = TRUE)
 

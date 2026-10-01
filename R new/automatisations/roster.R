@@ -31,7 +31,11 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
 
   dplyr::left_join(
     rfl_war_data %>%
-      dplyr::select(player_id, season, war),
+      dplyr::group_by(player_id, season) %>%
+      dplyr::arrange(week) %>%
+      dplyr::slice_tail(n = 1) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(player_id, season, war, war_pctl_season = war_pctl),
     by = c("player_id", "season")
   ) %>%
   dplyr::left_join(
@@ -49,20 +53,71 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     player_name_with_info = paste0("<div>", display_name, "</div><div><small>", pos_grouped, ", ", team, "</small></div>")
   ) %>%
   dplyr::left_join(
-    player_elo %>%
-      dplyr::select(season, week, mfl_id, player_elo_post),
+    rfl_player_elo %>%
+      dplyr::select(season, week, mfl_id, player_elo_post, player_elo_post_pctl),
     by = c("season", "week", "player_id" = "mfl_id")
   ) %>%
+  dplyr::group_by(player_id) %>%
+  dplyr::arrange(season, player_id) %>%
+  dplyr::arrange(week) %>%
+  tidyr::fill(c(player_elo_post, player_elo_post_pctl)) %>%
   dplyr::mutate(started = ifelse(starter_status == "starter", 1, 0)) %>%
   dplyr::group_by(season, franchise_id, player_id) %>%
   dplyr::mutate(games_started = sum(started, na.rm = TRUE)) %>%
   dplyr::ungroup() %>%
   dplyr::select(-started) %>%
+  dplyr::ungroup() %>%
   dplyr::left_join(
     rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
     by = "franchise_id"
-  )
+  ) %>%
+  dplyr::left_join(
+    rfl_drafts_data %>%
+      dplyr::select(season_drafted = season, franchise_id, mfl_id) %>%
+      dplyr::mutate(drafted = 1),
+    by = c(player_id = "mfl_id", "franchise_id")
+  ) %>%
+  #filter(season == 2026 & franchise_id == "0007" & week == 2) %>%
+  dplyr::left_join(
+    rfl_transactions_data %>%
+      dplyr::filter(type_desc == "added") %>%
+      dplyr::mutate(added = 1) %>%
+      dplyr::select(season_added = season, franchise_id, player_id, added),
+    by = dplyr::join_by(
+      franchise_id,
+      player_id,
+      season >= season_added
+    ),
+    multiple = "last"
+  ) %>%
+  dplyr::left_join(
+    rfl_trade_history %>%
+      dplyr::select(season_traded = season, franchise_ids, asset_ids) %>%
+      dplyr::mutate(traded = 1) %>%
+      tidyr::separate_rows(asset_ids, sep = ",") %>%
+      tidyr::separate_rows(franchise_ids, sep = ","),
+    by = dplyr::join_by(
+      franchise_id == franchise_ids,
+      player_id == asset_ids,
+      season >= season_traded
+    ),
+    multiple = "last"
+  ) %>%
+  dplyr::mutate(
+    player_pos_team = paste(pos_grouped, team, sep = ", "),
+    transaction = dplyr::case_when(
+      traded == 1 | season_traded > season_drafted ~ "traded",
+      drafted == 1 ~ "drafted",
+      TRUE ~ "added"
+    ),
+    transaction_emoji = dplyr::case_when(
+      transaction == "drafted" ~ emoji::emoji("ballot_box_with_check"),
+      transaction == "traded" ~ emoji::emoji("arrows_counterclockwise"),
+      TRUE ~ emoji::emoji("heavy_plus_sign")
+    ),
+  ) %>%
+  dplyr::select(-season_drafted:-traded)
 
 DBI::dbWriteTable(con, "rfl_roster_data", rfl_roster_data, overwrite = TRUE)
 
@@ -90,7 +145,7 @@ DBI::dbWriteTable(con, "rfl_ir_data", rfl_ir_data, overwrite = TRUE)
 
 # depth charts ----
 rfl_depth_chart_data <- rfl_roster_data %>%
-  #filter(franchise_id == "0016" & season == "2026") %>%
+  #filter(franchise_id == "0036" & season == "2026") %>%
   dplyr::group_by(season) %>%
   dplyr::filter(week == max(week)) %>%
   dplyr::group_by(season, franchise_id) %>%
@@ -141,11 +196,16 @@ rfl_depth_chart_data <- rfl_roster_data %>%
       TRUE ~ depth_chart
     )
   ) %>%
+  dplyr::group_by(season, franchise_id, depth_chart) %>%
+  dplyr::arrange(dplyr::desc(war)) %>%
+  dplyr::mutate(
+    depth_chart_new = ifelse(depth_chart %in% c("FLEX", "IDP"), paste0(depth_chart, dplyr::row_number()), depth_chart),
+  ) %>%
   dplyr::group_by(season, franchise_id, depth_chart, pos_grouped) %>%
   dplyr::mutate(
     depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
     depth_chart_pos = dplyr::case_when(
-      depth_chart %in% c("FLEX", "IDP") ~ paste0(depth_chart, pos_grouped, depth_chart_rank),
+      depth_chart_new %in% c("FLEX1", "FLEX2", "IDP1", "IDP2", "IDP3") ~ paste0(depth_chart, pos_grouped, depth_chart_rank),
       TRUE ~ depth_chart
     ),
     coord_h = dplyr::case_when(
@@ -172,16 +232,12 @@ rfl_depth_chart_data <- rfl_roster_data %>%
     player = ifelse(!is.na(war), paste0(display_name, " (", war, " WAR)"), display_name),
     pos_players = paste0(player, collapse = "\n")
   ) %>%
-  dplyr::group_by(season, franchise_id, depth_chart) %>%
-  dplyr::arrange(dplyr::desc(war)) %>%
-  dplyr::mutate(
-    depth_chart = ifelse(depth_chart %in% c("FLEX", "IDP"), paste0(depth_chart, dplyr::row_number()), depth_chart)
-  ) %>%
   dplyr::group_by(season, depth_chart) %>%
   dplyr::mutate(
     war_rank_league = dplyr::dense_rank(dplyr::desc(war))
   ) %>%
+  dplyr::ungroup() %>%
   dplyr::filter(!is.na(depth_chart)) %>%
-  dplyr::select(-war_rank_team, -depth_chart_rank_pos, -depth_chart_rank, -depth_chart_pos, -player)
+  dplyr::select(-war_rank_team, -depth_chart_rank_pos, -depth_chart_rank, -depth_chart_pos, -player, -depth_chart, depth_chart = depth_chart_new)
 
 DBI::dbWriteTable(con, "rfl_depth_chart_data", rfl_depth_chart_data, overwrite = TRUE)

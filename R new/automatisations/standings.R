@@ -24,28 +24,36 @@ DBI::dbWriteTable(con, "rfl_standing_data", rfl_standing_data, overwrite = TRUE)
 
 # create weekly rankings ----
 rfl_weekly_standing <- rfl_team_elo %>%
-  dplyr::filter(season == max(season)) %>%
   dplyr::mutate(
     winloss = ifelse(score_diff > 0, 1, 0)
   ) %>%
-  dplyr::group_by(franchise_id, week) %>%
-  dplyr::arrange(week) %>%
+  dplyr::group_by(season, franchise_id, week) %>%
   dplyr::summarise(
     winloss = paste(winloss, collapse = ","),
-    dplyr::across(c(season, dplyr::starts_with("franchise"), division, division_name, conference_id, conference_name), last),
+    dplyr::across(c(dplyr::starts_with("franchise"), division, division_name, conference_id, conference_name), last),
     .groups = "drop"
   ) %>%
   dplyr::left_join(
     rfl_standing_data %>%
-      dplyr::filter(season == max(season)) %>%
-      dplyr::select(week, franchise_id, dplyr::ends_with("_rank"), dplyr::ends_with("_total"), bowl, seed, pick),
-    by = c("franchise_id", "week")
+      dplyr::select(season, week, franchise_id, pf, pp, dplyr::ends_with("_rank"), dplyr::ends_with("_total"), bowl, seed, pick),
+    by = c("season", "franchise_id", "week")
   ) %>%
-  dplyr::group_by(week) %>%
+  # war rank
+  dplyr::left_join(
+    rfl_depth_chart_data %>%
+      dplyr::filter(!is.na(war_rank_league)) %>%
+      dplyr::group_by(season, franchise_id) %>%
+      dplyr::summarise(war = sum(war), .groups = "drop") %>%
+      dplyr::group_by(season) %>%
+      dplyr::mutate(war_rank = dplyr::min_rank(dplyr::desc(war))) %>%
+      dplyr::ungroup(),
+    by = c("season", "franchise_id")
+  ) %>%
+  dplyr::group_by(season, week) %>%
   dplyr::mutate(
     elo_shift = franchise_elo_postgame - franchise_elo_pregame,
     elo_rank = dplyr::min_rank(dplyr::desc(franchise_elo_postgame)),
-    true_standing = ((pf_rank + pp_rank * elo_rank) * 2) + record_rank + all_play_rank + (eff_rank / 4),
+    true_standing = ((pf_rank + elo_rank + pp_rank * war_rank) * 2) + record_rank + all_play_rank + (eff_rank / 4),
   ) %>%
   dplyr::arrange(true_standing, dplyr::desc(wins_total), dplyr::desc(pf_total)) %>%
   dplyr::mutate(
@@ -77,13 +85,25 @@ rfl_weekly_standing <- rfl_team_elo %>%
     ),
     power_rank_change = paste(power_rank, power_rank_emoji),
     seed_emoji = ifelse(is.na(seed_emoji), seed, seed_emoji)
-  )
+  ) %>%
+  dplyr::group_by(week) %>%
+  dplyr::mutate(
+    dplyr::across(
+      c(pf_total, pp_total, wins_total, all_play_wins_total, eff_total, war),
+      ~ round(dplyr::percent_rank(.x), 2),
+      .names = "{.col}_pctl"
+    ),
+    elo_rank_pctl = round(dplyr::percent_rank(franchise_elo_postgame), 2),
+    true_standing_pctl = round(dplyr::percent_rank(dplyr::desc(true_standing)), 2),
+  ) %>%
+  dplyr::ungroup()
 
 ## write to feather ----
 DBI::dbWriteTable(con, "rfl_weekly_standing", rfl_weekly_standing, overwrite = TRUE)
 
 # create current standing ----
 rfl_current_standing <- rfl_weekly_standing %>%
+  dplyr::filter(season == max(season)) %>%
   dplyr::group_by(franchise_id) %>%
   #filter(week == 12) %>%
   dplyr::arrange(week) %>%
@@ -92,7 +112,7 @@ rfl_current_standing <- rfl_weekly_standing %>%
     pf_sparkline = paste(unique(franchise_score), collapse = ","),
     elo_sparkline = paste(unique(franchise_elo_postgame), collapse = ","),
     dplyr::across(c(franchise_name, division, division_name, conference_name, season, franchise_elo_pregame), first),
-    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, elo_shift, dplyr::ends_with("_rank"), power_rank_change, bowl, bowl_emoji, seed, seed_emoji, power_rank_emoji), last),
+    dplyr::across(c(season, week, dplyr::ends_with("_total"), franchise_elo_postgame, elo_shift, dplyr::ends_with("_rank"), dplyr::ends_with("_pctl"), power_rank_change, bowl, bowl_emoji, seed, seed_emoji, power_rank_emoji), last),
     .groups = "drop"
   ) %>%
   dplyr::group_by(bowl, conference_name) %>%
@@ -138,7 +158,7 @@ rfl_current_standing <- rfl_weekly_standing %>%
     franchise_name_status = paste(franchise_name, "<sup>", status_div, status_bowl, status_sb_bye, "</sup>")
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider, franchise_name_status, seed_total) %>%
+  dplyr::select(season, week, franchise_id, division, franchise_name, conference_name, division_name, wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total, dplyr::starts_with("franchise_elo"), elo_sparkline, elo_shift, dplyr::ends_with("_rank"), dplyr::ends_with("_pctl"), power_rank_emoji, bowl, bowl_emoji, seed, seed_emoji, divider, franchise_name_status, seed_total) %>%
   dplyr::arrange(league_rank)
 
 ## write to feather ----

@@ -24,9 +24,16 @@ player_to_tv <- function(rating, beta = 2.5) {
 rfl_war_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/war_data/rfl_war_{x}.csv"),
-    col_types = "icccddii"
+    col_types = "ddcccdddd"
   )
 }) %>%
+  # add pctl
+  dplyr::group_by(week, pos) %>%
+  dplyr::mutate(
+    war_pctl = round(dplyr::percent_rank(war), 2),
+  ) %>%
+  dplyr::ungroup() %>%
+
   #filter(player_id == "16646") %>%
   # add player value
   #dplyr::left_join(
