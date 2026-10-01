@@ -1,9 +1,4 @@
-if (!exists("con", mode = "any") || !DBI::dbIsValid(con)) {
-  if (!dir.exists("data")) {
-    dir.create("data", recursive = TRUE, showWarnings = FALSE)
-  }
-  con <- DBI::dbConnect(duckdb::duckdb(), dbdir = file.path("data", "data.duckdb"), read_only = TRUE)
-}
+con <- DBI::dbConnect(duckdb::duckdb(), dbdir = file.path("data", "data.duckdb"), read_only = TRUE)
 
 read_data_table <- function(table_name) {
   if (DBI::dbExistsTable(con, table_name)) {

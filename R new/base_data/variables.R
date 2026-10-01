@@ -42,6 +42,7 @@ color_yellow <- "#ffd32a"
 color_bg <- "white"
 
 colors <- c(color_red, color_blue, color_green, color_orange, color_cyan, color_yellow)
+colors_rainbow <- c(color_red, color_orange, color_yellow, color_green, color_blue)
 
 colors_position <- c(
   "QB" = "#feca57",
@@ -164,7 +165,8 @@ gt_pctl_bar <- function(df, value, pctl) {
       value_position = "above",
       background_fill.height = "8px",
       background_fill.color = color_grey_light,
-      fill_palette = c(color_red, color_orange, color_yellow, color_green, color_blue)
+      fill_palette = c(color_red, color_orange, color_yellow, color_green, color_blue),
+      fill_na.color = color_grey_light,
     )
 }
 
@@ -174,6 +176,7 @@ reactable_default <- function(data, ...) {
     data = data,
     defaultColDef = reactable::colDef(
       headerStyle = list(background = color_bg),
+      align = "center",
       vAlign = "center",
       headerVAlign = "bottom",
       footerStyle = list(fontWeight = "bold", textAlign = "center")
@@ -265,10 +268,13 @@ reactable_coldef_color <- function(
         fontWeight = "bold"
       )
     },
-
-    footer = if (!is.null(footer_fun)) {
-      function(values) footer_fun(values, na.rm = TRUE)
-    } else NULL
+    footer = if (is.null(footer_fun)) {
+      NULL
+    } else {
+      function(values) {
+        footer_fun(values, na.rm = TRUE)
+      }
+    }
   )
 }
 
@@ -382,10 +388,54 @@ scale_green_red <- function(domain_values) {
 }
 
 scale_red_blue <- function(domain_values, reverse = FALSE) {
+
+  domain <- range(domain_values, na.rm = TRUE)
+
   pal <- scales::col_numeric(
     palette = c(color_red, color_blue),
-    domain = domain_values,
+    domain = domain,
     na.color = "transparent",
     reverse = reverse
   )
+
+  function(x) {
+    result <- rep("transparent", length(x))
+    valid <- !is.na(x)
+
+    x_clamped <- pmax(
+      domain[1],
+      pmin(x[valid], domain[2])
+    )
+
+    result[valid] <- pal(x_clamped)
+
+    result
+  }
+}
+
+
+scale_colors <- function(domain_values, palette_value = colors_rainbow, reverse = FALSE) {
+
+  domain <- range(domain_values, na.rm = TRUE)
+
+  pal <- scales::col_numeric(
+    palette = palette_value,
+    domain = domain,
+    na.color = "transparent",
+    reverse = reverse
+  )
+
+  function(x) {
+    result <- rep("transparent", length(x))
+    valid <- !is.na(x)
+
+    x_clamped <- pmax(
+      domain[1],
+      pmin(x[valid], domain[2])
+    )
+
+    result[valid] <- pal(x_clamped)
+
+    result
+  }
 }
