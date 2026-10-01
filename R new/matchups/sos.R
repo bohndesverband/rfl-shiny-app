@@ -504,7 +504,7 @@ output$rfl_fpts_abv_avg <- plotly::renderPlotly({
       cbr = color_blue,
       cbl = color_yellow
     ) +
-    ggplot2::geom_point(ggplot2::aes(text = franchise_name), color = color_grey_mid, alpha = 0.8, size = 4) +
+    #ggplot2::geom_point(ggplot2::aes(text = franchise_name), color = color_grey_mid, alpha = 0.8, size = 4) +
     ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6) +
     ggplot2::scale_color_discrete(type = colors) +
     plot_defaults +
