@@ -1,7 +1,11 @@
+source("R new/base_data/player_data.R", local = TRUE)
+
+# data ----
 transactions_filtered <- shiny::reactive({
   transactions_filtered <- rfl_transactions_data %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    dplyr::select(-season, -timestamp, -type, -player_id, -franchise_id, -player_elo_current, -player_elo_max)
+    dplyr::filter(season == 2026) %>%
+    #dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    dplyr::select(date, week, type_desc, display_name, pos_grouped, team, fpts_running, ppg_running, war, war_pctl, war_shift, player_elo_pre, player_elo_pre_pctl, elo_shift, franchise_name)
 })
 
 with_tooltip <- function(value, tooltip) {
@@ -9,40 +13,49 @@ with_tooltip <- function(value, tooltip) {
             title = tooltip, value)
 }
 
+# history ----
 output$players_transactions_table <- reactable::renderReactable({
   reactable_default(
     transactions_filtered(),
     columns = list(
-      date = reactable::colDef("Datum", format = reactable::colFormat(datetime = TRUE), width = 175),
+      date = reactable::colDef("Datum", format = reactable::colFormat(datetime = TRUE), width = 175, align = "left"),
       week = reactable::colDef("WK", width = 50),
-      display_name = reactable::colDef("Spieler", width = 150),
-      position = reactable::colDef("Pos", width = 50),
+      display_name = reactable::colDef("Spieler", width = 150, align = "left"),
+      pos_grouped = reactable::colDef("Pos", width = 50),
       team = reactable::colDef("Team", width = 75, sticky = "left"),
-      fpts = reactable_coldef_bg("FPts", palette_fun = scale_rainbow(min(transactions_filtered()$fpts, na.rm = TRUE):max(transactions_filtered()$fpts, na.rm = TRUE)), minWidth = 75),
-      ppg = reactable_coldef_bg("PPG", palette_fun = scale_rainbow(min(transactions_filtered()$ppg, na.rm = TRUE):max(transactions_filtered()$ppg, na.rm = TRUE)), minWidth = 75),
-      war = reactable_coldef_bg("WAR", palette_fun = scale_rainbow(min(transactions_filtered()$war, na.rm = TRUE):max(transactions_filtered()$war, na.rm = TRUE)), minWidth = 75, class = "border-right"),
-      player_elo = reactable::colDef(
-        header = with_tooltip("ELO", "ELO zum Zeitpunkt der Transaktion. Balken zeigt Perzentil innerhalb der Positionsgruppe."), width = 75,
+      fpts_running = reactable_coldef_bg(name = "FPts", palette_fun = scale_rainbow(min(transactions_filtered()$fpts_running, na.rm = TRUE):max(transactions_filtered()$fpts_running, na.rm = TRUE)), minWidth = 75),
+      ppg_running = reactable_coldef_bg(name = "PPG", palette_fun = scale_rainbow(min(transactions_filtered()$ppg_running, na.rm = TRUE):max(transactions_filtered()$ppg_running, na.rm = TRUE)), minWidth = 75, class = "border-right"),
+      war = reactable::colDef(
+        header = with_tooltip("WAR", "Wins above Replacement zum Zeitpunkt der Transaktion. Balken zeigt Perzentil innerhalb der Positionsgruppe."),
+        width = 100,
         style = function(value, index) {
-          pctl <- transactions_filtered()$player_elo_pctl[index]
+          pctl <- transactions_filtered()$war_pctl[index]
 
           reactable_coldef_bar_bg(width = pctl)
         }
       ),
-      elo_shift = reactable_coldef_color(
-        header = with_tooltip("+/-", "ELO-Veränderung seit der Transaktion"),
-        palette_fun = scale_red_blue(min(transactions_filtered()$elo_shift, na.rm = TRUE):max(transactions_filtered()$elo_shift, na.rm = TRUE)), minWidth = 50,
-        cell = function(value) {
-          content <- value
+      player_elo_pre = reactable::colDef(
+        header = with_tooltip("ELO", "ELO zum Zeitpunkt der Transaktion. Balken zeigt Perzentil innerhalb der Positionsgruppe."), width = 75,
+        style = function(value, index) {
+          pctl <- transactions_filtered()$player_elo_pre_pctl[index]
 
-          if (!is.na(value) & value > 0) {
-            content <- paste0("+", value)
-          }
-
-          content
+          reactable_coldef_bar_bg(width = pctl)
         }
       ),
-      franchise_name = reactable::colDef("Team"),
+      #elo_shift = reactable_coldef_color(
+        #header = with_tooltip("+/-", "ELO-Veränderung seit der Transaktion"),
+        #palette_fun = scale_colors(min(transactions_filtered()$elo_shift, na.rm = TRUE):max(transactions_filtered()$elo_shift, na.rm = TRUE)), c(color_red, color_blue), minWidth = 50,
+        #cell = function(value) {
+        #  content <- value
+#
+#          if (!is.na(value) & value > 0) {
+#            content <- paste0("+", value)
+#          }
+
+#          content
+#        }
+#      ),
+      franchise_name = reactable::colDef("Team", width = 150, align = "left"),
       type_desc = reactable::colDef(
         "Transaktion",
         html = TRUE,
@@ -56,21 +69,22 @@ output$players_transactions_table <- reactable::renderReactable({
           htmltools::span(value, class = paste("badge", color))
         }
       ),
-      player_elo_pctl = reactable::colDef(show = FALSE),
+      war_pctl = reactable::colDef(show = FALSE),
+      player_elo_pre_pctl = reactable::colDef(show = FALSE),
       player_elo_current_pctl = reactable::colDef(show = FALSE)
     ),
     columnGroups = list(
       reactable::colGroup(
         "Spieler",
-        columns = c("display_name", "position", "team")
+        columns = c("display_name", "pos_grouped", "team")
       ),
       reactable::colGroup(
         "Fantasy Pts",
-        columns = c("fpts", "ppg", "war")
+        columns = c("fpts_running", "ppg_running", "war", "war_shift")
       ),
       reactable::colGroup(
         "ELO",
-        columns = c("player_elo", "elo_shift")
+        columns = c("player_elo_pre", "elo_shift")
       )
     ),
     filterable = TRUE,
@@ -78,6 +92,12 @@ output$players_transactions_table <- reactable::renderReactable({
   )
 })
 
+# TODO: team bei jack gibbens stimmt nicht
+# TODO: war pctl bei jack gibbens und Red Murdock
+# TODO: elo shift bei teams ohne derzeitige elo
+# TODO: color columns bei shifts
+# TODO: elo shift in woche 4 checken
+# TODO: WAR-wert bei Malcolm Koonce fehlt
 
  # free agents ----
  #rfl_transactions_data %>%
@@ -88,6 +108,78 @@ output$players_transactions_table <- reactable::renderReactable({
 
  ## alle transactions ----
 
+# trade bait ----
+## data ----
+rfl_trade_baits <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=tradeBait&L=63018&APIKEY=aRNp3s%2BWvuWsx12mPlrBYDoeErox&INCLUDE_DRAFT_PICKS=0&JSON=1"))$tradeBaits$tradeBait %>%
+  dplyr::tibble() %>%
+  tidyr::unnest_wider(1) %>%
+  tidyr::separate_rows(willGiveUp, sep = ",") %>%
+  dplyr::mutate(willGiveUp = willGiveUp) %>%
+  dplyr::left_join(rfl_franchise_data %>% dplyr::select(franchise_id, franchise_name), by = "franchise_id") %>%
+  dplyr::left_join(
+    rfl_player_data_latest %>%
+      dplyr::select(player_id, display_name, pos_grouped, team, fpts_running, ppg_running, pos_rank_season, war, war_pctl, player_elo = player_elo_current, player_elo_pctl = player_elo_current_pctl),
+    by = c("willGiveUp" = "player_id")
+  ) %>%
+
+  #dplyr::left_join(mfl_players %>% dplyr::select(player_id, display_name_new = display_name, pos = grouped_pos, team_new = team), by = c("willGiveUp" = "player_id")) %>%
+
+  dplyr::mutate(
+    #display_name = dplyr::coalesce(display_name, display_name_new),
+    #pos_grouped = dplyr::coalesce(pos_grouped, pos),
+    #team = dplyr::coalesce(team, team_new),
+    player_elo = ifelse(is.na(player_elo), 1500, player_elo)
+  ) %>%
+
+  dplyr::arrange(dplyr::desc(player_elo)) %>%
+  dplyr::rename(player_id = willGiveUp) %>%
+  dplyr::select(franchise_name, display_name, pos_grouped, team, pos_rank_season, fpts_running, ppg_running, war, player_elo, war_pctl, player_elo_pctl, inExchangeFor)
+
+## output ----
+output$trade_bait <- reactable::renderReactable({
+  reactable_default(
+    rfl_trade_baits,
+    columns = list(
+      player_id = reactable::colDef(show = FALSE),
+      team = reactable::colDef("Team", width = 75, align = "left"),
+      display_name = reactable::colDef("Spieler", width = 200, align = "left"),
+      pos_grouped = reactable::colDef("Pos", width = 75),
+      pos_rank_season = reactable_coldef_color(name = "Rank", palette_fun = scale_colors(8:30, c(color_blue, color_red)), width = 75),
+      fpts_running = reactable_coldef_bg("FPts", palette_fun = scale_rainbow((5 * current_week - 1):(20 * current_week - 1)), width = 75),
+      ppg_running = reactable_coldef_bg("PPG", palette_fun = scale_rainbow(5:20), width = 75, class = "border-right"),
+      war = reactable::colDef(
+        "WAR", width = 100,
+        style = function(value, index) {
+          pctl <- rfl_trade_baits$war_pctl[index]
+
+          reactable_coldef_bar_bg(width = pctl)
+        },
+        class = "border-right"
+      ),
+      war_pctl = reactable::colDef(show = FALSE),
+      player_elo = reactable::colDef(
+        "ELO", width = 100,
+        style = function(value, index) {
+          pctl <- rfl_trade_baits$player_elo_pctl[index]
+
+          reactable_coldef_bar_bg(width = pctl)
+        }
+      ),
+      player_elo_pctl = reactable::colDef(show = FALSE),
+      franchise_name = reactable::colDef("Team", width = 200),
+      inExchangeFor = reactable::colDef("Gesucht wird", align = "left")
+    ),
+    columnGroups = list(
+      reactable::colGroup("Spieler", columns = c("display_name", "pos_grouped", "team")),
+      reactable::colGroup("FPts", columns = c("pos_rank_season", "fpts_running", "ppg_running"))
+    ),
+    filterable = TRUE,
+    defaultSorted = list(war = "desc"),
+    defaultPageSize = 15
+  )
+})
+
+
  # ui output ----
  output$players_transactions <- shiny::renderUI({
    shiny::fluidPage(
@@ -96,7 +188,6 @@ output$players_transactions_table <- reactable::renderReactable({
        shiny::tabPanel(
          "Transaktionen",
          shiny::fluidPage(
-           htmltools::h2("Historie"),
            shiny::fluidRow(
              shiny::column(
                shinycssloaders::withSpinner(reactable::reactableOutput("players_transactions_table")),
@@ -125,56 +216,14 @@ output$players_transactions_table <- reactable::renderReactable({
          )
        ),
        shiny::tabPanel(
-         "Offseason",
+         "Trade Bait",
          shiny::fluidPage(
-           htmltools::h2("Offseason"),
-
            shiny::fluidRow(
              shiny::column(
-               htmltools::h3("Alle Draftklassen"),
-               #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-               width = 7
-             ),
-             shiny::column(
-               #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
-               width = 5
-             )
-           ),
-
-           htmltools::h3("Einzelne Draftklasse"),
-           shiny::fluidRow(
-             shiny::column(
-               #shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital")),
-               width = 6
-             ),
-             shiny::column(
-               #shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital_positions")),
-               width = 6
-             )
-           ),
-           shiny::fluidRow(
-             shiny::column(
-               htmltools::div(
-                 class = "flex",
-                 shinyWidgets::radioGroupButtons(
-                   "selectDraftClassCharts",
-                   choices = c("ADP", "Bewertung", "VOE", "WAR", "ELO")
-                 ),
-                 #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
-                 # TODO: liga vergleich charts
-               ),
-               #shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class")),
-               width = 12
-             )
-           ),
-           shiny::fluidRow(
-             htmltools::h4("Bewertung"),
-             shiny::column(
-               #shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class_grades")),
+               shinycssloaders::withSpinner(reactable::reactableOutput("trade_bait")),
                width = 12
              )
            )
-
          )
        )
      )
