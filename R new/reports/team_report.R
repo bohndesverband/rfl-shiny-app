@@ -35,81 +35,92 @@ source("R new/reports/team/team_report_draft.R", local = TRUE)
 # Output ----
 output$team_report <- shiny::renderUI({
   shiny::fluidPage(
-    htmltools::h1("Teambericht", paste(selected_team_name())),
-    htmltools::h2("Roster"),
-    shiny::fluidRow(
-      htmltools::h3("Schedule"),
-      shiny::column(
-        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_depth_chart")),
-        width = 12
-      )
-    ),
-    htmltools::h2("Saison"),
-    shiny::fluidRow(
-      htmltools::h3("Schedule"),
-      shiny::column(
-        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_schedule")),
-        width = 12
-      )
-    ),
-    #htmltools::h2("Offseason"),
-    #shiny::fluidRow(
-    #  shiny::column(
-    #    htmltools::h3("Zu- & Abgänge"),
-        #shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-    #    width = 6
-    #  ),
-    #  shiny::column(
-        #shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
-    #    width = 6
-    #  )
-    #),
-    htmltools::h2("Draft"),
-    shiny::fluidRow(
-      shiny::column(
-        htmltools::h3("Alle Draftklassen"),
-        shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
-        width = 7
-      ),
-      shiny::column(
-        shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
-        width = 5
-      )
-    ),
-    htmltools::h3("Einzelne Draftklasse"),
-    shiny::fluidRow(
-      shiny::column(
-        shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital")),
-        width = 6
-      ),
-      shiny::column(
-        shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital_positions")),
-        width = 6
-      )
-    ),
-    shiny::fluidRow(
-      shiny::column(
-        htmltools::div(
-          class = "flex",
-          shinyWidgets::radioGroupButtons(
-            "selectDraftClassCharts",
-            choices = c("ADP", "Bewertung", "VOE", "WAR", "ELO")
+    htmltools::h1("Teambericht", paste(selected_team_name(), input$selectYear)),
+    shiny::tabsetPanel(
+      shiny::tabPanel(
+        "Roster",
+        shiny::fluidPage(
+          htmltools::h2("Roster"),
+          shiny::fluidRow(
+            shiny::column(
+              shinycssloaders::withSpinner(ggiraph::girafeOutput("team_depth_chart")),
+              width = 12
+            )
           ),
-          #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
-          # TODO: liga vergleich charts
-        ),
-        shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class")),
-        width = 12
-      )
-    ),
-    shiny::fluidRow(
-      htmltools::h4("Bewertung"),
-      shiny::column(
-        shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class_grades")),
-        width = 12
+          shiny::fluidRow(
+            shiny::column(
+              shinycssloaders::withSpinner(gt::gt_output("team_roster")),
+              width = 12
+            )
+          )
+        )
+      ),
+      shiny::tabPanel(
+        "Saison",
+        shiny::fluidPage(
+          htmltools::h2("Saison"),
+          shiny::fluidRow(
+            htmltools::h3("Schedule"),
+            shiny::column(
+              shinycssloaders::withSpinner(ggiraph::girafeOutput("team_schedule")),
+              width = 12
+            )
+          )
+        )
+      ),
+      shiny::tabPanel(
+        "Offseason",
+        shiny::fluidPage(
+          htmltools::h2("Offseason"),
+
+            shiny::fluidRow(
+              shiny::column(
+                htmltools::h3("Alle Draftklassen"),
+                shinycssloaders::withSpinner(reactable::reactableOutput("draft_classes_team")),
+                width = 7
+              ),
+              shiny::column(
+                shinycssloaders::withSpinner(ggiraph::girafeOutput("draft_classes_team_chart")),
+                width = 5
+              )
+            ),
+
+            htmltools::h3("Einzelne Draftklasse"),
+            shiny::fluidRow(
+              shiny::column(
+                shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital")),
+                width = 6
+              ),
+              shiny::column(
+                shinycssloaders::withSpinner(shiny::plotOutput("draft_class_capital_positions")),
+                width = 6
+              )
+            ),
+            shiny::fluidRow(
+              shiny::column(
+                htmltools::div(
+                  class = "flex",
+                  shinyWidgets::radioGroupButtons(
+                    "selectDraftClassCharts",
+                    choices = c("ADP", "Bewertung", "VOE", "WAR", "ELO")
+                  ),
+                  #shinyWidgets::prettySwitch("showLeagueComparison", "Zeige Picks im Vergleich zur Klasse", value = FALSE, fill = TRUE, status = "primary")
+                  # TODO: liga vergleich charts
+                ),
+                shinycssloaders::withSpinner(ggiraph::girafeOutput("team_draft_class")),
+                width = 12
+              )
+            ),
+            shiny::fluidRow(
+              htmltools::h4("Bewertung"),
+              shiny::column(
+                shinycssloaders::withSpinner(reactable::reactableOutput("team_draft_class_grades")),
+                width = 12
+              )
+            )
+
+        )
       )
     )
   )
 })
-
-# TODO: Tabs für verschiedene phasen (offseason, inseason...)
