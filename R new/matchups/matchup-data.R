@@ -1,3 +1,5 @@
+source("R new/base_data/player_data.R", local = TRUE)
+
 rfl_matchups_raw <- shiny::reactive({
   rfl_matchups_raw <-
     ##jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", current_week - 1, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
@@ -140,11 +142,12 @@ matchup_projection_table_data <- shiny::reactive({
       projected_1 = projected
     ) %>%
     dplyr::left_join(
-      rfl_player_scores %>%
+      rfl_player_data %>%
+        dplyr::arrange(season, week) %>%
         dplyr::group_by(player_id) %>%
         dplyr::summarise(
-          ppg = round(mean(points, na.rm = TRUE), 2),
-          sd = round(sd(points, na.rm = TRUE), 1),
+          ppg = last(ppg_running),
+          sd = round(sd(fpts, na.rm = TRUE), 1), # TODO: zu player data hinzufügen
           .groups = "drop"
         ),
       by = c("id" = "player_id")

@@ -3,7 +3,7 @@ source("R new/roster/depth_chart_data.R", local = TRUE)
 # TODO: in reactable tabellen umwandeln
 
 roster_war_filtered <- shiny::reactive({
-  roster_war_filtered <- roster_war %>%
+  roster_war_filtered <- rfl_current_roster %>%
     dplyr::filter(
       starts >= input$selectRflGames[1]
     #  starts >= 2
@@ -65,7 +65,7 @@ output$roster_war <- gt::render_gt({
 })
 
 output$roster_war_transactions <- gt::render_gt({
-  rfl_depth_chart_data %>%
+  rfl_current_roster %>%
     dplyr::group_by(franchise_name, transaction) %>%
     dplyr::summarise(war = round(sum(war, na.rm = TRUE), 2), .groups = "drop") %>%
     dplyr::filter(!is.na(transaction)) %>%

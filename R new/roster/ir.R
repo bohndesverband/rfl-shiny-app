@@ -82,11 +82,12 @@ output$lost_fpts <- reactable::renderReactable({
   reactable_default(
     data,
     columns = list(
-      franchise_name = reactable::colDef(name = "Team", width = 350),
+      franchise_name = reactable::colDef(name = "Team", width = 350, align = "left"),
       player_name_with_info = reactable::colDef(
         name = "Spieler",
         width = 250,
-        html = TRUE
+        html = TRUE,
+        align = "left"
       ),
       season = reactable::colDef(
         name = "Saison",

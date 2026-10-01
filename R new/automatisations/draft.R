@@ -48,26 +48,23 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
   dplyr::mutate(pos_rank = dplyr::dense_rank(first_pick)) %>%
   dplyr::ungroup() %>%
 
-  # add player elo
+  # add player data
   dplyr::left_join(
-    rfl_player_elo %>%
-      dplyr::group_by(season, mfl_id) %>%
+    rfl_player_data %>%
+      dplyr::filter(reg_season == 1) %>%
+      dplyr::group_by(player_id) %>%
       dplyr::mutate(
-        ppg = round(mean(score, na.rm = TRUE), 2)
+        peak_season = season[which.max(ifelse(is.na(player_elo_post), -Inf, player_elo_post))]
       ) %>%
-      dplyr::group_by(mfl_id) %>%
-      dplyr::mutate(
-        elo_peak = max(player_elo_post),
-        peak_season = season[which.max(player_elo_post)]
-      ) %>%
+      dplyr::group_by(player_id) %>%
       dplyr::arrange(season, week) %>%
-      dplyr::filter(row_number() == max(row_number())) %>%
-      dplyr::mutate(elo_shift = player_elo_post - 1500) %>%
-      dplyr::rename(current_player_elo = player_elo_post) %>%
+      dplyr::slice_tail(n = 1) %>%
       dplyr::ungroup() %>%
-      dplyr::select(mfl_id, current_player_elo, elo_peak, elo_season_end, elo_shift, ppg, peak_season),
-    by = "mfl_id"
+      dplyr::mutate(elo_shift = player_elo_post - 1500) %>%
+      dplyr::select(player_id, ppg = ppg_season, current_player_elo = player_elo_post, elo_shift, elo_peak = player_elo_max, peak_season),
+    by = c("mfl_id" = "player_id")
   ) %>%
+
   dplyr::group_by(season, pos_grouped) %>%
   dplyr::mutate(
     current_player_elo_rank = dplyr::dense_rank(desc(current_player_elo)),
@@ -108,8 +105,6 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
     class = paste(season, franchise_name)
   ) %>%
   dplyr::ungroup() %>%
-
-  # TODO: player_data statt einzeln ELO, WAR und Finishes
 
   # adp data
   dplyr::left_join(
