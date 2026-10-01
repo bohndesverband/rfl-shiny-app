@@ -21,7 +21,7 @@ rfl_depth_chart_data <- rfl_current_roster %>%
     by = "player_id"
   ) %>%
   dplyr::left_join(
-    player_elo %>%
+    rfl_player_elo %>%
       dplyr::group_by(mfl_id) %>%
       dplyr::arrange(dplyr::desc(season)) %>%
       dplyr::filter(dplyr::row_number() == 1) %>%

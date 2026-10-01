@@ -85,7 +85,7 @@ output$team_draft_class <- reactable::renderReactable({
   data <- rfl_drafts_data %>%
     dplyr::select(-elo_season_end) %>%
     dplyr::left_join(
-      player_elo %>%
+      rfl_player_elo %>%
         dplyr::select(mfl_id, elo_season = season, elo_season_end) %>%
         dplyr::distinct(),
       by = c("mfl_id"),

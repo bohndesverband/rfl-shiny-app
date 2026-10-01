@@ -1,4 +1,4 @@
-player_ppg <- player_elo %>%
+player_ppg <- rfl_player_elo %>%
   dplyr::group_by(season, mfl_id) %>%
   dplyr::summarise(
     fpts = sum(score),

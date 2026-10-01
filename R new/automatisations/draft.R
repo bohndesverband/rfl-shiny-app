@@ -50,7 +50,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
 
   # add player elo
   dplyr::left_join(
-    player_elo %>%
+    rfl_player_elo %>%
       dplyr::group_by(season, mfl_id) %>%
       dplyr::mutate(
         ppg = round(mean(score, na.rm = TRUE), 2)
@@ -108,6 +108,8 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
     class = paste(season, franchise_name)
   ) %>%
   dplyr::ungroup() %>%
+
+  # TODO: player_data statt einzeln ELO, WAR und Finishes
 
   # adp data
   dplyr::left_join(

@@ -43,7 +43,6 @@ rfl_draft_classes_sum_filtered <- shiny::reactive({
     dplyr::select(franchise_name, season, picks, rank_season, pvar, voe, rank, voe_pctl)
 })
 
-
 # alle Draftklassen ----
 ## tabelle ----
 output$draft_classes_team <- reactable::renderReactable({
@@ -313,7 +312,7 @@ output$team_draft_class <- ggiraph::renderGirafe({
       shiny::need(input$selectYear < new_season_march, "Noch keine Daten vorhanden")
     )
 
-    data <- player_elo %>%
+    data <- rfl_player_elo %>%
       dplyr::filter(mfl_id %in% selected_draft_players()) %>%
       dplyr::group_by(mfl_id, season) %>%
       dplyr::filter(week == max(week)) %>%

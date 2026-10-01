@@ -30,7 +30,7 @@ DBI::dbWriteTable(con, "rfl_team_elo", rfl_team_elo, overwrite = TRUE)
 #DBI::dbWriteTable(con, "rfl_team_elo", rfl_team_elo, overwrite = TRUE)
 
 # spieler ----
-player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
+rfl_player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/elo_data/rfl_player-elo_{x}.csv"),
     col_types = "iicccccnniiiii"
@@ -39,6 +39,20 @@ player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   dplyr::left_join(nflreadr::load_players() %>% select(display_name, gsis_id), by = "gsis_id") %>%
   dplyr::group_by(mfl_id, season) %>%
   dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
-  dplyr::ungroup()
 
-DBI::dbWriteTable(con, "rfl_player_elo", player_elo, overwrite = TRUE)
+  # add pctl
+  dplyr::group_by(position) %>%
+  dplyr::mutate(
+    player_elo_pre_pctl = round(dplyr::percent_rank(player_elo_pre), 2),
+    player_elo_post_pctl = round(dplyr::percent_rank(player_elo_post), 2),
+  ) %>%
+  dplyr::group_by(season, week, position) %>%
+  dplyr::mutate(
+    player_elo_post_pctl_week = round(dplyr::percent_rank(player_elo_post), 2),
+  ) %>%
+  dplyr::ungroup()
+  #dplyr::group_by(mfl_id, season) %>%
+  #dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
+  #dplyr::ungroup()
+
+# DBI::dbWriteTable(con, "rfl_player_elo", player_elo, overwrite = TRUE)

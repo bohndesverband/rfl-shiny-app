@@ -46,7 +46,7 @@ output$draft_classes_picks <- reactable::renderReactable({
 
   data <- rfl_draft_classes_filtered() %>%
     dplyr::left_join(
-      player_elo %>%
+      rfl_player_elo %>%
         dplyr::group_by(mfl_id) %>%
         dplyr::arrange(season, week) %>%
         dplyr::summarise(player_elo = list(player_elo_post), .groups = "drop"),
