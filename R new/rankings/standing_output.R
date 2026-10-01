@@ -3,8 +3,10 @@ source("R new/rankings/ranking_tables.R", local = TRUE)
 # conference standing ----
 output$conf_standing_table <- gt::render_gt({
   rfl_current_standing %>%
+    #dplyr::select(-dplyr::ends_with("_pctl")) %>%
     dplyr::mutate(
-      franchise_name = franchise_name_status
+      franchise_name = franchise_name_status,
+      dplyr::across(dplyr::ends_with("pctl"), ~ scales::percent(.x))
     ) %>%
     dplyr::group_by(conference_name) %>%
     gt::gt() %>%
@@ -33,13 +35,16 @@ output$conf_standing_table <- gt::render_gt({
     ) %>%
 
     gtExtras::gt_add_divider(c(franchise_name, pp_total, franchise_elo_postgame), color = color_grey_light, include_labels = FALSE) %>%
-    gtExtras::gt_add_divider(c(eff_rank, power_rank), color = color_bg, weight = "1px", include_labels = FALSE) %>%
+    gtExtras::gt_add_divider(c(war_rank, power_rank), color = color_bg, weight = "1px", include_labels = FALSE) %>%
     gtDefaults()
 })
 
 # power ranking ----
 output$power_ranking_table <- gt::render_gt({
   rfl_current_standing %>%
+    dplyr::mutate(
+      dplyr::across(dplyr::ends_with("pctl"), ~ scales::percent(.x))
+    ) %>%
     dplyr::arrange(power_rank) %>%
     #dplyr::select(-season, -week, -div_rank, -conf_rank, -league_rank) %>%
     gt::gt() %>%
@@ -64,6 +69,9 @@ output$power_ranking_table <- gt::render_gt({
 # elo ----
 output$elo_ranking_table <- gt::render_gt({
   rfl_current_standing %>%
+    dplyr::mutate(
+      dplyr::across(dplyr::ends_with("pctl"), ~ scales::percent(.x))
+    ) %>%
     dplyr::arrange(dplyr::desc(franchise_elo_postgame)) %>%
     #dplyr::select(-season, -week, -div_rank, -conf_rank, -league_rank) %>%
     gt::gt() %>%
