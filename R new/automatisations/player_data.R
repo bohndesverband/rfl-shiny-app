@@ -1,6 +1,6 @@
 # rfl players ----
 rfl_player_data <- rfl_player_scores %>%
-  #filter(season == 2026) %>%
+  #filter(season == 2026 & player_id == "12610") %>%
   dplyr::mutate(
     display_name = nflreadr::clean_player_names(player_name)
   ) %>%
@@ -51,20 +51,21 @@ rfl_player_data <- rfl_player_scores %>%
   ## running career war
   dplyr::left_join(
     rfl_war_data %>%
-      dplyr::arrange(player_id, season, week) %>%
       dplyr::group_by(player_id, season) %>%
+      dplyr::arrange(player_id, week) %>%
       dplyr::mutate(first_week = ifelse(week == min(week), 1, 0)) %>%
       dplyr::mutate(
         war_week = ifelse(first_week == 1, war, war - dplyr::lag(war))
       ) %>%
       dplyr::group_by(player_id) %>%
+      dplyr::arrange(season, week) %>%
       dplyr::mutate(war_career = round(cumsum(war_week), 2)) %>%
       dplyr::group_by(season, week, pos) %>%
       dplyr::mutate(war_career_pctl = round(dplyr::percent_rank(war_career), 2)) %>%
       dplyr::ungroup() %>%
       dplyr::select(season, week, player_id, war_week, war_career, war_career_pctl),
     by = c("season", "week", "player_id")
-  ) %>%
+  )
 
   # add elo
   ## add weekly elo

@@ -34,28 +34,6 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
   ) %>%
   dplyr::ungroup() %>%
 
-  # add weekly elo
-  dplyr::left_join(
-    player_elo %>%
-      dplyr::select(season, week, mfl_id, player_elo = player_elo_post),
-    by = c("season", "week", "player_id" = "mfl_id")
-  ) %>%
-
-  # add fantasy points
-  dplyr::left_join(
-    rfl_fantasy_finishes_weekly %>%
-      dplyr::select(season, week, player_id, points) %>%
-      dplyr::group_by(season, player_id) %>%
-      dplyr::arrange(week) %>%
-      dplyr::mutate(
-        points_cumsum = cumsum(points),
-        ppg_cummean = round(cummean(points), 2)
-      ) %>%
-      dplyr::select(-points) %>%
-      dplyr::ungroup(),
-    by = c("season", "week", "player_id")
-  )
-
 # DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
 
 # fantay finishes ----

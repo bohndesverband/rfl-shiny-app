@@ -113,6 +113,8 @@ rfl_trade_history <- rfl_trades_data %>%
     franchise_name = dplyr::first(franchise_name),
     #asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
     #asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
+    #asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
+    #asset_names_with_draft_info_badge = paste(asset_name_with_draft_info_badge, collapse = "\n"),
     .groups = "drop"
   ) %>%
   dplyr::mutate(
