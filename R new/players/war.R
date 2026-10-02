@@ -1,29 +1,21 @@
+source("R new/base_data/player_data.R", local = TRUE)
+
 # war ----
 player_war <- shiny::reactive({
-  rfl_war_data %>%
+  player_war <- rfl_player_data %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    dplyr::group_by(player_id) %>%
-    dplyr::summarise(
-      dplyr::across(c(player_name, pos), last),
-      dplyr::across(c(points, war, games_played, games_missed), ~ sum(.x, na.rm = TRUE)),
-      .groups = "drop"
-    ) %>%
-    dplyr::left_join(
-      mfl_players %>%
-        dplyr::select(player_id, team),
-      by = "player_id"
-    ) %>%
-    dplyr::filter(!is.na(player_name)) %>%
+
+    #dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    dplyr::filter(!is.na(player_name) & !is.na(war)) %>%
+    dplyr::group_by(season) %>%
+    dplyr::filter(week == max(week)) %>%
     dplyr::mutate(
-      war = round(war, 2),
-      war_pct = war / max(war),
-      display_name = nflreadr::clean_player_names(player_name)
+      war_pct = war / max(war, na.rm = TRUE)
     ) %>%
     dplyr::group_by(pos) %>%
-    dplyr::mutate(war_pct_pos = war / max(war)) %>%
+    dplyr::mutate(war_pct_pos = war / max(war, na.rm = TRUE)) %>%
     dplyr::ungroup() %>%
-    dplyr::rename(position = pos) %>%
-    dplyr::select(player_id, display_name, position, team, dplyr::starts_with("war"), dplyr::starts_with("games_"))
+    dplyr::select(player_id, display_name, pos_grouped, team, dplyr::starts_with("war"), dplyr::starts_with("games_"), -war_end_of_season, -war_pctl)
 })
 
 output$player_war <- gt::render_gt({
@@ -89,7 +81,7 @@ output$player_war <- gt::render_gt({
 # best players per position ----
 best_position_players <- shiny::reactive({
   player_war() %>%
-    dplyr::group_by(position) %>%
+    dplyr::group_by(pos_grouped) %>%
     dplyr::arrange(dplyr::desc(war)) %>%
     dplyr::filter(dplyr::row_number() <= 3) %>%
     dplyr::mutate(
@@ -105,8 +97,8 @@ best_position_players <- shiny::reactive({
 
 output$war_best_players <- shiny::renderPlot({
   ggplot2::ggplot(best_position_players(), aes(x = factor(pos_rank, levels = c(2,1,3)), y = col_height)) +
-    ggplot2::facet_wrap(~factor(position, c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")), ncol = 1, strip.position = "bottom") +
-    ggplot2::geom_col(aes(fill = position)) +
+    ggplot2::facet_wrap(~factor(pos_grouped, c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")), ncol = 1, strip.position = "bottom") +
+    ggplot2::geom_col(aes(fill = pos_grouped)) +
 
     ggplot2::geom_text(mapping = ggplot2::aes(label = war), vjust = 2, size = 4, color = color_bg, fontface = "bold") +
     ggplot2::geom_text(ggplot2::aes(label = sapply(display_name, function(x) paste(strwrap(x, width = 14), collapse = "\n"))), nudge_y = 0.15, vjust = 0, hjust = 0.5, size = 4, color = color_grey_mid, lineheight = 0.8) +

@@ -14,7 +14,8 @@ roster_war_sum <- shiny::reactive({
     dplyr::group_by(franchise_id, pos_grouped) %>%
     dplyr::summarise(
       war = round(sum(war, na.rm = TRUE), 2),
-      .groups = "drop") %>%
+      .groups = "drop"
+    ) %>%
     dplyr::group_by(franchise_id) %>%
     dplyr::mutate(total = round(sum(war, na.rm = TRUE), 2)) %>%
     dplyr::ungroup() %>%
@@ -32,7 +33,7 @@ player_war_reactable <- function(selected_franchise_id, selected_position) {
   data <- rfl_roster_data %>%
     dplyr::filter(season == input$selectYear & franchise_id == selected_franchise_id & pos_grouped == selected_position) %>%
     dplyr::filter(week == max(week)) %>%
-    dplyr::select(player_name_with_info, age, games_started, war, player_elo_post)
+    dplyr::select(player_name_with_info, age, games_started, war, player_elo)
 
   reactable_default(
     data,
@@ -43,12 +44,13 @@ player_war_reactable <- function(selected_franchise_id, selected_position) {
         cell = function(value, index) {
           as.character(htmltools::div(htmltools::HTML(value)))
         },
-        minWidth = 350
+        minWidth = 350,
+        align = "left"
       ),
       age = reactable_coldef_bg(name = "Alter", width = 100, palette_fun = scale_red_white(c(18:45), reverse = TRUE)),
       games_started = reactable_coldef_bg(name = "Gestartet", width = 100, palette_fun = scale_blue_white(c(0:14))),
       war = reactable_coldef_bg(name = "WAR", width = 100, palette_fun = scale_rainbow(rfl_roster_data$war)),
-      player_elo_post = reactable_coldef_bg(name = "ELO", width = 100, palette_fun = scale_rainbow(rfl_roster_data$player_elo_post))
+      player_elo = reactable_coldef_bg(name = "ELO", width = 100, palette_fun = scale_rainbow(rfl_roster_data$player_elo))
     ),
     defaultSorted = "war",
     defaultSortOrder = "desc",
@@ -88,7 +90,7 @@ output$team_war_by_position <- reactable::renderReactable({
     columns = c(
       list(
       franchise_id = reactable::colDef(show = FALSE),
-      franchise_name = reactable::colDef(name = "Team", width = 200),
+      franchise_name = reactable::colDef(name = "Team", width = 200, align = "left"),
       total = reactable_coldef_bg(name = "Total", width = 100, palette_fun = scale_red_blue(roster_war_sum()$total))
       ),
       stats::setNames(lapply(positions_grouped, position_coldef), positions_grouped)
@@ -384,7 +386,7 @@ output$roster_by_age <- reactable::renderReactable({
     columns = c(
       list(
         franchise_id = reactable::colDef(show = FALSE),
-        franchise_name = reactable::colDef(name = "Team", width = 200),
+        franchise_name = reactable::colDef(name = "Team", width = 200, align = "left"),
         total = reactable_coldef_bg(name = "Total", width = 75, palette_fun = scale_red_blue(fpts_by_age()$total, reverse = TRUE))
       ),
       stats::setNames(lapply(positions_grouped, roster_by_age_position_coldef), positions_grouped)

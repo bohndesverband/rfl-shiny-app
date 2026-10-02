@@ -7,6 +7,7 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     col_types = "dicccccc"
   )
 }) %>%
+  #filter(franchise_id == "0017" & season == 2026) %>%
   # add birthday
   dplyr::left_join(
     nflreadr::load_ff_playerids() %>%
@@ -29,38 +30,31 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
   ) %>%
   dplyr::select(-birthdate, -gameday) %>%
 
+  # add player data
+  dplyr::mutate(week_join = ifelse(week > 17, 17, week)) %>% # um weekly stats zu mergen
+
   dplyr::left_join(
-    rfl_war_data %>%
-      dplyr::group_by(player_id, season) %>%
-      dplyr::arrange(week) %>%
-      dplyr::slice_tail(n = 1) %>%
-      dplyr::ungroup() %>%
-      dplyr::select(player_id, season, war, war_pctl_season = war_pctl),
-    by = c("player_id", "season")
+    rfl_player_data %>%
+      dplyr::select(player_id, season, week, pos_grouped, fpts, war, war_pctl = war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
+    by = c("player_id", "season", "week_join" = "week"),
+    relationship = "many-to-many"
   ) %>%
+
+  dplyr::group_by(player_id) %>%
+  dplyr::arrange(season, week) %>%
+  tidyr::fill(c(pos_grouped, player_elo, player_elo_pctl)) %>%
+  dplyr::group_by(player_id, season) %>%
+  dplyr::arrange(season, week) %>%
+  tidyr::fill(c(war, war_pctl)) %>%
+  dplyr::ungroup() %>%
+
+  # add starter status
   dplyr::left_join(
     rfl_starter_data %>%
-      dplyr::mutate(player_id = as.character(player_id)) %>%
-      dplyr::select(season:player_id, player_score),
-    by = c("season", "week", "player_id", "franchise_id")
+      dplyr::select(season, week, franchise_id, player_id, starter_status),
+    by = c("season", "week", "franchise_id", "player_id")
   ) %>%
-  dplyr::mutate(
-    pos_grouped = dplyr::case_when(
-      pos %in% c("DE", "DT") ~ "DL",
-      pos %in% c("S", "CB") ~ "DB",
-      TRUE ~ pos
-    ),
-    player_name_with_info = paste0("<div>", display_name, "</div><div><small>", pos_grouped, ", ", team, "</small></div>")
-  ) %>%
-  dplyr::left_join(
-    rfl_player_elo %>%
-      dplyr::select(season, week, mfl_id, player_elo_post, player_elo_post_pctl),
-    by = c("season", "week", "player_id" = "mfl_id")
-  ) %>%
-  dplyr::group_by(player_id) %>%
-  dplyr::arrange(season, player_id) %>%
-  dplyr::arrange(week) %>%
-  tidyr::fill(c(player_elo_post, player_elo_post_pctl)) %>%
+
   dplyr::mutate(started = ifelse(starter_status == "starter", 1, 0)) %>%
   dplyr::group_by(season, franchise_id, player_id) %>%
   dplyr::mutate(games_started = sum(started, na.rm = TRUE)) %>%
@@ -105,7 +99,6 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     multiple = "last"
   ) %>%
   dplyr::mutate(
-    player_pos_team = paste(pos_grouped, team, sep = ", "),
     transaction = dplyr::case_when(
       traded == 1 | season_traded > season_drafted ~ "traded",
       drafted == 1 ~ "drafted",
@@ -116,8 +109,16 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
       transaction == "traded" ~ emoji::emoji("arrows_counterclockwise"),
       TRUE ~ emoji::emoji("heavy_plus_sign")
     ),
+    pos_grouped = ifelse(is.na(pos_grouped), pos, pos_grouped),
+    pos_grouped = dplyr::case_when(
+      pos_grouped %in% c("DT", "DE") ~ "DL",
+      pos_grouped %in% c("CB", "S") ~ "DB",
+      TRUE ~ pos_grouped
+    ),
+    player_pos_team = paste(pos_grouped, team, sep = ", "),
+    player_name_with_info = paste0("<div>", display_name, "</div><div><small>", pos_grouped, ", ", team, "</small></div>")
   ) %>%
-  dplyr::select(-season_drafted:-traded)
+  dplyr::select(-season_drafted:-traded, -week_join)
 
 DBI::dbWriteTable(con, "rfl_roster_data", rfl_roster_data, overwrite = TRUE)
 
@@ -145,13 +146,11 @@ DBI::dbWriteTable(con, "rfl_ir_data", rfl_ir_data, overwrite = TRUE)
 
 # depth charts ----
 rfl_depth_chart_data <- rfl_roster_data %>%
-  #filter(franchise_id == "0036" & season == "2026") %>%
+  #filter(franchise_id == "0017" & season == "2026") %>%
   dplyr::group_by(season) %>%
   dplyr::filter(week == max(week)) %>%
   dplyr::group_by(season, franchise_id) %>%
-  dplyr::mutate(
-    war_rank_team = dplyr::dense_rank(dplyr::desc(war)),
-  ) %>%
+  dplyr::mutate(war_rank_team = dplyr::dense_rank(dplyr::desc(war))) %>%
   dplyr::group_by(season, franchise_id, pos_grouped) %>%
   dplyr::arrange(dplyr::desc(war)) %>%
   dplyr::mutate(

@@ -40,7 +40,7 @@ rfl_weekly_standing <- rfl_team_elo %>%
   ) %>%
   # war rank
   dplyr::left_join(
-    rfl_depth_chart_data %>%
+    rfl_current_roster %>%
       dplyr::filter(!is.na(war_rank_league)) %>%
       dplyr::group_by(season, franchise_id) %>%
       dplyr::summarise(war = sum(war), .groups = "drop") %>%

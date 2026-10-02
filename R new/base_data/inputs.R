@@ -120,6 +120,7 @@ shiny::observeEvent(
       shiny::updateSliderInput(
         session,
         "selectRflGames",
+        "Anzahl Spiele als Starter",
         max = 13,
         value = 7
       )
@@ -127,6 +128,7 @@ shiny::observeEvent(
       shiny::updateSliderInput(
         session,
         "selectRflGames",
+        "Anzahl Spiele als Starter",
         max = current_week - 1,
         value = ifelse(current_week >= 13, 8, floor(current_week * 0.5))
       )
@@ -139,7 +141,8 @@ mfl_players_preselection <- shiny::reactive({
   req(input$selectPosition)
 
   # Grundfilter basierend auf der Position
-  filtered_data <- mfl_players %>%
+  mfl_players_preselection <- mfl_players %>%
+    dplyr::mutate(season = new_season_march) %>%
     dplyr::filter(grouped_pos %in% input$selectPosition) %>%
     dplyr::arrange(player_name)
 
@@ -148,12 +151,12 @@ mfl_players_preselection <- shiny::reactive({
       length(input$selectRflTeams) > 0 &&
       all(input$selectRflTeams != "")) {
 
-    filtered_data <- filtered_data %>%
+    mfl_players_preselection <- mfl_players_preselection %>%
       dplyr::filter(grepl(paste0("\\b", input$selectRflTeams, "\\b"), franchise_ids)) %>%
       dplyr::arrange(dplyr::desc(player_elo_post))
   }
 
-  filtered_data
+  mfl_players_preselection
 })
 
 # set inputs based on other inputs ----

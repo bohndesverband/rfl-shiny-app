@@ -10,21 +10,15 @@ if (current_week == 1) {
 rfl_starter_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/starter_data/rfl_starter_{x}.csv"),
-    col_types = "iiccdcccni"
+    col_types = "iiccccccni"
   )
 }) %>%
-  dplyr::mutate(
-    pos_grouped = dplyr::case_when(
-      pos %in% c("DT", "DE") ~ "DL",
-      pos %in% c("CB", "S") ~ "DB",
-      TRUE ~ pos
-    )
-  ) %>%
   dplyr::left_join(
-    rfl_player_scores %>%
-      dplyr::mutate(player_id = as.numeric(player_id)) %>%
-      dplyr::select(season, week, player_id, ppg, points_ppg_diff),
+    rfl_player_data %>%
+      dplyr::select(season, week, player_id, pos_grouped, fpts_running, ppg = ppg_running, ppg_diff = ppg_running_diff),
     by = c("season", "week", "player_id")
   )
+
+# TODO: mit roster data direkt zusammenführen
 
 DBI::dbWriteTable(con, "rfl_starter_data", rfl_starter_data, overwrite = TRUE)

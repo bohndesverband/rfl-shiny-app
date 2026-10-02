@@ -28,7 +28,7 @@ rfl_matchups_history <- rfl_team_elo %>%
       dplyr::summarise(
         franchise_score = sum(player_score, na.rm = TRUE),
         franchise_ppg_score = sum(ppg, na.rm = TRUE),
-        franchise_points_ppg_diff = round(sum(points_ppg_diff, na.rm = TRUE), 2),
+        franchise_points_ppg_diff = round(sum(ppg_diff, na.rm = TRUE), 2),
         .groups = "drop"
       ) %>%
       dplyr::select(season, week, franchise_id, franchise_ppg_score, franchise_points_ppg_diff),
@@ -41,7 +41,7 @@ rfl_matchups_history <- rfl_team_elo %>%
       dplyr::summarise(
         franchise_score = sum(player_score, na.rm = TRUE),
         franchise_ppg_score = sum(ppg, na.rm = TRUE),
-        franchise_points_ppg_diff = round(sum(points_ppg_diff, na.rm = TRUE), 2),
+        franchise_points_ppg_diff = round(sum(ppg_diff, na.rm = TRUE), 2),
         .groups = "drop"
       ) %>%
       dplyr::select(season, week, franchise_id, opponent_ppg_score = franchise_ppg_score, opponent_points_ppg_diff = franchise_points_ppg_diff),
