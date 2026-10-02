@@ -92,7 +92,9 @@ rfl_player_data <- rfl_player_scores %>%
   # fülle zeilen mit fehlenden daten
   dplyr::group_by(player_id) %>%
   dplyr::arrange(season, week) %>%
-  tidyr::fill(games_played, games_missed, war, war_pctl, pvar, player_elo_pre:player_elo_post_pctl_week)
+  dplyr::mutate(game = dplyr::row_number()) %>%
+  tidyr::fill(games_played, games_missed, war, war_pctl, pvar, player_elo_pre:player_elo_post_pctl_week) %>%
+  dplyr::ungroup()
 
 DBI::dbWriteTable(con, "rfl_player_data", rfl_player_data, overwrite = TRUE)
 
