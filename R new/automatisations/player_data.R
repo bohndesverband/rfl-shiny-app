@@ -17,12 +17,11 @@ rfl_player_data <- rfl_player_scores %>%
   dplyr::arrange(week) %>%
   dplyr::mutate(
     fpts_running = cumsum(points),
-    ppg_running = round(cummean(points), 2),
-    ppg_running_diff = round(points - ppg_running, 2)
+    ppg_running = round(cummean(points), 2)
   ) %>%
   dplyr::ungroup() %>%
   dplyr::rename(fpts = points) %>%
-  dplyr::select(season, week, reg_season, player_id:fpts, fpts_running, ppg_running, ppg_running_diff, pos_rank:top60_weekly) %>%
+  dplyr::select(season, week, reg_season, player_id:fpts, fpts_running, ppg_running, pos_rank:top60_weekly) %>%
 
   dplyr::left_join(
     rfl_fantasy_finishes_season %>%
@@ -30,7 +29,7 @@ rfl_player_data <- rfl_player_scores %>%
     by = c("player_id", "season"),
     relationship = "many-to-many"
   ) %>%
-  dplyr::select(season:fpts, fpts_running, ppg_running, ppg_running_diff, ppg_season = ppg, pos_rank:top60_season) %>%
+  dplyr::select(season:fpts, ppg, fpts_running, ppg_running, pos_rank:top60_season) %>%
 
   # add war
   ## weekly
@@ -47,19 +46,37 @@ rfl_player_data <- rfl_player_scores %>%
       dplyr::summarise(war_end_of_season = last(war), .groups = "drop"),
     by = c("season", "player_id")
   ) %>%
+  ## running career war
+
+  dplyr::left_join(
+    rfl_war_data %>%
+      dplyr::arrange(player_id, season, week) %>%
+      dplyr::group_by(player_id, season) %>%
+      dplyr::mutate(first_week = ifelse(week == min(week), 1, 0)) %>%
+      dplyr::mutate(
+        war_week = ifelse(first_week == 1, war, war - dplyr::lag(war))
+      ) %>%
+      dplyr::group_by(player_id) %>%
+      dplyr::mutate(war_career = round(cumsum(war_week), 2)) %>%
+      dplyr::group_by(season, week, pos) %>%
+      dplyr::mutate(war_career_pctl = round(dplyr::percent_rank(war_career), 2)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(season, week, player_id, war_week, war_career, war_career_pctl),
+    by = c("season", "week", "player_id")
+  ) %>%
 
   # add elo
   ## add weekly elo
   dplyr::left_join(
-    rfl_player_elo %>%
-      dplyr::select(-position, -team, -score_diff, -dplyr::starts_with("opponent"), -gsis_id, -score, -display_name),
+    player_elo %>%
+      dplyr::select(-position, -team, -score_diff, -dplyr::starts_with("opponent"), -gsis_id, -score),
     by = c("season", "week", "player_id" = "mfl_id")
   ) %>%
   dplyr::select(season:team, games_played, games_missed, everything()) %>%
 
   ## add current elo
   dplyr::left_join(
-    rfl_player_elo %>%
+    player_elo %>%
       dplyr::group_by(mfl_id) %>%
       dplyr::arrange(season, week) %>%
       dplyr::summarise(
@@ -69,16 +86,12 @@ rfl_player_data <- rfl_player_scores %>%
         player_elo_max = max(player_elo_post)
       ),
     by = c("player_id" = "mfl_id")
-  ) %>%
-
-  # fülle zeilen mit fehlenden daten
-  dplyr::group_by(player_id) %>%
-  dplyr::arrange(season, week) %>%
-  tidyr::fill(games_played, games_missed, war, war_pctl, pvar, player_elo_pre:player_elo_post_pctl_week)
+  )
 
 DBI::dbWriteTable(con, "rfl_player_data", rfl_player_data, overwrite = TRUE)
 
 # mfl players ----
+## player data ----
 mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=players&L=63018&APIKEY=&DETAILS=&SINCE=&PLAYERS=&JSON=1")) %>%
   purrr::pluck("players", "player") %>%
   dplyr::tibble() %>%
@@ -96,14 +109,7 @@ mfl_players <- jsonlite::read_json(paste0(mfl_api_base_march, "/export?TYPE=play
       TRUE ~ pos
     ),
     display_name = nflreadr::clean_player_names(player_name)
-  ) %>%
-  dplyr::left_join(
-    rfl_player_data %>%
-      dplyr::group_by(player_id) %>%
-      dplyr::arrange(season, week) %>%
-      dplyr::slice_tail(n = 1) %>%
-      dplyr::select(player_id, player_elo_post),
-    by = "player_id"
   )
 
 DBI::dbWriteTable(con, "mfl_players", mfl_players, overwrite = TRUE)
+

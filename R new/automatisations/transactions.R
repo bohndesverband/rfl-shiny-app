@@ -10,7 +10,7 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
       grepl("FP_", asset_id) ~ stringr::str_split(asset_id, "_")[[1]][4],
       grepl("DP_", asset_id) ~ stringr::str_split(asset_id, "_")[[1]][2]
     ),
-    team = dplyr::case_when(
+    pick_team_id = dplyr::case_when(
       grepl("FP_", asset_id) ~ stringr::str_split(asset_id, "_")[[1]][2],
       grepl("DP_", asset_id) ~ franchise_id
     )
@@ -18,16 +18,16 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   dplyr::left_join(
     rfl_franchise_data %>%
       dplyr::select(franchise_id, franchise_name),
-    by = c("team" = "franchise_id")
+    by = c("pick_team_id" = "franchise_id")
   ) %>%
 
   dplyr::ungroup() %>%
   dplyr::mutate(
     pick_round = ifelse(grepl("DP_", asset_id), as.numeric(pick_round) + 1, as.numeric(pick_round)),
-    trade_asset_name = ifelse(grepl("FP_", asset_id), paste(asset_name, franchise_name), asset_name),
+    asset_name_clean = ifelse(grepl("FP_", asset_id), paste(asset_name, franchise_name), asset_name),
     trade_asset_id = ifelse(grepl("DP_", asset_id) | grepl("FP_", asset_id), paste0("DP_", pick_round), asset_id)
-  ) %>%
-  dplyr::select(-franchise_name, -team) %>%
+  )
+  dplyr::select(-franchise_name, -pick_team_id) %>%
   dplyr::group_by(trade_id) %>%
   dplyr::arrange(trade_side) %>%
   dplyr::mutate(
@@ -69,7 +69,7 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
   dplyr::mutate(
     asset_name = ifelse(!is.na(asset_name_with_info), asset_name_with_info, asset_name)
   ) %>%
-  dplyr::select(season:asset_name, trade_asset_name:pick_year, pick_round, everything(), -asset_name_with_info)
+  dplyr::select(season:asset_name, asset_name_clean:pick_year, pick_round, everything(), -asset_name_with_info)
 
 DBI::dbWriteTable(con, "rfl_trades_data", rfl_trades_data, overwrite = TRUE)
 
@@ -89,7 +89,7 @@ rfl_trade_history <- rfl_trades_data %>%
   dplyr::rowwise() %>%
   dplyr::mutate(
     pos = stringr::str_split(gsub(".*\\(([^)]+)\\).*", "\\1", asset_name), ",")[[1]][1],
-    #asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), trade_asset_name),
+    #asset_name_with_draft_info = ifelse(!is.na(player_name_with_info), paste(asset_name, player_name_with_info, sep = " - "), asset_name_clean),
     #asset_name_with_draft_info_badge= ifelse(!is.na(pick_cat_badge), paste0(asset_name_with_draft_info, pick_cat_badge), asset_name_with_draft_info)
   ) %>%
   dplyr::group_by(trade_id) %>%
@@ -108,7 +108,7 @@ rfl_trade_history <- rfl_trades_data %>%
     #asset_types = dplyr::first(asset_types),
     asset_positions = dplyr::first(asset_positions),
     franchise_ids = dplyr::first(franchise_ids),
-    asset_names = paste(trade_asset_name, collapse = "\n"),
+    asset_names = paste(asset_name_clean, collapse = "\n"),
     franchise_id = dplyr::first(franchise_id),
     franchise_name = dplyr::first(franchise_name),
     #asset_names_with_draft_info = paste(asset_name_with_draft_info, collapse = "\n"),
@@ -124,12 +124,14 @@ rfl_trade_history <- rfl_trades_data %>%
 DBI::dbWriteTable(con, "rfl_trade_history", rfl_trade_history, overwrite = TRUE)
 
 # transactions
-rfl_transactions_data <- purrr::map_df(2026:2026, function(x) {
+rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/transactions_data/rfl_transactions_{x}.csv"),
     col_types = "ddTdcccc"
   )
 }) %>%
+  #filter(player_id == "17046") %>%
+
   # helper um zu joinen
   dplyr::mutate(
     season_join = dplyr::case_when(
@@ -137,16 +139,16 @@ rfl_transactions_data <- purrr::map_df(2026:2026, function(x) {
       TRUE ~ season
     ),
     week_join = dplyr::case_when(
-      (week == 0 | week == 22) & season < 2020 ~ 12,
-      (week == 0 | week == 22) & season >= 2020 ~ 13,
-      TRUE ~ week
+      (week == 0 | week == 22) & season < 2020 ~ 16,
+      (week == 0 | week == 22) & season >= 2020 ~ 17,
+      TRUE ~ week - 1
     ),
-    join_id = paste0(season_join, week_join)
+    join_id = paste0(season_join, stringr::str_pad(week_join, 2, pad = "0"))
   ) %>%
 
 
 
-  # füge trades an
+  # TODO: füge trades an
   #dplyr::bind_rows(
   #  rfl_trades_data %>%
   #    dplyr::mutate(
@@ -159,25 +161,48 @@ rfl_transactions_data <- purrr::map_df(2026:2026, function(x) {
 
   dplyr::left_join(
     rfl_player_data %>%
-      dplyr::mutate(join_id_new = paste0(season, week)) %>%
-      dplyr::select(join_id_new, player_id, display_name, pos_grouped, team, games_played, games_missed, fpts_running, ppg_running, pos_rank, war, war_pctl, war_end_of_season, player_elo_pre, player_elo_pre_pctl, player_elo_current, player_elo_current),
+      dplyr::mutate(join_id_new = paste0(season, stringr::str_pad(week, 2, pad = "0"))) %>%
+      dplyr::select(join_id_new, player_id, display_name, pos_grouped, team, games_played, games_missed, fpts_running, ppg_running, pos_rank, war_career, war_career_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
     by = dplyr::join_by(
       player_id,
       dplyr::closest(join_id >= join_id_new)
     )
   ) %>%
 
+  # füge aktuellen WAR an
+  dplyr::left_join(
+    rfl_player_data %>%
+      dplyr::group_by(player_id) %>%
+      dplyr::arrange(season, week) %>%
+      dplyr::slice_tail(n = 1) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(player_id, war_current = war_career, player_elo_current, player_elo_current_pctl, pos_grouped_new = pos_grouped, team_new = team),
+    by = "player_id"
+  ) %>%
+
   # wenn daten aus vergangenen saison, lösche fpts und war
   dplyr::mutate(
     dplyr::across(
-      c(games_played, games_missed, pos_rank, fpts_running, ppg_running, war, war_pctl, war_end_of_season),
-    ~ ifelse(
+      c(games_played, games_missed, fpts_running, ppg_running, pos_rank),
+      ~ ifelse(
         stringr::str_detect(join_id_new, as.character(season)),
         .x,
         NA
       )
-    )
+    ),
+    dplyr::across(
+      c(war_career, war_career_pctl),
+      ~ ifelse(
+        week == 0,
+        0,
+        .x
+      )
+    ),
+    # aktualisiere team und position
+    pos_grouped = ifelse(stringr::str_detect(join_id_new, as.character(season)), pos_grouped, pos_grouped_new),
+    team = ifelse(stringr::str_detect(join_id_new, as.character(season)), team, team_new)
   ) %>%
+  dplyr::select(-pos_grouped_new, -team_new) %>%
 
   # add player info für nicht vorhandene namen
   dplyr::left_join(
@@ -208,11 +233,12 @@ rfl_transactions_data <- purrr::map_df(2026:2026, function(x) {
 
   # data cleaning
   dplyr::mutate(
-    player_elo_pre = ifelse(is.na(player_elo_pre), 1500, player_elo_pre),
-    elo_shift = player_elo_current - player_elo_pre,
-    war_shift = war_end_of_season - war
+    player_elo = ifelse(is.na(player_elo), 1500, player_elo),
+    elo_shift = player_elo_current - player_elo,
+    war_shift = ifelse(is.na(war_career), war_current, war_current - war_career)
   ) %>%
-  dplyr::arrange(dplyr::desc(timestamp))
+  dplyr::arrange(dplyr::desc(timestamp)) %>%
+  dplyr::distinct()
 
 DBI::dbWriteTable(con, "rfl_transactions_data", rfl_transactions_data, overwrite = TRUE)
 

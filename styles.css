@@ -29,7 +29,8 @@
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData{
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .action-button#filterData {
   display: inline-block;
 }
 
@@ -258,13 +259,17 @@
   width: 100%;
 }
 
-/* Trade Bait */
-.sidebar:has(~ #dashboard-container #section-trade-bait.active) .form-group:not(:has(#selectPositions-label)):not(:has(#selectPlayers-label)) {
+/* Transaktionen */
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)) {
     display: none;
 }
 
 /* Trade history */
 .sidebar:has(~ #dashboard-container #section-trade-history.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectPositions-label)):not(:has(#selectTradeAsset-label)) {
+    display: none;
+}
+
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)) {
     display: none;
 }
 
@@ -467,9 +472,18 @@
 }
 
 .Reactable > .rt-table > .rt-tbody:has(> .rt-tr-group > .rt-tr-details) > .rt-tr-group:not(:has(> .rt-tr-details)) {
-    opacity: 0.3;
-    transition: opacity 0.3s ease;
-  }
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.border-right {
+  border-right: 1px solid var(--color__bg) !important;
+}
+
+/* reactable spalten mit balken */
+.rt-td[style*="background-image: linear-gradient"] .rt-td-inner {
+  padding-top: 9px;
+}
 
 /* tabellen header zentrieren */
 .rt-th {

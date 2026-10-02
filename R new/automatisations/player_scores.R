@@ -23,19 +23,38 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
 }) %>%
   dplyr::group_by(season, player_id) %>%
   dplyr::mutate(
-    games = n(),
-    ppg = round(mean(points, na.rm = TRUE), 2),
-    points_ppg_diff = round(points - ppg, 2),
     pos_grouped = dplyr::case_when(
       pos %in% c("DT", "DE") ~ "DL",
       pos %in% c("CB", "S") ~ "DB",
       TRUE ~ pos
     ),
-    #games = n(),
-    #ppg = round(mean(points, na.rm = TRUE), 2),
-    #points_ppg_diff = round(points - ppg, 2)
+    games = n(),
+    ppg = round(mean(points, na.rm = TRUE), 2),
+    points_ppg_diff = round(points - ppg, 2)
   ) %>%
-  dplyr::ungroup()
+  dplyr::ungroup() %>%
+
+  # add weekly elo
+  dplyr::left_join(
+    player_elo %>%
+      dplyr::select(season, week, mfl_id, player_elo = player_elo_post),
+    by = c("season", "week", "player_id" = "mfl_id")
+  ) %>%
+
+  # add fantasy points
+  dplyr::left_join(
+    rfl_fantasy_finishes_weekly %>%
+      dplyr::select(season, week, player_id, points) %>%
+      dplyr::group_by(season, player_id) %>%
+      dplyr::arrange(week) %>%
+      dplyr::mutate(
+        points_cumsum = cumsum(points),
+        ppg_cummean = round(cummean(points), 2)
+      ) %>%
+      dplyr::select(-points) %>%
+      dplyr::ungroup(),
+    by = c("season", "week", "player_id")
+  )
 
 # DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
 

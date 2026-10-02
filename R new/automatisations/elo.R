@@ -23,6 +23,16 @@ rfl_team_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
     col_types = "iiccnnnnnnn"
   )
 }) %>%
+  dplyr::mutate(
+    franchise_elo_pregame_pctl = round(dplyr::percent_rank(franchise_elo_pregame), 2),
+    franchise_elo_postgame_pctl = round(dplyr::percent_rank(franchise_elo_postgame), 2),
+  ) %>%
+  dplyr::group_by(season, week) %>%
+  dplyr::mutate(
+    franchise_elo_pregame_pctl_week = round(dplyr::percent_rank(franchise_elo_pregame), 2),
+    franchise_elo_postgame_pctl_week = round(dplyr::percent_rank(franchise_elo_postgame), 2),
+  ) %>%
+  dplyr::ungroup() %>%
   dplyr::left_join(rfl_franchise_data %>% select(franchise_id, franchise_name, division, division_name, conference_id, conference_name), by = "franchise_id") %>%
   dplyr::left_join(rfl_franchise_data %>% select(franchise_id, franchise_name) %>% rename(opponent_name = franchise_name), by = c("opponent_id" = "franchise_id"))
 
@@ -36,6 +46,16 @@ rfl_player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
     col_types = "iicccccnniiiii"
   )
 }) %>%
+  dplyr::group_by(position) %>%
+  dplyr::mutate(
+    player_elo_pre_pctl = round(dplyr::percent_rank(player_elo_pre), 2),
+    player_elo_post_pctl = round(dplyr::percent_rank(player_elo_post), 2),
+  ) %>%
+  dplyr::group_by(season, week, position) %>%
+  dplyr::mutate(
+    player_elo_post_pctl_week = round(dplyr::percent_rank(player_elo_post), 2),
+  ) %>%
+  dplyr::ungroup() %>%
   dplyr::left_join(nflreadr::load_players() %>% select(display_name, gsis_id), by = "gsis_id") %>%
   dplyr::group_by(mfl_id, season) %>%
   dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
