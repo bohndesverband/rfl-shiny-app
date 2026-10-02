@@ -4,7 +4,7 @@ source("R new/base_data/player_data.R", local = TRUE)
 transactions_filtered <- shiny::reactive({
   transactions_filtered <- rfl_transactions_data %>%
     #dplyr::filter(season == 2026) %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2] & week >= input$selectWeeks[1] & week <= input$selectWeeks[2]) %>%
+    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
     dplyr::select(date, week, type_desc, display_name, pos_grouped, team, fpts_running, ppg_running, war = war_career, war_pctl = war_career_pctl, war_shift, player_elo, player_elo_pctl, elo_shift, franchise_name)
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
