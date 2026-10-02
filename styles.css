@@ -136,6 +136,11 @@
   display: none;
 }
 
+/* Player Report */
+.sidebar:has(~ #dashboard-container #section-profil.active) .form-group:not(:has(#selectPlayers-label)) {
+  display: none;
+}
+
 /* Player WAR */
 .sidebar:has(~ #dashboard-container #section-wins-above-replacement.active) .form-group:not(:has(#selectYears-label)) {
   display: none;

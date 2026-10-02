@@ -104,6 +104,11 @@ shiny::observeEvent(active_tab(), {
       options = list("actions-box" = TRUE, "none-selected-text" = "RFL Team wählen")
     )
   }
+
+  ## NFL Spieler
+  if (active_tab() == "#section-profil") {
+    #shinyWidgets::updatePickerInput(session, "selectPlayers", choices = split(setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), mfl_players_preselection()$grouped_pos), selected = top_player_id)
+  }
 })
 
 shiny::observeEvent(

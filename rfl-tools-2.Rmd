@@ -571,6 +571,24 @@ shiny::fluidPage(
 )
 ```
 
+# Profil {data-navmenu="Spieler"}
+
+```{r player-report, echo=FALSE, message=FALSE, warning=FALSE}
+loaded_data_player_report <- shiny::reactiveVal(FALSE)
+
+observeEvent(active_tab(), {
+  if (active_tab() == "#section-profil" & !loaded_data_player_report()) {
+    source("R new/reports/player_report.R", local = TRUE)
+
+    loaded_data_player_report(TRUE)
+  }
+})
+
+shiny::fluidPage(
+  shiny::uiOutput("player_report")
+)
+```
+
 # Wins above Replacement {data-navmenu="Spieler"}
 
 ##
@@ -736,7 +754,7 @@ shiny::fluidPage(
 
 # Transaktionen {data-navmenu="Spieler"}
 
-```{r transactions, echo=FALSE, message=FALSE, warning=FALSE}
+```{r transactions, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 loaded_data_trade_history <- shiny::reactiveVal(FALSE)
 loaded_data_transactions <- shiny::reactiveVal(FALSE)
 
