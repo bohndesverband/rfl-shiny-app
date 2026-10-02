@@ -255,7 +255,7 @@
 }
 
 /* Transaktionen */
-.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectWeeks-label)) {
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)) {
     display: none;
 }
 

@@ -120,16 +120,6 @@ shiny::sliderInput(
 )
 
 shiny::sliderInput(
-  "selectWeeks",
-  "Wochen",
-  min = 1,
-  max = 13,
-  value = c(1, 13),
-  step = 1,
-  sep = ""
-)
-
-shiny::sliderInput(
   "selectDraftRounds",
   "Draft Runden",
   min = 1,
