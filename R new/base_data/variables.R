@@ -214,24 +214,11 @@ text_color <- function(bg) {
 }
 
 reactable_coldef_bg <- function(
-    name,
-    cell_fun = NULL,
     palette_fun,
-    details_fun = NULL,
-    minWidth = 100,
-    footer_fun = NULL,
     ...
 ) {
   reactable::colDef(
-    name = name,
-    minWidth = minWidth,
     ...,
-    cell = if (!is.null(cell_fun)) {
-      function(index) {
-        cell_fun(index)
-      }
-    } else NULL,
-
     style = function(value) {
       bg <- palette_fun(value)
 
@@ -240,23 +227,12 @@ reactable_coldef_bg <- function(
         color = text_color(bg),
         textAlign = "center"
       )
-    },
-
-    details = if (!is.null(details_fun)) {
-      function(index) {
-        details_fun(index)
-      }
-    } else NULL,
-
-    footer = if (!is.null(footer_fun)) {
-      function(values) footer_fun(values, na.rm = TRUE)
-    } else NULL
+    }
   )
 }
 
 reactable_coldef_color <- function(
     palette_fun,
-    footer_fun = NULL,
     ...
 ) {
   reactable::colDef(
@@ -267,21 +243,20 @@ reactable_coldef_color <- function(
         textAlign = "center",
         fontWeight = "bold"
       )
-    },
-    footer = if (is.null(footer_fun)) {
-      NULL
-    } else {
-      function(values) {
-        footer_fun(values, na.rm = TRUE)
-      }
     }
   )
 }
 
 ## rainbow scale ----
-scale_rainbow <- function(domain_values, reverse = FALSE) {
+scale_rainbow <- function(domain_values, reverse = FALSE, text = FALSE) {
+  colors <- c(color_red, color_orange, color_yellow, color_green, color_blue)
+
+  if (text) {
+    colors <- c(color_red, color_orange, color_green, color_blue)
+  }
+
   pal <- scales::col_numeric(
-    palette = c(color_red, color_orange, color_yellow, color_green, color_blue),
+    palette = colors,
     domain = domain_values,
     na.color = "transparent",
     reverse = reverse

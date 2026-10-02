@@ -29,7 +29,8 @@
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData{
+.sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .action-button#filterData {
   display: inline-block;
 }
 
@@ -253,8 +254,8 @@
   width: 100%;
 }
 
-/* Trade Bait */
-.sidebar:has(~ #dashboard-container #section-trade-bait.active) .form-group:not(:has(#selectPositions-label)):not(:has(#selectPlayers-label)) {
+/* Transaktionen */
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectWeeks-label)) {
     display: none;
 }
 
@@ -472,6 +473,11 @@
 
 .border-right {
   border-right: 1px solid var(--color__bg) !important;
+}
+
+/* reactable spalten mit balken */
+.rt-td[style*="background-image: linear-gradient"] .rt-td-inner {
+  padding-top: 9px;
 }
 
 /* tabellen header zentrieren */
