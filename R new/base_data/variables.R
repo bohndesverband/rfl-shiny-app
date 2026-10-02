@@ -138,7 +138,7 @@ gt_player <- function(df) {
   df %>%
     gt::cols_label(
       display_name = "Spieler",
-      position = "Pos",
+      pos_grouped = "Pos",
       team = "Team"
     ) %>%
     gt::tab_options(

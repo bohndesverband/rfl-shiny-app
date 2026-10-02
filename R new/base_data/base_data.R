@@ -17,8 +17,6 @@ rfl_matchups_history <- read_data_table("rfl_matchups_history")
 
 source("R new/base_data/elo.R", local = TRUE)
 
-rfl_player_scores <- read_data_table("rfl_player_scores")
-
 source("R new/base_data/fantasy_finishes.R", local = TRUE)
 
 source("R new/base_data/rosters.R", local = TRUE)
@@ -26,8 +24,6 @@ source("R new/base_data/rosters.R", local = TRUE)
 source("R new/base_data/standing.R", local = TRUE)
 
 source("R new/base_data/starter.R", local = TRUE)
-
-source("R new/base_data/war.R", local = TRUE)
 
 source("R new/base_data/draft.R", local = TRUE) # nach fantasy_finishes, elo und war
 

@@ -1,7 +1,9 @@
+source("R new/base_data/player_data.R", local = TRUE)
+
 # running elo ----
-running_player_elo <- rfl_player_elo %>%
-  dplyr::select(season, week, mfl_id, display_name, position, team, player_elo_post) %>%
-  dplyr::group_by(mfl_id) %>%
+running_player_elo <- rfl_player_data %>%
+  dplyr::select(season, week, player_id, display_name, pos_grouped, team, player_elo_post) %>%
+  dplyr::group_by(player_id) %>%
   dplyr::arrange(season, week) %>%
   dplyr::mutate(
     game = dplyr::row_number(),
@@ -10,17 +12,20 @@ running_player_elo <- rfl_player_elo %>%
   dplyr::ungroup() %>%
   dplyr::left_join(
     mfl_players %>%
-      dplyr::select(player_id, season) %>%
-      dplyr::rename(last_season = season),
-    by = c("mfl_id" = "player_id")
-  )
+      dplyr::select(player_id),
+    by = "player_id"
+  ) %>%
+  dplyr::group_by(player_id) %>%
+  dplyr::mutate(last_season = max(season)) %>%
+  dplyr::ungroup()
+# TODO: last leason zu player data hinzufügen
 
 ## output ----
 output$running_player_elo <- renderPlot({
   ggplot2::ggplot(running_player_elo, ggplot2::aes(x = game, y = player_elo_post)) +
-    ggplot2::geom_hex(data = subset(running_player_elo, active == 1 & position == input$selectPosition), bins = 70) +
+    ggplot2::geom_hex(data = subset(running_player_elo, active == 1 & pos_grouped == input$selectPosition), bins = 70) +
 
-    ggalt::geom_xspline(data = subset(running_player_elo, mfl_id %in% c(input$selectPlayers)), ggplot2::aes(color = display_name), spline_shape = -0.5) +
+    ggalt::geom_xspline(data = subset(running_player_elo, player_id %in% c(input$selectPlayers)), ggplot2::aes(color = display_name), spline_shape = -0.5) +
     ggplot2::coord_cartesian(xlim = c(0, max(running_player_elo$game)), ylim = c(min(running_player_elo$player_elo_post) - 10, max(running_player_elo$player_elo_post)), expand = FALSE) +
 
     plot_elo_defaults +
@@ -34,8 +39,8 @@ output$running_player_elo <- renderPlot({
 # elo standing ----
 player_elo_standing <- shiny::reactive({
   running_player_elo %>%
-    dplyr::filter(position == input$selectPosition) %>%
-    dplyr::group_by(mfl_id) %>%
+    #dplyr::filter(pos_grouped == input$selectPosition) %>%
+    dplyr::group_by(player_id) %>%
     dplyr::arrange(game) %>%
     dplyr::mutate(
       elo_shift = ifelse(
@@ -59,7 +64,7 @@ output$player_elo_ranking_table <- gt::render_gt({
       title = paste("RFL", input$selectPosition, "ELO Ranking"),
       subtitle = paste("Woche", player_elo_standing()$week[1], player_elo_standing()$season[1])
     ) %>%
-    gt::cols_hide(c(season:mfl_id, active)) %>%
+    gt::cols_hide(c(season:player_id, active)) %>%
     gt::cols_move(elo_shift, player_elo_post) %>%
 
     gt::data_color(
@@ -113,7 +118,7 @@ output$player_elo_ranking_table <- gt::render_gt({
     ) %>%
     gt::cols_width(
       display_name ~ px(150),
-      c(position, team) ~ px(70),
+      c(pos_grouped, team) ~ px(70),
       c(elo_shift:game) ~ px(100)
     )
 })
@@ -125,7 +130,7 @@ observeEvent(input$player_elo_ranking_table, {
     selected = NULL
   )
 
-  selected_players <- player_elo_standing()$mfl_id[input$player_elo_ranking_table]
+  selected_players <- player_elo_standing()$player_id[input$player_elo_ranking_table]
   shiny::updateSelectizeInput(session, "selectPlayers", selected = selected_players)
 })
 
@@ -133,11 +138,11 @@ observeEvent(input$player_elo_ranking_table, {
 player_elo_peaks <- running_player_elo %>%
   dplyr::filter(active == 1) %>%
   dplyr::filter(last_season >= new_season_sept - 2) %>%
-  dplyr::group_by(mfl_id) %>%
+  dplyr::group_by(player_id) %>%
   dplyr::filter(player_elo_post == max(player_elo_post)) %>%
   dplyr::filter(game == max(game)) %>% # falls es mehrere wochen mit selber elo gibt
   dplyr::ungroup() %>%
-  dplyr::select(display_name, position, team, player_elo_post, season, week, game) %>%
+  dplyr::select(display_name, pos_grouped, team, player_elo_post, season, week, game) %>%
   dplyr::arrange(dplyr::desc(player_elo_post))
 
 output$player_elo_peaks_table <- gt::render_gt({
@@ -166,7 +171,7 @@ output$player_elo_peaks_table <- gt::render_gt({
     gt_player() %>%
     gt::cols_width(
       display_name ~ px(150),
-      c(position, team) ~ px(70),
+      c(pos_grouped, team) ~ px(70),
       c(week, game) ~ px(100)
     )
 })
@@ -174,7 +179,7 @@ output$player_elo_peaks_table <- gt::render_gt({
 # elo data ----
 output$player_elo_data <- reactable::renderReactable({
   data <- rfl_player_elo %>%
-    dplyr::select(season, week, display_name, position, team, score, player_elo_pre, player_elo_post, elo_shift, opponent_id, opponent_elo_pre, opponent_elo_post)
+    dplyr::select(season, week, display_name, pos_grouped, team, score, player_elo_pre, player_elo_post, elo_shift, opponent_id, opponent_elo_pre, opponent_elo_post)
 
   reactable_default(
     data,

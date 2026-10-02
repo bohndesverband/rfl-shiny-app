@@ -73,4 +73,4 @@ rfl_war_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
   ) %>%
   dplyr::select(-war_mean, -games_played_sum, -dplyr::starts_with("top"), -dplyr::starts_with("bonus"))
 
-DBI::dbWriteTable(con, "rfl_war_data", rfl_war_data, overwrite = TRUE)
+# DBI::dbWriteTable(con, "rfl_war_data", rfl_war_data, overwrite = TRUE)

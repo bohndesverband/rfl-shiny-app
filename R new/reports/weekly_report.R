@@ -12,11 +12,6 @@ report_players <- shiny::reactive({
       player_id = as.character(player_id)
     ) %>%
     dplyr::left_join(
-      mfl_players %>%
-        dplyr::select(player_id, headshot),
-      by = "player_id"
-    ) %>%
-    dplyr::left_join(
       projected_points(),
       by = c("player_id" = "id")
     ) %>%
@@ -31,7 +26,7 @@ report_players <- shiny::reactive({
 ## highest scoring players ----
 high_scorers <- shiny::reactive({
   high_scorers <- report_players() %>%
-    dplyr::filter(starter_status == "starter") %>%
+    dplyr::filter(starter_status == "starter" & !is.na(player_score)) %>%
     dplyr::group_by(player_id) %>%
     dplyr::mutate(
       franchises = paste(unique(franchise_name), collapse = ",\n") %>% sub(",\n([^,]*)$", " &\n\\1", .)
@@ -43,16 +38,15 @@ high_scorers <- shiny::reactive({
     dplyr::mutate(
       value = player_score,
       title = paste(pos, "der Woche"),
-      subtitle = paste(player_name, "\nhat diese Woche\ndie meisten", pos, "Punkte für die\n", franchises, "erzielt."),
-      image = headshot
+      subtitle = paste(player_name, "\nhat diese Woche\ndie meisten", pos, "Punkte für die\n", franchises, "erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## benchwarmers ----
 benchwarmers <- shiny::reactive({
   benchwarmers <- report_players() %>%
-    dplyr::filter(starter_status == "nonstarter") %>%
+    dplyr::filter(starter_status == "nonstarter"& !is.na(player_score)) %>%
     dplyr::group_by(player_id) %>%
     dplyr::mutate(
       franchises = paste(unique(franchise_name), collapse = ",\n") %>% sub(",\n([^,]*)$", " &\n\\1", .)
@@ -64,56 +58,43 @@ benchwarmers <- shiny::reactive({
     dplyr::mutate(
       value = player_score,
       title = paste(pos, "Bankwärmer der Woche"),
-      subtitle = paste(player_name, "\nhat diese Woche\ndie meisten", pos, "Punkte\nauf der Bank der\n", franchises, "erzielt."),
-      image = headshot
+      subtitle = paste(player_name, "\nhat diese Woche\ndie meisten", pos, "Punkte\nauf der Bank der\n", franchises, "erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest player elo risers ----
 biggest_player_elo_risers <- shiny::reactive({
-  biggest_player_elo_risers <- player_elo %>%
+  biggest_player_elo_risers <- rfl_player_data %>%
     dplyr::filter(season == max(season)) %>%
     dplyr::filter(week == max(week)) %>%
-    dplyr::group_by(position) %>%
+    dplyr::group_by(pos_grouped) %>%
     dplyr::arrange(dplyr::desc(elo_shift)) %>%
     dplyr::slice(1) %>%
     dplyr::ungroup() %>%
-    dplyr::left_join(
-      mfl_players %>%
-        dplyr::select(player_id, headshot),
-      by = c("mfl_id" = "player_id")
-    ) %>%
     dplyr::mutate(
       value = elo_shift,
-      title = paste("Größter", position, "ELO Gewinn"),
-      subtitle = paste(display_name, "\nhat diese Woche\ndie meiste ELO\nunter", paste0(position, "s"), "gewonnen."),
-      image = headshot
+      title = paste("Größter", pos_grouped, "ELO Gewinn"),
+      subtitle = paste(display_name, "\nhat diese Woche\ndie meiste ELO\nunter", paste0(pos_grouped, "s"), "gewonnen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest player elo drops ----
 biggest_player_elo_drops <- shiny::reactive({
-  biggest_player_elo_drops <- player_elo %>%
+  biggest_player_elo_drops <- rfl_player_data %>%
     dplyr::filter(season == max(season)) %>%
     dplyr::filter(week == max(week)) %>%
-    dplyr::group_by(position) %>%
+    dplyr::group_by(pos_grouped) %>%
     dplyr::arrange(elo_shift) %>%
     dplyr::slice(1) %>%
     dplyr::ungroup() %>%
-    dplyr::left_join(
-      mfl_players %>%
-        dplyr::select(player_id, headshot),
-      by = c("mfl_id" = "player_id")
-    ) %>%
     dplyr::mutate(
       value = elo_shift,
-      title = paste("Größter", position, "ELO Verlust"),
-      subtitle = paste(display_name, "\nhat diese Woche\ndie meiste ELO\nunter", paste0(position, "s"), "verloren"),
-      image = headshot
+      title = paste("Größter", pos_grouped, "ELO Verlust"),
+      subtitle = paste(display_name, "\nhat diese Woche\ndie meiste ELO\nunter", paste0(pos_grouped, "s"), "verloren")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 weekly_report_players <- shiny::reactive({
@@ -178,10 +159,9 @@ best_manager <- shiny::reactive({
     dplyr::mutate(
       value = scales::percent(weekly_eff, accuracy = 0.01),
       title = "Bester Manager",
-      subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche satte \n", pf, "der möglichen", pp, "FPts\n erzielt."),
-      image = icon
+      subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche satte \n", pf, "der möglichen", pp, "FPts\n erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## worst manager ----
@@ -191,10 +171,9 @@ worst_manager <- shiny::reactive({
     dplyr::mutate(
       value = scales::percent(weekly_eff, accuracy = 0.01),
       title = "Schlechtester Manager",
-      subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche nur\n", pf, "der möglichen", pp, "FPts\n erzielt."),
-      image = icon
+      subtitle = paste("Das Lineup vom Team\n", franchise_name, "\nhat diese Woche nur\n", pf, "der möglichen", pp, "FPts\n erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## luckiest manager ----
@@ -206,10 +185,9 @@ luckiest_manager <- shiny::reactive({
       wins_text = ifelse(wins == 1, "Sieg", "Siege"),
       value = paste0(all_play_wins, "-", 35 - all_play_wins),
       title = "Glücklichstes Team",
-      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhätte mit seinen", pf, "FPts\ndiese Woche nur", all_play_wins, "Teams\ngeschlagen, hat aber trotzdem\n", wins, wins_text, "geholt."),
-      image = icon
+      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhätte mit seinen", pf, "FPts\ndiese Woche nur", all_play_wins, "Teams\ngeschlagen, hat aber trotzdem\n", wins, wins_text, "geholt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## unluckiest manager ----
@@ -220,10 +198,9 @@ unluckiest_manager <- shiny::reactive({
     dplyr::mutate(
       value = paste0(all_play_wins, "-", 35 - all_play_wins),
       title = "Unglücklichstes Team",
-      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhätte mit seinen", pf, "FPts\ndiese Woche", all_play_wins, "Teams\ngeschlagen, hat aber keines\nseiner Matches gewonnen."),
-      image = icon
+      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhätte mit seinen", pf, "FPts\ndiese Woche", all_play_wins, "Teams\ngeschlagen, hat aber keines\nseiner Matches gewonnen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest overachiever ----
@@ -233,10 +210,9 @@ biggest_overachiever <- shiny::reactive({
     dplyr::mutate(
       value = projected_diff_pct,
       title = "Größter Overachiever",
-      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhat seine vorhergesagten\n", projected_points, "FPts um\n", projected_diff, paste0("(=", pf, ")"), "\nübertroffen."),
-      image = icon
+      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhat seine vorhergesagten\n", projected_points, "FPts um\n", projected_diff, paste0("(=", pf, ")"), "\nübertroffen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest underachiever ----
@@ -246,10 +222,9 @@ biggest_underachiever <- shiny::reactive({
     dplyr::mutate(
       value = projected_diff_pct,
       title = "Größter Underachiever",
-      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhat seine vorhergesagten\n", projected_points, "FPts um\n", abs(projected_diff), paste0("(=", pf, ")"), "\nuntertroffen."),
-      image = icon
+      subtitle = paste("Der Owner vom Team\n", franchise_name, "\nhat seine vorhergesagten\n", projected_points, "FPts um\n", abs(projected_diff), paste0("(=", pf, ")"), "\nuntertroffen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 # matches ----
@@ -276,10 +251,9 @@ biggest_blowout <- shiny::reactive({
     dplyr::mutate(
       value = paste(franchise_score, "vs", opponent_score),
       title = "Deutlichster Sieg",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat seinen Gegner\n", opponent_name, "\nmit einem Abstand von\n", pct, "geschlagen."),
-      image = icon
+      subtitle = paste("Das Team\n", franchise_name, "\nhat seinen Gegner\n", opponent_name, "\nmit einem Abstand von\n", pct, "geschlagen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## narrowest win ----
@@ -290,10 +264,9 @@ narrowest_win <- shiny::reactive({
     dplyr::mutate(
       value = paste(franchise_score, "vs", opponent_score),
       title = "Knappster Sieg",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat seinen Gegner\n", opponent_name, "\nmit einem Abstand\nvon", pct, "geschlagen."),
-      image = icon
+      subtitle = paste("Das Team\n", franchise_name, "\nhat seinen Gegner\n", opponent_name, "\nmit einem Abstand\nvon", pct, "geschlagen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest upset ----
@@ -304,10 +277,9 @@ biggest_upset <- shiny::reactive({
     dplyr::mutate(
       value = paste(elo_diff, "ELO"),
       title = "Größte Überraschung",
-      subtitle = paste("Das Team\n", franchise_name, paste0("(", franchise_elo_pregame, ")"), "\nhat das Team\n", opponent_name, paste0("(", opponent_elo_pregame, ")"), "\ngeschlagen."),
-      image = icon
+      subtitle = paste("Das Team\n", franchise_name, paste0("(", franchise_elo_pregame, ")"), "\nhat das Team\n", opponent_name, paste0("(", opponent_elo_pregame, ")"), "\ngeschlagen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## highest scoring game ----
@@ -318,10 +290,9 @@ highest_scoring_game <- shiny::reactive({
     dplyr::mutate(
       value = total_points,
       title = "Punktreichstes Spiel",
-      subtitle = paste("Im Spiel zwischen\n", franchise_name, paste0("(", franchise_score, ")"), "\nund\n", opponent_name, paste0("(", opponent_score, ")"), "\nsind die meisten Punkte\nerzielt worden."),
-      image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
+      subtitle = paste("Im Spiel zwischen\n", franchise_name, paste0("(", franchise_score, ")"), "\nund\n", opponent_name, paste0("(", opponent_score, ")"), "\nsind die meisten Punkte\nerzielt worden.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## lowest scoring game ----
@@ -332,10 +303,9 @@ lowest_scoring_game <- shiny::reactive({
     dplyr::mutate(
       value = total_points,
       title = "Punktärmstes Spiel",
-      subtitle = paste("Im Spiel zwischen\n", franchise_name, paste0("(", franchise_score, ")"), "\nund\n", opponent_name, paste0("(", opponent_score, ")"), "\nsind die wenigsten Punkte\nerzielt worden."),
-      image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
+      subtitle = paste("Im Spiel zwischen\n", franchise_name, paste0("(", franchise_score, ")"), "\nund\n", opponent_name, paste0("(", opponent_score, ")"), "\nsind die wenigsten Punkte\nerzielt worden.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## highest combined ELO ----
@@ -347,10 +317,9 @@ top_game <- shiny::reactive({
     dplyr::mutate(
       value = combined_elo,
       title = "Top Spiel",
-      subtitle = paste("Das Spiel zwischen\n", franchise_name, paste0("(", franchise_elo_pregame, ")"), "\nund\n", opponent_name, paste0("(", opponent_elo_pregame, ")"), "\nhatte die höchste gesamt-ELO."),
-      image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
+      subtitle = paste("Das Spiel zwischen\n", franchise_name, paste0("(", franchise_elo_pregame, ")"), "\nund\n", opponent_name, paste0("(", opponent_elo_pregame, ")"), "\nhatte die höchste gesamt-ELO.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## high scorer ----
@@ -361,10 +330,9 @@ high_scorer <- shiny::reactive({
     dplyr::mutate(
       value = franchise_score,
       title = "Meiste Punkte",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nmeisten Punkte erzielt."),
-      image = icon
+      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nmeisten Punkte erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## low scorer ----
@@ -375,10 +343,9 @@ low_scorer <- shiny::reactive({
     dplyr::mutate(
       value = franchise_score,
       title = "Wenigste Punkte",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nwenigsten Punkte erzielt."),
-      image = icon
+      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nwenigsten Punkte erzielt.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## highest ELO jump ----
@@ -397,10 +364,9 @@ highest_elo_jump <- shiny::reactive({
     dplyr::mutate(
       value = elo_shift,
       title = "Größter ELO Gewinn",
-      subtitle = paste(start, franchises, second, "diese Woche die\nmeiste ELO gewonnen."),
-      image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
+      subtitle = paste(start, franchises, second, "diese Woche die\nmeiste ELO gewonnen.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## biggest ELO drop ----
@@ -410,10 +376,9 @@ biggest_elo_drop <- shiny::reactive({
     dplyr::mutate(
       value = elo_shift,
       title = "Größter ELO Verlust",
-      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nmeiste ELO verloren."),
-      image = "https://www45.myfantasyleague.com/fflnetdynamic2024/63018_award_1735820644.png"
+      subtitle = paste("Das Team\n", franchise_name, "\nhat diese Woche die\nmeiste ELO verloren.")
     ) %>%
-    dplyr::select(title, subtitle, value, image)
+    dplyr::select(title, subtitle, value)
 })
 
 ## output ----
@@ -451,8 +416,7 @@ output$weeklyReportPlayers <- shiny::renderPlot({
 
 output$weeklyReportPlayersTable <- DT::renderDataTable({
   DT::datatable(
-    rbind(biggest_player_elo_risers(), biggest_player_elo_drops()) %>%
-      dplyr::select(-image),
+    rbind(biggest_player_elo_risers(), biggest_player_elo_drops()),
     options = list(dom = "Bfrti", pageLength = 32)
   )
 })

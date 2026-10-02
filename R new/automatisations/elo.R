@@ -75,4 +75,4 @@ rfl_player_elo <- purrr::map_df(2016:season_before_wk_2, function(x) {
   #dplyr::mutate(elo_season_end = player_elo_post[which.max(week)]) %>%
   #dplyr::ungroup()
 
-DBI::dbWriteTable(con, "rfl_player_elo", rfl_player_elo, overwrite = TRUE)
+# DBI::dbWriteTable(con, "rfl_player_elo", rfl_player_elo, overwrite = TRUE)

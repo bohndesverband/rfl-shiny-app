@@ -131,21 +131,21 @@ ranking_table_elo <- function(df) {
 
     df <- df %>%
       gt::cols_move(franchise_elo_postgame, elo_sparkline) %>%
-      gtExtras::gt_merge_stack(
-        franchise_elo_pregame,
-        franchise_elo_pregame_pctl,
-        small_cap = FALSE,
-        palette = c(color_text, color_text),
-        font_weight = c("normal", "normal")
-      ) %>%
+      #gtExtras::gt_merge_stack(
+      #  franchise_elo_pregame,
+      #  franchise_elo_pregame_pctl,
+      #  small_cap = FALSE,
+      #  palette = c(color_text, color_text),
+      #  font_weight = c("normal", "normal")
+      #) %>%
 
-      gtExtras::gt_merge_stack(
-        franchise_elo_postgame,
-        franchise_elo_postgame_pctl,
-        small_cap = FALSE,
-        palette = c(color_text, color_text),
-        font_weight = c("normal", "normal")
-      ) %>%
+      #gtExtras::gt_merge_stack(
+      ##  franchise_elo_postgame,
+      #  franchise_elo_postgame_pctl,
+      #  small_cap = FALSE,
+      #  palette = c(color_text, color_text),
+      #  font_weight = c("normal", "normal")
+      #) %>%
 
       gt::data_color(
         elo_shift,

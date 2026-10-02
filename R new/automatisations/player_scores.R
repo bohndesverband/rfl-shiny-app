@@ -56,7 +56,7 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
     by = c("season", "week", "player_id")
   )
 
-DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
+# DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
 
 # fantay finishes ----
 

@@ -1,3 +1,5 @@
+source("R new/base_data/player_data.R", local = TRUE)
+
 # TODO: seite für neueste draftklasse aufräumen (Dinge ausblenden)
 # TODO: plot für die density der gedrafteten position, ähnlich wie auf history seite ganz unten
 # daten ----
@@ -46,11 +48,11 @@ output$draft_classes_picks <- reactable::renderReactable({
 
   data <- rfl_draft_classes_filtered() %>%
     dplyr::left_join(
-      rfl_player_elo %>%
-        dplyr::group_by(mfl_id) %>%
+      rfl_player_data %>%
+        dplyr::group_by(player_id) %>%
         dplyr::arrange(season, week) %>%
         dplyr::summarise(player_elo = list(player_elo_post), .groups = "drop"),
-      by = "mfl_id"
+      by = c("mfl_id" = "player_id")
     ) %>%
     dplyr::arrange(overall) %>%
     dplyr::select(round_pick, player_name_with_badge, pos_team, franchise_name, draft_range_subline, pick_cat, pvar, voe)
@@ -168,15 +170,16 @@ output$draft_classes_voe <- ggiraph::renderGirafe({
 rfl_draft_boards <- shiny::reactive({
   rfl_draft_boards <- rfl_draft_classes_filtered() %>%
     dplyr::left_join(
-      rfl_player_scores %>%
+      rfl_player_data %>%
         dplyr::group_by(player_id) %>%
         dplyr::summarise(
           latest_player_name = dplyr::last(player_name),
-          fpts = sum(points, na.rm = TRUE),
+          fpts = round(sum(fpts, na.rm = TRUE), 0),
           .groups = "drop"
         ),
       by = c("mfl_id" = "player_id")
     ) %>%
+    # TODO: fpts zu draft data hinzufügen
     dplyr::mutate(fpts_max = max(fpts, na.rm = TRUE)) %>%
     dplyr::group_by(pos_grouped) %>%
     dplyr::mutate(fpts = ifelse(is.na(fpts), 0, fpts)) %>%

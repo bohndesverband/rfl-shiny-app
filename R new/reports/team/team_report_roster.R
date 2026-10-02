@@ -5,7 +5,7 @@ rfl_depth_chart_data <- read_data_table("rfl_depth_chart_data")
 ## filter data ----
 depth_chart_team <- shiny::reactive({
   depth_chart_team <- rfl_depth_chart_data %>%
-    #dplyr::filter(season == 2026 & franchise_id == "0036")
+    #dplyr::filter(season == 2026 & franchise_id == "0017")
     dplyr::filter(season == input$selectYear & franchise_id == input$selectRflTeam)
 })
 
@@ -34,7 +34,7 @@ output$team_depth_chart <- ggiraph::renderGirafe({
       panel.grid.minor = ggplot2::element_blank()
     ) +
     ggplot2::labs(
-      title = paste(selected_team_name(), "Depth Chart", input$selectYear),
+      #title = paste(selected_team_name(), "Depth Chart", input$selectYear),
       subtitle = "Angezeigt werden die Top-Spieler des Rosters auf ihren Positionen nach Wins above Replacement (WAR).",
       x = "",
       y = ""
@@ -51,15 +51,15 @@ output$team_roster <- gt::render_gt({
     #dplyr::filter(franchise_id == "0007" & season == 2026) %>%
     dplyr::filter(week == max(week)) %>%
     #filter(player_id == "14221") %>%
-    dplyr::select(franchise_name, pos_grouped, display_name, player_pos_team, war, player_elo_post, age, transaction_emoji, war_pctl_season, player_elo_post_pctl) %>%
+    dplyr::select(franchise_name, pos_grouped, display_name, player_pos_team, war, player_elo, age, transaction_emoji, war_pctl, player_elo_pctl) %>%
     dplyr::mutate(
       dplyr::across(
-        c(war_pctl_season, player_elo_post_pctl),
+        c(war_pctl, player_elo_pctl),
         ~ dplyr::coalesce(.x, 0)
       )
     ) %>%
     dplyr::group_by(franchise_name, pos_grouped) %>%
-    dplyr::arrange(factor(pos_grouped, levels = positions_grouped), dplyr::desc(war), dplyr::desc(player_elo_post)) %>%
+    dplyr::arrange(factor(pos_grouped, levels = positions_grouped), dplyr::desc(war), dplyr::desc(player_elo)) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste(paste(selected_team_name(), collapse = ", "), "Depth Chart", input$selectYear)
@@ -71,8 +71,8 @@ output$team_roster <- gt::render_gt({
       palette = c(color_text, color_grey_mid),
       font_weight = c("normal", "normal")
     ) %>%
-    gt_pctl_bar("war", "war_pctl_season") %>%
-    gt_pctl_bar("player_elo_post", "player_elo_post_pctl") %>%
+    gt_pctl_bar("war", "war_pctl") %>%
+    gt_pctl_bar("player_elo", "player_elo_pctl") %>%
     gt::data_color(
       age,
       palette = c(color_bg, color_red),
@@ -82,7 +82,7 @@ output$team_roster <- gt::render_gt({
       display_name = "Spieler",
       age = "Alter",
       war = "WAR",
-      player_elo_post = "ELO",
+      player_elo = "ELO",
       transaction_emoji = ""
     ) %>%
     gtDefaults() %>%
