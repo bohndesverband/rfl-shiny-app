@@ -1,44 +1,23 @@
 # rfl players ----
-rfl_player_data <- rfl_player_scores %>%
-  #filter(season == 2026 & player_id == "12610") %>%
-  dplyr::mutate(
-    display_name = nflreadr::clean_player_names(player_name)
-  ) %>%
-  dplyr::select(season:player_name, display_name, pos, pos_grouped, team) %>%
-
-  # add fantasy finishes
-  # add fantasy points
-  dplyr::left_join(
-    rfl_fantasy_finishes_weekly %>%
-      dplyr::select(-player_name:-team, -pos_grouped),
-    by = c("season", "week", "player_id")
-  ) %>%
-  dplyr::group_by(player_id, season) %>%
-  dplyr::arrange(week) %>%
-  dplyr::mutate(
-    fpts_running = cumsum(points),
-    ppg_running = round(cummean(points), 2),
-    ppg_running_diff = round(points - ppg_running, 2)
-  ) %>%
+rfl_player_data <- rfl_war_data %>%
+  dplyr::select(-points) %>%
+  #filter(player_id == "15290") %>%
+  group_by(player_id, season) %>%
+  tidyr::complete(week = 1:17) %>%
   dplyr::ungroup() %>%
-  dplyr::rename(fpts = points) %>%
-  dplyr::select(season, week, reg_season, player_id:fpts, fpts_running, ppg_running, ppg_running_diff, pos_rank:top60_weekly) %>%
-
   dplyr::left_join(
-    rfl_fantasy_finishes_season %>%
-      dplyr::select(season, player_id, ppg, pos_rank_season = pos_rank, dplyr::ends_with("_season"), -points_season),
-    by = c("player_id", "season"),
-    relationship = "many-to-many"
+    nflreadr::load_ff_playerids() %>%
+      dplyr::select(mfl_id, gsis_id),
+    by = c("player_id" = "mfl_id")
   ) %>%
-  dplyr::select(season:fpts, fpts_running, ppg_running, ppg_running_diff, ppg_season = ppg, pos_rank:top60_season) %>%
-
-  # add war
-  ## weekly
   dplyr::left_join(
-    rfl_war_data %>%
-      dplyr::select(-pos, -points),
-    by = c("season", "week", "player_id")
+    nflreadr::load_rosters_weekly(2016:new_season_sept) %>%
+      dplyr::select(season, week, gsis_id, team, status),
+    by = c("season", "week", "gsis_id")
   ) %>%
+  dplyr::arrange(week) %>%
+  tidyr::fill(team) %>%
+
   ## current war
   dplyr::left_join(
     rfl_war_data %>%
@@ -65,7 +44,66 @@ rfl_player_data <- rfl_player_scores %>%
       dplyr::ungroup() %>%
       dplyr::select(season, week, player_id, war_week, war_career, war_career_pctl),
     by = c("season", "week", "player_id")
-  )
+  ) %>%
+
+  # add date from week
+  dplyr::left_join(
+    nflreadr::load_schedules(2016:season_before_wk_2) %>%
+      dplyr::group_by(season, week) %>%
+      dplyr::arrange(gameday) %>%
+      dplyr::mutate(date = last(gameday)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(season, week, game_id, date, away_team, home_team) %>%
+      tidyr::uncount(2) %>%
+      dplyr::group_by(game_id) %>%
+      dplyr::mutate(
+        team = ifelse(dplyr::row_number() == 1, away_team, home_team),
+        opponent = ifelse(dplyr::row_number() == 1, home_team, away_team),
+        opponent_side = ifelse(dplyr::row_number() == 1, paste0("@", opponent), opponent)
+      ) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(-game_id, -away_team, -home_team),
+    by = c("season", "week", "team"),
+    relationship = "many-to-many"
+  ) %>%
+  dplyr::mutate(
+    dplyr::across(c(opponent, opponent_side), ~ ifelse(is.na(.x), "BYE", .x))
+  ) %>%
+
+  # add player scores
+  dplyr::left_join(
+    rfl_player_scores %>%
+      dplyr::select(-pos) %>%
+      dplyr::mutate(display_name = nflreadr::clean_player_names(player_name)) %>%
+      dplyr::mutate(team = nflreadr::clean_team_abbrs(team)),
+    by = c("season", "week", "player_id", "team")
+  ) %>%
+
+  # add fantasy finishes
+  # add fantasy points
+  dplyr::left_join(
+    rfl_fantasy_finishes_weekly %>%
+      dplyr::select(-player_name:-team, -pos_grouped, -points:-points_ppg_diff),
+    by = c("season", "week", "player_id")
+  ) %>%
+
+  dplyr::group_by(player_id, season) %>%
+  dplyr::arrange(week) %>%
+  dplyr::mutate(
+    points = as.numeric(points),
+    fpts_running = cumsum(dplyr::coalesce(points, 0)),
+    ppg = ifelse(is.na(ppg), dplyr::lag(ppg), ppg),
+    ppg_running = round(cummean(dplyr::coalesce(ppg, lag(ppg))), 2),
+    ppg_running_diff = round(points - ppg_running, 2)
+  ) %>%
+  dplyr::ungroup() %>%
+
+  dplyr::left_join(
+    rfl_fantasy_finishes_season %>%
+      dplyr::select(season, player_id, pos_rank_season = pos_rank, dplyr::ends_with("_season"), -points_season),
+    by = c("player_id", "season"),
+    relationship = "many-to-many"
+  ) %>%
 
   # add elo
   ## add weekly elo
@@ -74,7 +112,6 @@ rfl_player_data <- rfl_player_scores %>%
       dplyr::select(-position, -team, -score_diff, -dplyr::starts_with("opponent"), -gsis_id, -score, -display_name),
     by = c("season", "week", "player_id" = "mfl_id")
   ) %>%
-  dplyr::select(season:team, games_played, games_missed, everything()) %>%
 
   ## add current elo
   dplyr::left_join(
@@ -89,11 +126,20 @@ rfl_player_data <- rfl_player_scores %>%
       ),
     by = c("player_id" = "mfl_id")
   ) %>%
+  #dplyr::filter(season != max(season) | week < current_week) %>%
 
   # fülle zeilen mit fehlenden daten
   dplyr::group_by(player_id) %>%
   dplyr::arrange(season, week) %>%
-  tidyr::fill(games_played, games_missed, war, war_pctl, pvar, player_elo_pre:player_elo_post_pctl_week)
+  dplyr::mutate(
+    game = dplyr::row_number()
+  ) %>%
+  dplyr::select(season, week, date, reg_season, player_id, player_name, display_name, pos, pos_grouped, team, game, opponent, opponent_side, status, games_season = games, games_reg_season = games_played, games_missed, fpts = points, ppg, pos_rank, fpts_running, ppg_running, ppg_running_diff, war, war_pctl, war_week, war_end_of_season, war_career, war_career_pctl, pvar, pos_rank_season, dplyr::starts_with("top"), player_elo_pre, player_elo_pre_pctl, player_elo_post, player_elo_post_pctl, player_elo_post_pctl_week, elo_shift, player_elo_season_end = elo_season_end, player_elo_current) %>%
+  dplyr::group_by(player_id, season) %>%
+  dplyr::arrange(week) %>%
+  tidyr::fill(reg_season, player_name, display_name, pos, pos_grouped, team, games_season, games_reg_season, games_missed, ppg, ppg_running, war, war_pctl, pvar, player_elo_pre:player_elo_season_end) %>%
+  dplyr::ungroup()
+
 
 DBI::dbWriteTable(con, "rfl_player_data", rfl_player_data, overwrite = TRUE)
 
