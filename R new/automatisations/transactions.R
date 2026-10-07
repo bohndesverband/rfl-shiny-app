@@ -26,7 +26,7 @@ rfl_trades_data <- purrr::map_df(2016:2026, function(x) {
     pick_round = ifelse(grepl("DP_", asset_id), as.numeric(pick_round) + 1, as.numeric(pick_round)),
     asset_name_clean = ifelse(grepl("FP_", asset_id), paste(asset_name, franchise_name), asset_name),
     trade_asset_id = ifelse(grepl("DP_", asset_id) | grepl("FP_", asset_id), paste0("DP_", pick_round), asset_id)
-  )
+  ) %>%
   dplyr::select(-franchise_name, -pick_team_id) %>%
   dplyr::group_by(trade_id) %>%
   dplyr::arrange(trade_side) %>%
@@ -133,6 +133,7 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
   )
 }) %>%
   #filter(player_id == "17046") %>%
+  #filter(franchise_id == "0007" & season == 2026) %>%
 
   # helper um zu joinen
   dplyr::mutate(
@@ -163,8 +164,10 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
 
   dplyr::left_join(
     rfl_player_data %>%
-      dplyr::mutate(join_id_new = paste0(season, stringr::str_pad(week, 2, pad = "0"))) %>%
-      dplyr::select(join_id_new, player_id, display_name, pos_grouped, team, games_played, games_missed, fpts_running, ppg_running, pos_rank, war_career, war_career_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
+      dplyr::mutate(
+        join_id_new = paste0(season, stringr::str_pad(week, 2, pad = "0"))
+      ) %>%
+      dplyr::select(join_id_new, player_id, display_name, pos_grouped, team, fpts_running, ppg_running, pos_rank, war, war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
     by = dplyr::join_by(
       player_id,
       dplyr::closest(join_id >= join_id_new)
@@ -178,28 +181,28 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
       dplyr::arrange(season, week) %>%
       dplyr::slice_tail(n = 1) %>%
       dplyr::ungroup() %>%
-      dplyr::select(player_id, war_current = war_career, player_elo_current, player_elo_current_pctl, pos_grouped_new = pos_grouped, team_new = team),
+      dplyr::select(player_id, fpts_current = fpts_running, ppg_current = ppg_running, war_current = war, player_elo_current, player_elo_current_pctl, pos_grouped_new = pos_grouped, team_new = team),
     by = "player_id"
   ) %>%
 
   # wenn daten aus vergangenen saison, lösche fpts und war
   dplyr::mutate(
     dplyr::across(
-      c(games_played, games_missed, fpts_running, ppg_running, pos_rank),
+      c(fpts_running, ppg_running, ppg_current, fpts_current, pos_rank, war, war_pctl, war_current),
       ~ ifelse(
         stringr::str_detect(join_id_new, as.character(season)),
         .x,
         NA
       )
     ),
-    dplyr::across(
-      c(war_career, war_career_pctl),
-      ~ ifelse(
-        week == 0,
-        0,
-        .x
-      )
-    ),
+    #dplyr::across(
+    #  c(war, war_pctl),
+    #  ~ ifelse(
+    #    week == 0,
+    #    0,
+    #    .x
+    #  )
+    #),
     # aktualisiere team und position
     pos_grouped = ifelse(stringr::str_detect(join_id_new, as.character(season)), pos_grouped, pos_grouped_new),
     team = ifelse(stringr::str_detect(join_id_new, as.character(season)), team, team_new)
@@ -236,8 +239,10 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
   # data cleaning
   dplyr::mutate(
     player_elo = ifelse(is.na(player_elo), 1500, player_elo),
+    ppg_shift = ifelse(is.na(ppg_running), ppg_current, ppg_current - ppg_running),
+    fpts_shift = ifelse(is.na(fpts_running), fpts_current, fpts_current - fpts_running),
+    war_shift = ifelse(is.na(war), war_current, war_current - war),
     elo_shift = player_elo_current - player_elo,
-    war_shift = ifelse(is.na(war_career), war_current, war_current - war_career)
   ) %>%
   dplyr::arrange(dplyr::desc(timestamp)) %>%
   dplyr::distinct()

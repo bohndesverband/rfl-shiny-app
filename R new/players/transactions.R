@@ -5,7 +5,7 @@ transactions_filtered <- shiny::reactive({
   transactions_filtered <- rfl_transactions_data %>%
     #dplyr::filter(season == 2026) %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    dplyr::select(date, week, type_desc, display_name, pos_grouped, team, fpts_running, ppg_running, war = war_career, war_pctl = war_career_pctl, war_shift, player_elo, player_elo_pctl, elo_shift, franchise_name)
+    dplyr::select(date, week, type_desc, display_name, pos_grouped, team, dplyr::ends_with("_shift"), ppg_running, ppg_current, fpts_running, fpts_current, war, war_current, player_elo, player_elo_current, franchise_name)
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
@@ -88,53 +88,134 @@ output$players_transactions_table <- reactable::renderReactable({
       display_name = reactable::colDef("Spieler", width = 200, align = "left"),
       pos_grouped = reactable::colDef("Pos", width = 50),
       team = reactable::colDef("Team", width = 75),
-      fpts_running = reactable_coldef_color(
-        name = "FPts", width = 75,
-        palette_fun = scale_rainbow(range(data$fpts_running, na.rm = TRUE), text = TRUE)
+      ppg_shift = reactable_coldef_bg(
+        name = "PPG", width = 100,
+        palette_fun = scale_colors(range(data$ppg_shift, na.rm = TRUE), c(color_red, color_blue)),
+        cell = reactable_cell_shift
       ),
-      ppg_running = reactable_coldef_color(
-        name = "PPG", width = 75,
-        palette_fun = scale_rainbow(range(data$ppg_running, na.rm = TRUE), text = TRUE)
-      ),
-      war = reactable::colDef(
-        header = with_tooltip("WAR", "Career Wins above Replacement zum Zeitpunkt der Transaktion. Balken zeigt Perzentil innerhalb der Positionsgruppe."),
-        width = 125,
-        style = reactable_coldef_bar_bg("war_pctl")
+      fpts_shift = reactable_coldef_bg(
+        name = "FPts", width = 100,
+        palette_fun = scale_colors(range(data$fpts_shift, na.rm = TRUE), c(color_red, color_blue)),
+        cell = reactable_cell_shift
       ),
       war_shift = reactable_coldef_bg(
-        header = with_tooltip("+/-", "WAR-Veränderung seit der Transaktion."), width = 100,
+        name = "WAR", width = 100,
         palette_fun = scale_colors(range(data$war_shift, na.rm = TRUE), c(color_red, color_blue)),
         cell = reactable_cell_shift
       ),
-      player_elo = reactable::colDef(
-        header = with_tooltip("ELO", "ELO zum Zeitpunkt der Transaktion. Balken zeigt Perzentil innerhalb der Positionsgruppe."),
-        width = 125,
-        style = reactable_coldef_bar_bg("player_elo_pctl")
-      ),
       elo_shift = reactable_coldef_bg(
-        header = with_tooltip("+/-", "ELO-Veränderung seit der Transaktion"), width = 100,
+        name = "ELO", width = 100,
         palette_fun = scale_colors(range(data$elo_shift, na.rm = TRUE), c(color_red, color_blue)),
         cell = reactable_cell_shift
       ),
       franchise_name = reactable::colDef("Team", width = 250, align = "left"),
-      war_pctl = reactable::colDef(show = FALSE),
-      player_elo_pctl = reactable::colDef(show = FALSE),
-      player_elo_current_pctl = reactable::colDef(show = FALSE)
+      fpts_current = reactable::colDef(show = FALSE),
+      fpts_running = reactable::colDef(show = FALSE),
+      ppg_running = reactable::colDef(show = FALSE),
+      ppg_current = reactable::colDef(show = FALSE),
+      war = reactable::colDef(show = FALSE),
+      war_current = reactable::colDef(show = FALSE),
+      player_elo = reactable::colDef(show = FALSE),
+      player_elo_current = reactable::colDef(show = FALSE)
     ),
     columnGroups = list(
       reactable::colGroup(
-        "Fantasy Pts",
-        columns = c("fpts_running", "ppg_running")
-      ),
-      reactable::colGroup(
-        "WAR",
-        columns = c("war", "war_shift")
-      ),
-      reactable::colGroup(
-        "ELO",
-        columns = c("player_elo", "elo_shift")
+        "Veränderung zum Zeitpunkt der Transaktion",
+        columns = c("ppg_shift", "fpts_shift", "war_shift", "elo_shift")
       )
+      #reactable::colGroup(
+      #  "WAR",
+      #  columns = c("war", "war_shift")
+      #),
+      #reactable::colGroup(
+      #  "ELO",
+      #  columns = c("player_elo", "elo_shift")
+      #)
     ),
+    details = function(row) {
+      reactable_default(
+        data[row, ],
+        columns = list(
+          fpts_current = reactable_coldef_color(
+            name = "FPts", width = 125,
+            palette_fun = scale_rainbow(range(data$fpts_current, na.rm = TRUE), text = TRUE),
+            cell = function(value, index) {
+              old <- data[row, ]$fpts_running
+
+              sep = " → "
+
+              if (!is.na(old) && !is.na(value) && value > old) {
+                sep = " ↗ "
+              } else if (!is.na(old) & value < old) (
+                sep = " ↘ "
+              )
+
+              paste0(old, sep, value)
+            }
+          ),
+          ppg_current = reactable_coldef_color(
+            name = "PPG", width = 125,
+            palette_fun = scale_rainbow(range(data$ppg_current, na.rm = TRUE), text = TRUE),
+            cell = function(value, index) {
+              old <- data[row, ]$ppg_running
+
+              sep = " → "
+
+              if (!is.na(old) && !is.na(value) && value > old) {
+                sep = " ↗ "
+              }
+
+              paste0(old, sep, value)
+            }
+          ),
+          war_current = reactable_coldef_color(
+            name = "WAR", width = 125,
+            palette_fun = scale_rainbow(range(data$war_current, na.rm = TRUE), text = TRUE),
+            cell = function(value, index) {
+              old <- data[row, ]$war
+
+              sep = " → "
+
+              if (!is.na(old) && !is.na(value) && value > old) {
+                sep = " ↗ "
+              }
+
+              paste0(old, sep, value)
+            }
+          ),
+          player_elo_current = reactable_coldef_color(
+            name = "ELO", width = 125,
+            palette_fun = scale_rainbow(range(data$player_elo_current, na.rm = TRUE), text = TRUE),
+            cell = function(value, index) {
+              old <- data[row, ]$player_elo
+
+              sep = " → "
+
+              if (!is.na(old) && !is.na(value) && value > old) {
+                sep = " ↗ "
+              }
+
+              paste0(old, sep, value)
+            }
+          ),
+          date = reactable::colDef(show = FALSE),
+          week = reactable::colDef(show = FALSE),
+          type_desc = reactable::colDef(show = FALSE),
+          display_name = reactable::colDef(show = FALSE),
+          pos_grouped = reactable::colDef(show = FALSE),
+          team = reactable::colDef(show = FALSE),
+          ppg_shift = reactable::colDef(show = FALSE),
+          fpts_shift = reactable::colDef(show = FALSE),
+          war = reactable::colDef(show = FALSE),
+          war_shift = reactable::colDef(show = FALSE),
+          player_elo = reactable::colDef(show = FALSE),
+          elo_shift = reactable::colDef(show = FALSE),
+          franchise_name = reactable::colDef(show = FALSE),
+          ppg_running = reactable::colDef(show = FALSE),
+          fpts_running = reactable::colDef(show = FALSE)
+        )
+      )
+    },
     filterable = TRUE,
     defaultPageSize = 15
   )
@@ -240,19 +321,19 @@ output$players_transactions <- shiny::renderUI({
           # )
         )
       ),
-      shiny::tabPanel(
-        "Trades",
-        shiny::fluidPage(
-          htmltools::h2("Saison"),
-          shiny::fluidRow(
-            htmltools::h3("Schedule"),
-            shiny::column(
-              #shinycssloaders::withSpinner(ggiraph::girafeOutput("team_schedule")),
-              width = 12
-            )
-          )
-        )
-      ),
+      #shiny::tabPanel(
+      #  "Trades",
+      #  shiny::fluidPage(
+      #    htmltools::h2("Saison"),
+      #    shiny::fluidRow(
+      #      htmltools::h3("Schedule"),
+      #      shiny::column(
+      #        #shinycssloaders::withSpinner(ggiraph::girafeOutput("team_schedule")),
+      #        width = 12
+      #      )
+      #    )
+      #  )
+      #),
       shiny::tabPanel(
         "Trade Bait",
         shiny::fluidPage(

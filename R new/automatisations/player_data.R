@@ -1,7 +1,8 @@
 # rfl players ----
-rfl_player_data <- rfl_war_data %>%
-  dplyr::select(-points) %>%
-  #filter(player_id == "15290") %>%
+rfl_player_data <- rfl_player_scores %>%
+  dplyr::distinct() %>%
+  dplyr::select(-team) %>%
+  #filter(player_id == "10143") %>%
   group_by(player_id, season) %>%
   tidyr::complete(week = 1:17) %>%
   dplyr::ungroup() %>%
@@ -13,18 +14,19 @@ rfl_player_data <- rfl_war_data %>%
   dplyr::left_join(
     nflreadr::load_rosters_weekly(2016:new_season_sept) %>%
       dplyr::select(season, week, gsis_id, team, status),
-    by = c("season", "week", "gsis_id")
+    by = c("season", "week", "gsis_id"),
+    multiple = "last"
   ) %>%
   dplyr::arrange(week) %>%
   tidyr::fill(team) %>%
 
-  ## current war
+  ## end of season war
   dplyr::left_join(
     rfl_war_data %>%
       dplyr::group_by(season, player_id) %>%
       dplyr::arrange(week) %>%
       dplyr::summarise(war_end_of_season = last(war), .groups = "drop"),
-    by = c("season", "player_id")
+    by = c("season", "player_id"),
   ) %>%
 
   ## running career war
@@ -42,7 +44,7 @@ rfl_player_data <- rfl_war_data %>%
       dplyr::group_by(season, week, pos) %>%
       dplyr::mutate(war_career_pctl = round(dplyr::percent_rank(war_career), 2)) %>%
       dplyr::ungroup() %>%
-      dplyr::select(season, week, player_id, war_week, war_career, war_career_pctl),
+      dplyr::select(season, week, player_id, war, war_pctl, war_week, war_career, war_career_pctl, games_missed, pvar),
     by = c("season", "week", "player_id")
   ) %>%
 
@@ -70,12 +72,15 @@ rfl_player_data <- rfl_war_data %>%
     dplyr::across(c(opponent, opponent_side), ~ ifelse(is.na(.x), "BYE", .x))
   ) %>%
 
-  # add player scores
+  # add running ppg
   dplyr::left_join(
     rfl_player_scores %>%
-      dplyr::select(-pos) %>%
-      dplyr::mutate(display_name = nflreadr::clean_player_names(player_name)) %>%
-      dplyr::mutate(team = nflreadr::clean_team_abbrs(team)),
+      dplyr::mutate(team = nflreadr::clean_team_abbrs(team)) %>%
+      dplyr::group_by(player_id, season) %>%
+      dplyr::arrange(week) %>%
+      dplyr::mutate(ppg_running = round(cummean(points), 2)) %>%
+      dplyr::ungroup() %>%
+      dplyr::select(season, week, player_id, team, ppg_running),
     by = c("season", "week", "player_id", "team")
   ) %>%
 
@@ -92,8 +97,6 @@ rfl_player_data <- rfl_war_data %>%
   dplyr::mutate(
     points = as.numeric(points),
     fpts_running = cumsum(dplyr::coalesce(points, 0)),
-    ppg = ifelse(is.na(ppg), dplyr::lag(ppg), ppg),
-    ppg_running = round(cummean(dplyr::coalesce(ppg, lag(ppg))), 2),
     ppg_running_diff = round(points - ppg_running, 2)
   ) %>%
   dplyr::ungroup() %>%
@@ -132,14 +135,15 @@ rfl_player_data <- rfl_war_data %>%
   dplyr::group_by(player_id) %>%
   dplyr::arrange(season, week) %>%
   dplyr::mutate(
-    game = dplyr::row_number()
+    game = dplyr::row_number(),
+    display_name = nflreadr::clean_player_names(player_name)
   ) %>%
-  dplyr::select(season, week, date, reg_season, player_id, player_name, display_name, pos, pos_grouped, team, game, opponent, opponent_side, status, games_season = games, games_reg_season = games_played, games_missed, fpts = points, ppg, pos_rank, fpts_running, ppg_running, ppg_running_diff, war, war_pctl, war_week, war_end_of_season, war_career, war_career_pctl, pvar, pos_rank_season, dplyr::starts_with("top"), player_elo_pre, player_elo_pre_pctl, player_elo_post, player_elo_post_pctl, player_elo_post_pctl_week, elo_shift, player_elo_season_end = elo_season_end, player_elo_current) %>%
+  dplyr::select(season, week, date, reg_season, player_id, player_name, display_name, pos, pos_grouped, team, game, opponent, opponent_side, status, fpts = points, ppg_running, pos_rank, fpts_running, ppg_running_diff, war, war_pctl, war_week, war_end_of_season, war_career, war_career_pctl, pvar, pos_rank_season, dplyr::starts_with("top"), player_elo_pre, player_elo_pre_pctl, player_elo_post, player_elo_post_pctl, player_elo_post_pctl_week, elo_shift, player_elo_season_end = elo_season_end, player_elo_current, player_elo_current_pctl) %>%
   dplyr::group_by(player_id, season) %>%
   dplyr::arrange(week) %>%
-  tidyr::fill(reg_season, player_name, display_name, pos, pos_grouped, team, games_season, games_reg_season, games_missed, ppg, ppg_running, war, war_pctl, pvar, player_elo_pre:player_elo_season_end) %>%
+  tidyr::fill(ppg_running, war, war_pctl) %>%
+  tidyr::fill(player_name, display_name, pos, pos_grouped, team, ppg_running, pvar, player_elo_pre:player_elo_season_end, .direction = "downup") %>%
   dplyr::ungroup()
-
 
 DBI::dbWriteTable(con, "rfl_player_data", rfl_player_data, overwrite = TRUE)
 

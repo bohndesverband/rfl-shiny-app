@@ -32,7 +32,7 @@ rfl_player_scores <- purrr::map_df(2016:season_before_wk_2, function(x) {
     ppg = round(mean(points, na.rm = TRUE), 2),
     points_ppg_diff = round(points - ppg, 2)
   ) %>%
-  dplyr::ungroup() %>%
+  dplyr::ungroup()
 
 # DBI::dbWriteTable(con, "rfl_player_scores", rfl_player_scores, overwrite = TRUE)
 
