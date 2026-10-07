@@ -1,5 +1,6 @@
 rfl_sos_filtered <- shiny::reactive({
   req(input$selectYears[1] >= 2024)
+  # TODO: ältere jahre
 
   rfl_sos_filtered <- read_data_table("sos") %>%
     dplyr::filter(
@@ -269,6 +270,7 @@ output$rfl_sos_insesason <- gt::render_gt({
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
+# SOS History ----
 output$sos_history <- shiny::renderPlot({
   ggplot2::ggplot(rfl_sos_data, ggplot2::aes(x = season, y = sos_total, color = franchise_name)) +
     ggplot2::geom_boxplot(ggplot2::aes(group = season), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
@@ -298,15 +300,8 @@ output$sos_history <- shiny::renderPlot({
     )
 }, height = 600)
 
-color_cells <- function(x) {
-  dplyr::case_when(
-    x == "kommend" ~ color_red,
-    x == "bisher" ~ color_blue,
-    grepl(",", x) ~ color_orange,
-    TRUE ~ color_black
-  )
-}
-
+# schedule delta ----
+## helper ----
 add_data_color <- function(df, color, data) {
   df %>%
     gt::data_color(
@@ -317,8 +312,8 @@ add_data_color <- function(df, color, data) {
     )
 }
 
-# schedule ----
-output$rfl_schedule <- gt::render_gt({
+## output ----
+output$rfl_schedule_delta <- gt::render_gt({
   #req(new_season_march != new_season_sept)
 
   latest_week <- dplyr::case_when(
@@ -327,12 +322,14 @@ output$rfl_schedule <- gt::render_gt({
     TRUE ~ current_week - 1
   )
 
+  # TODO: vergangene jahre auswählen
+
   #latest_week <- 1
 
   data <- rfl_schedule_data %>%
     dplyr::filter(
+      #season == input$selectYear
       season == new_season_sept
-      #season == 2026
     ) %>%
     dplyr::mutate(
       type = ifelse(week <= latest_week, "bisher", "kommend")
@@ -380,7 +377,7 @@ output$rfl_schedule <- gt::render_gt({
     #) %>%
     gt::gt() %>%
     gt::tab_header(
-      title = gt::html(paste0("RFL Schedule Difficulty ", new_season_sept, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
+      title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYear, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
       subtitle = "Anhand der Pregame-ELO wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Hier wird die Stärke des eigenen Teams und die relative Stärke des Gegners zum eigenen Team berücksichtigt. Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
     ) %>%
 
@@ -431,11 +428,11 @@ output$rfl_schedule <- gt::render_gt({
     add_data_color(dplyr::contains("WK13.m_1_win_difficulty"), dplyr::contains("WK13.m_1_opponent_abbrev")) %>%
     add_data_color(dplyr::contains("WK13.m_2_win_difficulty"), dplyr::contains("WK13.m_2_opponent_abbrev")) %>%
 
-    #gtExtras::gt_highlight_rows(
-    #  rows = franchise_id %in% input$selectRflTeams,
-    #  columns = c(franchise_name),
-    #  fill = color_grey_light
-    #) %>%
+    gtExtras::gt_highlight_rows(
+      rows = franchise_id %in% input$selectRflTeams,
+      columns = c(franchise_name),
+      fill = color_grey_light
+    ) %>%
 
     gt::data_color(
       columns = win_difficulty_delta,
@@ -464,33 +461,40 @@ output$rfl_schedule <- gt::render_gt({
       data_row.padding.horizontal = gt::px(5),
       column_labels.padding.horizontal = gt::px(5)
     )
-})
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
 # matchup over/underachievments ----
-output$rfl_fpts_abv_avg <- plotly::renderPlotly({
-  shiny::validate(
-    shiny::need(current_week >= 3, "Es sind für diesen Zeitraum keine Daten vorhanden")
-  )
+output$fpts_abv_avg <- ggiraph::renderGirafe({
+  #shiny::validate(
+  #  shiny::need(current_week >= 3, "Es sind für diesen Zeitraum keine Daten vorhanden")
+  #)
 
   plot_data <- rfl_matchups_history %>%
     dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
-    #dplyr::filter(season == 2025) %>%
+    #dplyr::filter(season == 2026) %>%
     dplyr::group_by(franchise_id) %>%
     dplyr::summarise(
       franchise_name = dplyr::last(franchise_name),
       avg_franchise_fpts_diff = sum(franchise_points_ppg_diff, na.rm = TRUE) / 2,
       avg_opponent_fpts_diff = sum(opponent_points_ppg_diff, na.rm = TRUE),
       .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      x_z = as.numeric(scale(avg_franchise_fpts_diff)),
+      y_z = as.numeric(scale(avg_opponent_fpts_diff)),
+      outlier_score = sqrt(x_z^2 + y_z^2),
+      outlier = outlier_score >= quantile(outlier_score, .85, na.rm = TRUE)
     )
 
   shiny::validate(
     shiny::need(nrow(plot_data) > 0, "Es sind für diesen Zeitraum keine Daten vorhanden")
   )
 
-  plot <- ggplot2::ggplot(plot_data, aes(x = avg_franchise_fpts_diff, y = avg_opponent_fpts_diff)) +
+  plot_default <- ggplot2::ggplot(plot_data, aes(x = avg_franchise_fpts_diff, y = avg_opponent_fpts_diff)) +
     plot_quadrants(
-      xmin = min(plot_data$avg_franchise_fpts_diff),
-      xmax = max(plot_data$avg_franchise_fpts_diff),
+      xmin = min(plot_data$avg_franchise_fpts_diff) - 15,
+      xmax = max(plot_data$avg_franchise_fpts_diff) + 15,
       xmean = mean(plot_data$avg_franchise_fpts_diff),
       ymin = min(plot_data$avg_opponent_fpts_diff),
       ymax = max(plot_data$avg_opponent_fpts_diff),
@@ -504,21 +508,37 @@ output$rfl_fpts_abv_avg <- plotly::renderPlotly({
       cbr = color_blue,
       cbl = color_yellow
     ) +
-    #ggplot2::geom_point(ggplot2::aes(text = franchise_name), color = color_grey_mid, alpha = 0.8, size = 4) +
-    ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6) +
+    ggiraph::geom_point_interactive(
+      ggplot2::aes(tooltip = franchise_name, data_id = franchise_id),
+      color = color_grey_mid, alpha = 0.8, size = 4
+    ) +
     ggplot2::scale_color_discrete(type = colors) +
     plot_defaults +
     ggplot2::labs(
       title = "Fantasy Points Above Average: Team vs. Gegner",
+      subtitle = "Dargestellt werden alle Teams mit ihrer Differenz von erzielten ",
       x = "Team FPts - PPG",
       y = "Gegner FPts - PPG",
       color = ""
     ) +
     ggplot2::scale_x_continuous(limits = c(min(plot_data$avg_franchise_fpts_diff) - 20, max(plot_data$avg_franchise_fpts_diff) + 20), expand = c(0, 0))
 
-  plotly::ggplotly(plot, tooltip = c("text")) %>%
-    plotly::layout(
-      legend = list(orientation = "h", x = 0.5, y = 1.05, xanchor = "center", font = list(size = 11))
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot_default +
+      ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6)
+
+    girafe_default_output(
+      plot
     )
+  } else {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(data = subset(plot_data, outlier == TRUE), ggplot2::aes(data_id = franchise_id), size = 6, shape = 21, fill = color_grey_light, color = color_grey_dark, stroke = 1) +
+      ggrepel::geom_text_repel(data = subset(plot_data, outlier == TRUE), ggplot2::aes(label = franchise_name), point.padding = 30, direction = "y", size = 3, fontface = "bold", color = color_grey_dark)
+
+    girafe_default_output(
+      plot
+    )
+  }
+
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)

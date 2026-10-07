@@ -24,7 +24,7 @@
 }
 
 .sidebar:has(~ #dashboard-container #section-fantasy-finishes.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-strength-of-schedule.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-schedule.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-magic-number.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
@@ -279,11 +279,11 @@
 }
 
 /* SoS*/
-.sidebar:has(~ #dashboard-container #section-strength-of-schedule.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+.sidebar:has(~ #dashboard-container #section-schedule.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
     display: none;
 }
 
-#section-strength-of-schedule [class*="col-"] { background: white; }
+#section-schedule [class*="col-"] { background: white; }
 
 /* Draft History */
 .sidebar:has(~ #dashboard-container #section-draft-history.active) .form-group:not(:has(#selectRflTeams-label)) {

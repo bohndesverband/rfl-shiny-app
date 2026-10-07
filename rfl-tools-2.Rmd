@@ -325,7 +325,7 @@ Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und
 
 ## 
 
-```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
+```{r conference-standing, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -939,54 +939,50 @@ shiny::fluidPage(
 )
 ```
 
-# Strength of Schedule {data-navmenu="Matchups"}
-
-##
+# Schedule {data-navmenu="Matchups"}
 
 ```{r sos, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/matchups/sos.R", local = TRUE)
+source("R new/matchups/schedule.R", local = TRUE)
+
+#shiny::fluidPage(
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
+#      width = 12
+#    )
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(plotly::plotlyOutput("rfl_fpts_abv_avg", height = "800px")),
+#      width = 12
+#    ),
+#    style = "height: 800px"
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
+#      width = 12
+#    ),
+#    style = "height: 600px"
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
+#      width = 12
+#    ),
+#    style = "height: 800px"
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
+#      width = 12
+#    ),
+#    style = "height: 800px"
+#  )
+#)
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
-      width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("rfl_schedule")),
-      width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(plotly::plotlyOutput("rfl_fpts_abv_avg", height = "800px")),
-      width = 12
-    ),
-    style = "height: 800px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
-      width = 12
-    ),
-    style = "height: 600px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
-      width = 12
-    ),
-    style = "height: 800px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
-      width = 12
-    ),
-    style = "height: 800px"
-  )
+  shiny::uiOutput("schedule")
 )
 ```
 
