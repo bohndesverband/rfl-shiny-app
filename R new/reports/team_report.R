@@ -60,6 +60,12 @@ output$team_report <- shiny::renderUI({
         shiny::fluidPage(
           htmltools::h2("Saison"),
           shiny::fluidRow(
+            shiny::column(
+              shinycssloaders::withSpinner(ggiraph::girafeOutput("team_pctl")),
+              width = 6
+            )
+          ),
+          shiny::fluidRow(
             htmltools::h3("Schedule"),
             shiny::column(
               shinycssloaders::withSpinner(ggiraph::girafeOutput("team_schedule")),
