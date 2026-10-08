@@ -6,7 +6,7 @@ library(feather)
 new_season_sept <- nflreadr::get_current_season()
 
 # load base data ----
-rfl_standing_data <- purrr::map_df(2026:season_before_wk_2, function(x) {
+rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/standing_data/rfl_standing_{x}.csv"),
     col_types = "dicccddddididdidddiddddiiiiiiiiiiiiiiiiiiicii"

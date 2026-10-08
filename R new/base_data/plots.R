@@ -110,6 +110,7 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 0,
       vjust = 1,
       lineheight = 0.9,
+      color = color_grey_mid
     ),
     # oben rechts fläche
     ggplot2::annotate(
@@ -130,6 +131,7 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 1,
       vjust = 1,
       lineheight = 0.9,
+      color = color_grey_mid
     ),
     # unten rechts fläche
     ggplot2::annotate(
@@ -150,6 +152,7 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 1,
       vjust = 0,
       lineheight = 0.9,
+      color = color_grey_mid
     ),
     # unten links fläche
     ggplot2::annotate(
@@ -170,6 +173,7 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 0,
       vjust = 0,
       lineheight = 0.9,
+      color = color_grey_mid
     ),
     plot_geom_vline(xmean),
     plot_geom_hline(ymean),

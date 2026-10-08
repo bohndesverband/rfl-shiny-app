@@ -294,6 +294,16 @@ htmltools::div(
   class = "alert alert-info hitrate"
 )
 
+htmltools::div(
+  htmltools::HTML("<strong>Glück</strong> misst die Points Against des Teams gegen den Liga Durchschnitt. Je höher der Wert, desto mehr Glück war im Matchup involviert.<br>Die Formel lautet: League Avg Points For / Points Against"),
+  class="alert alert-info luck"
+)
+
+htmltools::div(
+  htmltools::HTML("<strong>Qualität</strong> misst die Points For des Teams gegen den Liga Durchschnitt. Je höher der Wert, desto mehr Qualität war im Matchup involviert.<br>Die Formel lautet: Points For / League Avg Points For"),
+  class="alert alert-info quality"
+)
+
 selected_team_names <- shiny::reactive({
   rfl_franchise_data %>%
     dplyr::filter(franchise_id %in% input$selectRflTeams) %>%
@@ -950,13 +960,6 @@ source("R new/matchups/schedule.R", local = TRUE)
 #      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
 #      width = 12
 #    )
-#  ),
-#  shiny::fluidRow(
-#    shiny::column(
-#      shinycssloaders::withSpinner(plotly::plotlyOutput("rfl_fpts_abv_avg", height = "800px")),
-#      width = 12
-#    ),
-#    style = "height: 800px"
 #  ),
 #  shiny::fluidRow(
 #    shiny::column(

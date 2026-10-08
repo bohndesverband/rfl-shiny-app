@@ -101,6 +101,13 @@
   }
 }
 
+.sidebar:has(~ #dashboard-container #section-schedule.active) {
+  .alert.luck,
+  .alert.quality{
+    display: block;
+  }
+}
+
 
 /* Conference Ranking */
 /* Power Ranking */

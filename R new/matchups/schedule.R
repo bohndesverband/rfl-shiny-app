@@ -508,15 +508,11 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
       cbr = color_blue,
       cbl = color_yellow
     ) +
-    ggiraph::geom_point_interactive(
-      ggplot2::aes(tooltip = franchise_name, data_id = franchise_id),
-      color = color_grey_mid, alpha = 0.8, size = 4
-    ) +
     ggplot2::scale_color_discrete(type = colors) +
     plot_defaults +
     ggplot2::labs(
       title = "Fantasy Points Above Average: Team vs. Gegner",
-      subtitle = "Dargestellt werden alle Teams mit ihrer Differenz von erzielten ",
+      subtitle = "Dargestellt werden alle Teams mit ihrer Differenz von erzielten FPts und den PPG der gestarteten Spieler (X-Achse).\nDieser Wert gibt Auskunft darüber, wie viel die eigenen gestarteten Spieler über- oder unterperformen.\nAuf der Y-Achse finden sich die Werte der Matchup-Gegner.",
       x = "Team FPts - PPG",
       y = "Gegner FPts - PPG",
       color = ""
@@ -525,20 +521,138 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
 
   if (length(input$selectRflTeams) > 0) {
     plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(tooltip = franchise_name, data_id = franchise_id),
+        color = color_grey_mid, alpha = 0.8, size = 4
+      ) +
       ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6)
-
-    girafe_default_output(
-      plot
-    )
   } else {
     plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, outlier == FALSE),
+        ggplot2::aes(tooltip = franchise_name, data_id = franchise_id),
+        color = color_grey_mid, alpha = 0.8, size = 4
+      ) +
       ggiraph::geom_point_interactive(data = subset(plot_data, outlier == TRUE), ggplot2::aes(data_id = franchise_id), size = 6, shape = 21, fill = color_grey_light, color = color_grey_dark, stroke = 1) +
       ggrepel::geom_text_repel(data = subset(plot_data, outlier == TRUE), ggplot2::aes(label = franchise_name), point.padding = 30, direction = "y", size = 3, fontface = "bold", color = color_grey_dark)
-
-    girafe_default_output(
-      plot
-    )
   }
+
+  girafe_default_output(
+    plot
+  )
 
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# Luck und Quality ----
+output$matchups_skill_quality <- ggiraph::renderGirafe({
+  plot_data <- rfl_standing_data %>%
+    dplyr::filter(
+      season >= input$selectYears[1] & season <= input$selectYears[2]
+      #season > 2024
+    ) %>%
+    dplyr::group_by(season) %>%
+    dplyr::filter(week == max(week)) %>%
+    dplyr::group_by(franchise_id) %>%
+    dplyr::summarise(
+      dplyr::across(c(franchise_name), ~ dplyr::last(.x)),
+      dplyr::across(c(quality_season, luck_season), mean),
+      .groups = "drop"
+    ) %>%
+    dplyr::mutate(
+      quality_season_rank = dplyr::dense_rank(dplyr::desc(quality_season)),
+      luck_season_rank = dplyr::dense_rank(dplyr::desc(luck_season)),
+      x_z = as.numeric(scale(quality_season)),
+      y_z = as.numeric(scale(luck_season)),
+      outlier_score = sqrt(x_z^2 + y_z^2),
+      outlier = outlier_score >= quantile(outlier_score, .8, na.rm = TRUE)
+    )
+
+  plot_default <- ggplot2::ggplot(plot_data, aes(x = quality_season, y = luck_season)) +
+    plot_quadrants(
+      xmin = min(plot_data$quality_season),
+      xmax = max(plot_data$quality_season),
+      xmean = mean(plot_data$quality_season),
+      ymin = min(plot_data$luck_season),
+      ymax = max(plot_data$luck_season),
+      ymean = mean(plot_data$luck_season),
+      ltl = "wenig Qualität,\nviel Glück",
+      ltr = "viel Qualität,\nviel Glück",
+      lbr = "viel Qualität,\nwenig Glück",
+      lbl = "wenig Qualität,\nwenig Glück",
+      ctl = color_yellow,
+      ctr = color_green,
+      cbr = color_blue,
+      cbl = color_red
+    ) +
+    ggplot2::scale_color_discrete(type = colors) +
+    plot_defaults +
+    ggplot2::labs(
+      title = "Qualität vs. Glück",
+      #subtitle = "Dargestellt werden alle Teams ",
+      x = "Qualität (PF / ⌀ PF)",
+      y = "Glück (⌀ PF / PA)",
+      color = ""
+    )
+
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\nQualität #", quality_season_rank, "\nGlück #", luck_season_rank),
+          data_id = franchise_id
+        ),
+        color = color_grey_mid, alpha = 0.8, size = 4
+      ) +
+      ggplot2::geom_point(data = subset(plot_data, franchise_id %in% input$selectRflTeams), ggplot2::aes(color = franchise_name), size = 6)
+  } else {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, outlier == FALSE),
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\nQualität #", quality_season_rank, "\nGlück #", luck_season_rank),
+          data_id = franchise_id
+        ),
+        color = color_grey_mid, alpha = 0.8, size = 4
+      ) +
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, outlier == TRUE),
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\nQualität #", quality_season_rank, "\nGlück #", luck_season_rank),
+          data_id = franchise_id
+        ),
+        size = 6, shape = 21, fill = color_grey_light, color = color_grey_dark, stroke = 1
+      ) +
+      ggrepel::geom_text_repel(data = subset(plot_data, outlier == TRUE), ggplot2::aes(label = franchise_name), point.padding = 30, direction = "y", size = 3, fontface = "bold", color = color_grey_dark)
+  }
+
+  girafe_default_output(
+    plot
+  )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
+# ui output ----
+output$schedule <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1(paste("RFL Schedule", input$selectYear)),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shinycssloaders::withSpinner(gt::gt_output("rfl_schedule_delta"))),
+        width = 12
+      )
+    ),
+    htmltools::hr(style = "margin-block: 2rem"),
+    htmltools::h2("Matchups"),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shinycssloaders::withSpinner(ggiraph::girafeOutput("fpts_abv_avg"))),
+        width = 12
+      )
+    ),
+    shiny::column(
+      shinycssloaders::withSpinner(shinycssloaders::withSpinner(ggiraph::girafeOutput("matchups_skill_quality"))),
+      width = 12
+    )
+  )
+})

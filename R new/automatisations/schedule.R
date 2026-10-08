@@ -4,7 +4,14 @@ var_season <- 2026
 
 # matchups
 rfl_matchups_history <- rfl_team_elo %>%
+  dplyr::group_by(season, week) %>%
+  dplyr::mutate(
+    pf_avg = mean(franchise_score, na.rm = TRUE)
+  ) %>%
+  dplyr::ungroup() %>%
   mutate(
+    luck = round((2 * pf_avg) / opponent_score, 2),
+    quality = round(franchise_score / pf_avg, 2),
     total_points = franchise_score + opponent_score,
     total_elo = franchise_elo_pregame + opponent_elo_pregame,
     elo_diff = franchise_elo_pregame - opponent_elo_pregame,
@@ -20,7 +27,7 @@ rfl_matchups_history <- rfl_team_elo %>%
     total_elo_shift = sum(elo_shift)
   ) %>%
   dplyr::ungroup() %>%
-  dplyr::select(season, week, franchise_id, opponent_id, franchise_name, win, elo_shift, total_elo_shift, franchise_elo_pregame, franchise_elo_postgame, franchise_score, elo_diff, opponent_score, opponent_elo_pregame, opponent_name, total_points, total_elo, score_diff, score_diff_pct, upset, label, division, conference_id) %>%
+  dplyr::select(season, week, franchise_id, opponent_id, franchise_name, win, elo_shift, total_elo_shift, franchise_elo_pregame, franchise_elo_postgame, franchise_score, elo_diff, opponent_score, opponent_elo_pregame, opponent_name, luck, quality, total_points, total_elo, score_diff, score_diff_pct, upset, label, division, conference_id) %>%
   dplyr::left_join(
     rfl_starter_data %>%
       dplyr::filter(starter_status == "starter") %>%
@@ -54,10 +61,10 @@ rfl_matchups_history <- rfl_team_elo %>%
   ) %>%
   # pctl berechnung
   dplyr::mutate(
-    eff = franchise_score / pp,
+    eff = round(franchise_score / pp, 2),
     dplyr::across(
-      c(franchise_score, pp, eff, elo_shift, all_play_wins, franchise_elo_pregame, elo_shift, franchise_ppg_score, franchise_points_ppg_diff, total_points, total_elo, score_diff, score_diff_pct),
-      ~ dplyr::percent_rank(.x),
+      c(franchise_score, pp, luck, quality, eff, elo_shift, all_play_wins, franchise_elo_pregame, elo_shift, franchise_ppg_score, franchise_points_ppg_diff, total_points, total_elo, score_diff, score_diff_pct),
+      ~ round(dplyr::percent_rank(.x), 2),
       .names = "{.col}_pctl"
     )
   ) %>%
