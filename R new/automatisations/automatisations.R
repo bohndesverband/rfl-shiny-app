@@ -22,3 +22,36 @@ source("R new/automatisations/transactions.R", local = TRUE) # nach draft, war, 
 DBI::dbDisconnect(con, shutdown = TRUE)
 
 rm(rfl_player_scores, rfl_player_elo, rfl_war_data)
+
+# DB Test ----
+
+tables <- DBI::dbListTables(con)
+
+test_tables <- purrr::map_dfr(tables, function(tbl) {
+
+  result <- tryCatch(
+    {
+      DBI::dbGetQuery(
+        con,
+        sprintf('SELECT * FROM "%s"', tbl)
+      )
+
+      tibble::tibble(
+        table = tbl,
+        status = "OK",
+        error = NA_character_
+      )
+    },
+    error = function(e) {
+      tibble::tibble(
+        table = tbl,
+        status = "ERROR",
+        error = conditionMessage(e)
+      )
+    }
+  )
+
+  result
+})
+
+print(test_tables, n = 30)
