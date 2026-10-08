@@ -840,8 +840,6 @@ shiny::fluidPage(
 
 # Übersicht {data-navmenu="Matchups"}
 
-##
-
 ```{r matchup-overview, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_matchup_overview <- shiny::reactiveVal(FALSE)
 
@@ -899,6 +897,46 @@ shiny::fluidPage(
 )
 ```
 
+# Schedule {data-navmenu="Matchups"}
+
+```{r sos, echo=FALSE, message=FALSE, warning=FALSE}
+source("R new/matchups/schedule.R", local = TRUE)
+
+#shiny::fluidPage(
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
+#      width = 12
+#    )
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
+#      width = 12
+#    ),
+#    style = "height: 600px"
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
+#      width = 12
+#    ),
+#    style = "height: 800px"
+#  ),
+#  shiny::fluidRow(
+#    shiny::column(
+#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
+#      width = 12
+#    ),
+#    style = "height: 800px"
+#  )
+#)
+
+shiny::fluidPage(
+  shiny::uiOutput("schedule")
+)
+```
+
 # Alle Matchups {data-navmenu="Matchups"}
 
 ##
@@ -946,46 +984,6 @@ shiny::fluidPage(
       width = 12
     )
   )
-)
-```
-
-# Schedule {data-navmenu="Matchups"}
-
-```{r sos, echo=FALSE, message=FALSE, warning=FALSE}
-source("R new/matchups/schedule.R", local = TRUE)
-
-#shiny::fluidPage(
-#  shiny::fluidRow(
-#    shiny::column(
-#      shinycssloaders::withSpinner(gt::gt_output("rfl_sos_insesason")),
-#      width = 12
-#    )
-#  ),
-#  shiny::fluidRow(
-#    shiny::column(
-#      shinycssloaders::withSpinner(shiny::plotOutput("sos_history")),
-#      width = 12
-#    ),
-#    style = "height: 600px"
-#  ),
-#  shiny::fluidRow(
-#    shiny::column(
-#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_total")),
-#      width = 12
-#    ),
-#    style = "height: 800px"
-#  ),
-#  shiny::fluidRow(
-#    shiny::column(
-#      shinycssloaders::withSpinner(shiny::plotOutput("rfl_sos_matchups")),
-#      width = 12
-#    ),
-#    style = "height: 800px"
-#  )
-#)
-
-shiny::fluidPage(
-  shiny::uiOutput("schedule")
 )
 ```
 

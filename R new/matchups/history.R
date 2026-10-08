@@ -53,7 +53,7 @@ output$rfl_matchup_history_table <- gt::render_gt({
     gt::cols_move(c(opponent_ppg_score, opponent_points_ppg_diff), opponent_elo_pregame) %>%
     gt::tab_spanner(
       "Team",
-      c(dplyr::starts_with("franchise"), pp, eff, win, all_play_wins, elo_shift, total_elo_shift),
+      c(dplyr::starts_with("franchise"), pp, eff, win, all_play_wins, elo_shift, total_elo_shift, luck, quality),
     ) %>%
     gt::tab_spanner(
       "Match Totals",
@@ -76,6 +76,8 @@ output$rfl_matchup_history_table <- gt::render_gt({
       franchise_points_ppg_diff = "FPtsOAvg",
       opponent_ppg_score = "PPG",
       opponent_points_ppg_diff = "FPtsOAvg",
+      luck = "Glück",
+      quality = "Qualität"
     ) %>%
     gt::tab_footnote(
       "Summe aller PPG der gesatarten Spieler im jeweiligen Matchup",
@@ -93,6 +95,7 @@ output$rfl_matchup_history_table <- gt::render_gt({
       #c(franchise_name, opponent_name) ~ px(200),
       c(all_play_wins, total_points, total_elo, score_diff, score_diff_pct, total_elo_shift, franchise_ppg_score, franchise_points_ppg_diff, opponent_ppg_score, opponent_points_ppg_diff) ~ px(100),
       c(win, pp, eff) ~ px(70),
+      c(luck, quality) ~ px(75),
     )
 })
 
