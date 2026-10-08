@@ -302,8 +302,8 @@ plot_draft_defaults <- function(df) {
 }
 
 # giraf defaults ----
-girafe_default_output <- function(plot, width = 16, height = 9) {
-  ggiraph::girafe(ggobj = plot, width_svg = width, height_svg = height) %>%
+girafe_default_output <- function(plot, width = 16, height = 9, ...) {
+  ggiraph::girafe(ggobj = plot, width_svg = width, height_svg = height, ...) %>%
     ggiraph::girafe_options(
       ggiraph::opts_sizing(rescale = TRUE),
       ggiraph::opts_hover(css = paste0("stroke-opacity: 1; stroke-width: 2; stroke:", color_grey_dark)),

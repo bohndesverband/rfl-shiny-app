@@ -239,9 +239,9 @@ rfl_transactions_data <- purrr::map_df(2016:2026, function(x) {
   # data cleaning
   dplyr::mutate(
     player_elo = ifelse(is.na(player_elo), 1500, player_elo),
-    ppg_shift = ifelse(is.na(ppg_running), ppg_current, ppg_current - ppg_running),
-    fpts_shift = ifelse(is.na(fpts_running), fpts_current, fpts_current - fpts_running),
-    war_shift = ifelse(is.na(war), war_current, war_current - war),
+    ppg_shift = ifelse(is.na(ppg_running), ppg_current, round(ppg_current - ppg_running, 2)),
+    fpts_shift = ifelse(is.na(fpts_running), fpts_current, round(fpts_current - fpts_running, 2)),
+    war_shift = ifelse(is.na(war), war_current, round(war_current - war, 2)),
     elo_shift = player_elo_current - player_elo,
   ) %>%
   dplyr::arrange(dplyr::desc(timestamp)) %>%

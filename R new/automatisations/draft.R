@@ -61,7 +61,7 @@ rfl_drafts_data <- purrr::map_df(2016:var_season, function(x) {
       dplyr::slice_tail(n = 1) %>%
       dplyr::ungroup() %>%
       dplyr::mutate(elo_shift = player_elo_post - 1500) %>%
-      dplyr::select(player_id, ppg = ppg_season, current_player_elo = player_elo_post, elo_shift, elo_peak = player_elo_max, peak_season),
+      dplyr::select(player_id, ppg = ppg_running, current_player_elo = player_elo_post, elo_shift, peak_season),
     by = c("mfl_id" = "player_id")
   ) %>%
 
