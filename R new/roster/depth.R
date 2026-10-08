@@ -295,7 +295,7 @@ elo_vs_war <- shiny::reactive({
     dplyr::filter(season == input$selectYear) %>%
     #dplyr::filter(season == 2025) %>%
     dplyr::filter(week == max(week)) %>%
-    dplyr::select(franchise_id, franchise_name, franchise_elo_postgame) %>%
+    dplyr::select(franchise_id, franchise_name, elo_post) %>%
     dplyr::left_join(
       roster_war_sum() %>%
         dplyr::select(franchise_id, total),
@@ -304,11 +304,11 @@ elo_vs_war <- shiny::reactive({
 })
 
 output$elo_vs_war <- ggiraph::renderGirafe({
-  plot <- ggplot2::ggplot(elo_vs_war(), ggplot2::aes(x = franchise_elo_postgame, y = total)) +
+  plot <- ggplot2::ggplot(elo_vs_war(), ggplot2::aes(x = elo_post, y = total)) +
     plot_quadrants(
-      xmin = min(elo_vs_war()$franchise_elo_postgame, na.rm = TRUE),
-      xmean = mean(elo_vs_war()$franchise_elo_postgame, na.rm = TRUE),
-      xmax = max(elo_vs_war()$franchise_elo_postgame, na.rm = TRUE),
+      xmin = min(elo_vs_war()$elo_post, na.rm = TRUE),
+      xmean = mean(elo_vs_war()$elo_post, na.rm = TRUE),
+      xmax = max(elo_vs_war()$elo_post, na.rm = TRUE),
       ymin = min(elo_vs_war()$total, na.rm = TRUE),
       ymean = mean(elo_vs_war()$total, na.rm = TRUE),
       ymax = max(elo_vs_war()$total, na.rm = TRUE),
@@ -323,18 +323,18 @@ output$elo_vs_war <- ggiraph::renderGirafe({
 
     # alle punkte
     ggiraph::geom_point_interactive(
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", franchise_elo_postgame, "\nWAR: ", total), data_id = franchise_id),
+      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), data_id = franchise_id),
       size = 7, alpha = 0.25, color = color_grey_mid
     ) +
 
     # ausgewählte punkte
     ggiraph::geom_point_interactive(
       data = subset(elo_vs_war(), franchise_id %in% input$selectRflTeams),
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", franchise_elo_postgame, "\nWAR: ", total), color = franchise_name, data_id = franchise_id), size = 10
+      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), color = franchise_name, data_id = franchise_id), size = 10
     ) +
     ggplot2::scale_color_discrete(type = colors) +
 
-    ggplot2::scale_x_continuous(limits = c(min(elo_vs_war()$franchise_elo_postgame, na.rm = TRUE) - 25, max(elo_vs_war()$franchise_elo_postgame, na.rm = TRUE) + 25), expand = c(0, 0)) +
+    ggplot2::scale_x_continuous(limits = c(min(elo_vs_war()$elo_post, na.rm = TRUE) - 25, max(elo_vs_war()$elo_post, na.rm = TRUE) + 25), expand = c(0, 0)) +
     ggplot2::scale_y_continuous(limits = c(min(elo_vs_war()$total, na.rm = TRUE) - 1, max(elo_vs_war()$total, na.rm = TRUE) + 1), expand = c(0, 0)) +
 
     plot_defaults +
@@ -484,3 +484,4 @@ output$roster_depth <- shiny::renderUI({
 #    )
 #  )
 #)
+                                                                                    

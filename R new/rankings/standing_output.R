@@ -25,7 +25,7 @@ output$conf_standing_table <- gt::render_gt({
       columns = franchise_name
     ) %>%
 
-    gt::cols_move(elo_rank, franchise_elo_postgame) %>%
+    gt::cols_move(elo_season_rank, elo_post) %>%
 
     gt::cols_hide(elo_shift) %>%
 
@@ -34,8 +34,8 @@ output$conf_standing_table <- gt::render_gt({
       locations = cells_body(rows = divider == 1)
     ) %>%
 
-    gtExtras::gt_add_divider(c(franchise_name, pp_total, franchise_elo_postgame), color = color_grey_light, include_labels = FALSE) %>%
-    gtExtras::gt_add_divider(c(war_rank, power_rank), color = color_bg, weight = "1px", include_labels = FALSE) %>%
+    gtExtras::gt_add_divider(c(franchise_name, pp_season, elo_post), color = color_grey_light, include_labels = FALSE) %>%
+    gtExtras::gt_add_divider(c(war_starter_season_rank, power_rank), color = color_bg, weight = "1px", include_labels = FALSE) %>%
     gtDefaults()
 })
 
@@ -58,7 +58,7 @@ output$power_ranking_table <- gt::render_gt({
     ranking_table_bowl() %>%
 
     gt::cols_move(power_rank, franchise_name) %>%
-    gt::cols_move(elo_rank, power_rank) %>%
+    gt::cols_move(elo_season_rank, power_rank) %>%
 
     gt::cols_hide(c(conference_name:elo_sparkline)) %>%
 
@@ -72,7 +72,7 @@ output$elo_ranking_table <- gt::render_gt({
     dplyr::mutate(
       dplyr::across(dplyr::ends_with("pctl"), ~ scales::percent(.x))
     ) %>%
-    dplyr::arrange(dplyr::desc(franchise_elo_postgame)) %>%
+    dplyr::arrange(dplyr::desc(elo_post)) %>%
     #dplyr::select(-season, -week, -div_rank, -conf_rank, -league_rank) %>%
     gt::gt() %>%
     gt::tab_header(
@@ -83,7 +83,7 @@ output$elo_ranking_table <- gt::render_gt({
     ranking_table_base() %>%
     ranking_table_elo() %>%
 
-    gt::cols_hide(c(conference_name:pf_sparkline, pp_total:pf_total, pf_rank:seed_emoji)) %>%
+    gt::cols_hide(c(conference_name:pf_sparkline, pp_season:pf_season, pf_rank:seed_emoji)) %>%
 
     gtDefaults()
 }) %>%
@@ -108,7 +108,7 @@ output$draft_order_table <- gt::render_gt({
     dplyr::left_join(
       rfl_current_standing %>%
         dplyr::filter(week == max(week)) %>%
-        dplyr::select(franchise_id, season, div_rank, league_rank, divider, division_name, pp_total, power_rank, seed, bowl, bowl_emoji, seed_emoji),
+        dplyr::select(franchise_id, season, div_rank, league_rank, divider, division_name, pp_season, power_rank, seed, bowl, bowl_emoji, seed_emoji),
       by = "franchise_id"
     ) %>%
     dplyr::arrange(pick) %>%
@@ -133,7 +133,7 @@ output$draft_order_table <- gt::render_gt({
       )
     ) %>%
     gt::data_color(
-      pp_total,
+      pp_season,
       palette = c(color_red, color_blue)
     ) %>%
     gt::data_color(
@@ -148,9 +148,9 @@ output$draft_order_table <- gt::render_gt({
     ) %>%
     gt::cols_label(
       pick = "Pick",
-      pp_total = "Potential Points",
+      pp_season = "Potential Points",
       power_rank = "Power Rank"
     ) %>%
-    gtExtras::gt_add_divider(c(franchise_name, pick, pp_total, power_rank), color = color_grey_light, include_labels = FALSE)
+    gtExtras::gt_add_divider(c(franchise_name, pick, pp_season, power_rank), color = color_grey_light, include_labels = FALSE)
 })
 

@@ -335,7 +335,7 @@ Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und
 
 ## 
 
-```{r conference-standing, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {

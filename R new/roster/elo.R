@@ -1,4 +1,4 @@
-source("R new/rankings/standing.R", local = TRUE)
+source("R new/rankings/standing_output.R", local = TRUE)
 source("R new/rankings/ranking_tables.R", local = TRUE)
 
 # running elo----
@@ -31,12 +31,12 @@ elo_leaders_weekly <- shiny::reactive({
     dplyr::distinct() %>%
     dplyr::left_join(
       rfl_standing_data %>%
-        dplyr::select(season, week, franchise_id, pp_total, all_play_wins_total) %>%
+        dplyr::select(season, week, franchise_id, pp_season, all_play_wins_season) %>%
         dplyr::distinct(),
       by = c("season", "week", "franchise_id")
     ) %>%
-    dplyr::filter(pp_total == max(pp_total)) %>%
-    dplyr::filter(all_play_wins_total == max(all_play_wins_total)) %>%
+    dplyr::filter(pp_season == max(pp_season)) %>%
+    dplyr::filter(all_play_wins_season == max(all_play_wins_season)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(game = dplyr::row_number()) %>%
     dplyr::group_by(franchise_id) %>%
@@ -111,7 +111,7 @@ output$elo_change <- shiny::renderPlot({
     dplyr::summarise(top_pctl = quantile(elo_end, 0.8)) %>%
     dplyr::pull(top_pctl)
 
-  ggplot2::ggplot(elo_change(), ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions))) +
+  ggplot2::ggplot(elo_change(), ggplot2::aes(y = reorder(franchise_name, elo_shift), color = franchise_id %in% c(input$selectRflTeams))) +
     ggplot2::geom_vline(xintercept = top_pctl, color = color_grey_mid) +
     ggplot2::geom_text(label = "Contender", x = top_pctl + 5, y = 1, color = color_grey_mid, hjust = 0) +
     ggforce::geom_link(aes(x = elo_start, xend = elo_end, yend = franchise_name, linewidth = ggplot2::after_stat(index))) +

@@ -95,8 +95,8 @@ rfl_matchup_overview <- shiny::reactive({
         dplyr::filter(
           week == ifelse(input$selectWeek > max(week), max(week), input$selectWeek)
         ) %>%
-        dplyr::mutate(loss_total = (week * 2) - wins_total) %>%
-        dplyr::select(franchise_id, div_rank, wins_total, loss_total),
+        dplyr::mutate(loss_total = (week * 2) - wins_season) %>%
+        dplyr::select(franchise_id, div_rank, wins_season, loss_total),
       by = "franchise_id"
     ) %>%
     #select(-division:-conference_name) %>%
@@ -104,6 +104,8 @@ rfl_matchup_overview <- shiny::reactive({
     dplyr::arrange(dplyr::desc(div_rank)) %>%
     dplyr::mutate(matchup_rank = dplyr::row_number()) %>%
     dplyr::ungroup()
+
+  # TODO: DB Tabelle erstellen bzw. zu daten hinzufügen
 
     #dplyr::select(franchise_id:conference_name, franchise_projected, opponent_projected, franchise_left_to_play, opponent_left_to_play, franchise_live, opponent_live, franchise_points_left, opponent_points_left, win_prob) %>%
     #filter(division == "00")
@@ -127,7 +129,7 @@ output$matchupOverview <- shiny::renderPlot({
 
     # franchise name
     ggplot2::geom_text(
-      ggplot2::aes(label = paste(franchise_name, paste0("(", wins_total, "-", loss_total, ")"))),
+      ggplot2::aes(label = paste(franchise_name, paste0("(", wins_season, "-", loss_total, ")"))),
       x = 0.51,
       size = 6, hjust = 0, nudge_y = 0.15, fontface = "bold", color = color_black
     ) +
@@ -232,7 +234,7 @@ output$matchupTable <- gt::render_gt({
       dplyr::select(-conference_name) %>%
       dplyr::group_by(matchup) %>%
       dplyr::mutate(
-        elo_sum = paste("Total ELO:", sum(franchise_elo_postgame))
+        elo_sum = paste("Total ELO:", sum(elo_post))
       ) %>%
       dplyr::ungroup() %>%
       dplyr::arrange(dplyr::desc(elo_sum)) %>%

@@ -1,7 +1,7 @@
-source("R new/rankings/standing.R", local = TRUE)
+source("R new/rankings/standing_output.R", local = TRUE)
 
 power_ranking_plot <- shiny::reactive({
-  data <- rfl_weekly_standing %>%
+  data <- rfl_standing_data %>%
     dplyr::filter(season == max(season))
 
 
@@ -13,8 +13,8 @@ power_ranking_plot <- shiny::reactive({
     ggplot2::geom_text(data = subset(data, week == 1), ggplot2::aes(label = franchise_name), x = 0.9, hjust = 1, vjust = 0.35, color = color_text) +
     ggplot2::geom_text(data = subset(data, week == max(week)), ggplot2::aes(label = franchise_name, x = max(week) + 0.1), hjust = 0, vjust = 0.35, color = color_text) +
 
-    ggbump::geom_bump(data = subset(data, division %in% input$selectRflDivisions | franchise_id %in% input$selectRflTeams), linewidth = 1.8) +
-    ggplot2::geom_point(data = subset(data, division %in% input$selectRflDivisions | franchise_id %in% input$selectRflTeams), size = 5) +
+    ggbump::geom_bump(data = subset(data, franchise_id %in% input$selectRflTeams), linewidth = 1.8) +
+    ggplot2::geom_point(data = subset(data, franchise_id %in% input$selectRflTeams), size = 5) +
 
     ggplot2::scale_x_continuous(limits = c(-0.4, max(data$week) + 1.3), labels = c(1:max(data$week)), breaks = c(1:max(data$week))) +
     ggplot2::scale_y_reverse(limits = c(36, 1), labels = c(36:1), breaks = c(36:1), sec.axis = ggplot2::sec_axis(transform = ~., name="Power Rank", labels = c(36:1), breaks = c(36:1))) +

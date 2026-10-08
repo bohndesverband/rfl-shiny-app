@@ -24,10 +24,10 @@ ranking_table_base <- function(df) {
     gt::cols_label(
       franchise_name = "Team"
     ) %>%
-    gt::cols_hide(c(franchise_id, season:division, div_rank:league_rank, seed, bowl, divider, seed_total, franchise_name_status)) %>%
+    gt::cols_hide(c(franchise_id, season, div_rank:league_rank, seed, bowl, divider, seed_total, franchise_name_status)) %>%
 
     gtExtras::gt_highlight_rows(
-      rows = franchise_id %in% c(input$selectRflTeams) | division %in% c(input$selectRflDivisions),
+      rows = franchise_id %in% c(input$selectRflTeams),
       fill = color_grey_light
     ) %>%
     gt::cols_width(
@@ -43,7 +43,7 @@ ranking_table_standing <- function(df) {
   df <- df %>%
     gt::tab_spanner(
       label = "Standing",
-      columns = c(wins_total, losses_total, winloss, pf_sparkline, pp_total, pf_total)
+      columns = c(wins_season, losses_season, winloss, pf_sparkline, pp_season, pf_season)
     ) %>%
 
     gtExtras::gt_plt_winloss(
@@ -73,22 +73,22 @@ ranking_table_standing <- function(df) {
 
   df <- df %>%
     gtExtras::gt_plt_bullet(
-      pp_total,
-      target = pf_total,
+      pp_season,
+      target = pf_season,
       width = 30,
       palette = c(color_grey_mid, color_grey_dark)
     ) %>%
 
     gt::cols_width(
-      wins_total ~ gt::px(50),
-      losses_total ~ gt::px(50)
+      wins_season ~ gt::px(50),
+      losses_season ~ gt::px(50)
     ) %>%
 
     gt::cols_label(
-      wins_total = "W",
-      losses_total = "L",
+      wins_season = "W",
+      losses_season = "L",
       winloss = "Ergebnisse",
-      pp_total = "Potential Points"
+      pp_season = "Potential Points"
     )
 
   df
@@ -113,24 +113,24 @@ ranking_table_elo <- function(df) {
       df <- df %>%
         gt::tab_spanner(
           label = "ELO",
-          columns = c(franchise_elo_pregame, elo_sparkline, franchise_elo_postgame, elo_shift)
+          columns = c(elo_pre, elo_sparkline, elo_post, elo_shift)
         ) %>%
         gt::cols_label(
-          franchise_elo_pregame = "WK 1",
+          elo_pre = "WK 1",
           elo_sparkline = paste0("WK 1-", rfl_current_standing$week[1]),
-          franchise_elo_postgame = paste("WK", rfl_current_standing$week[1]),
+          elo_post = paste("WK", rfl_current_standing$week[1]),
           elo_shift = "+/-"
         )
     } else {
       df <- df %>%
         gt::cols_hide(elo_sparkline) %>%
         gt::cols_label(
-          franchise_elo_postgame = "ELO",
+          elo_post = "ELO",
         )
     }
 
     df <- df %>%
-      gt::cols_move(franchise_elo_postgame, elo_sparkline) %>%
+      gt::cols_move(elo_post, elo_sparkline) %>%
       #gtExtras::gt_merge_stack(
       #  franchise_elo_pregame,
       #  franchise_elo_pregame_pctl,
@@ -153,8 +153,8 @@ ranking_table_elo <- function(df) {
       ) %>%
 
       gt::cols_width(
-        franchise_elo_pregame ~ gt::px(75),
-        franchise_elo_postgame ~ gt::px(75),
+        elo_pre ~ gt::px(75),
+        elo_post ~ gt::px(75),
         elo_shift ~ gt::px(50)
       ) %>%
 
@@ -189,8 +189,8 @@ ranking_table_power_rank <- function(df) {
 
   df <- df %>%
     gtExtras::gt_merge_stack(
-      elo_rank,
-      elo_rank_pctl,
+      elo_season_rank,
+      elo_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -198,7 +198,7 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       pf_rank,
-      pf_total_pctl,
+      pf_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -206,7 +206,7 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       pp_rank,
-      pp_total_pctl,
+      pp_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -214,7 +214,7 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       record_rank,
-      wins_total_pctl,
+      wins_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -222,7 +222,7 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       all_play_rank,
-      all_play_wins_total_pctl,
+      all_play_wins_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -230,15 +230,15 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       eff_rank,
-      eff_total_pctl,
+      eff_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
     ) %>%
 
     gtExtras::gt_merge_stack(
-      war_rank,
-      war_pctl,
+      war_starter_season_rank,
+      war_starter_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
@@ -246,24 +246,24 @@ ranking_table_power_rank <- function(df) {
 
     gtExtras::gt_merge_stack(
       power_rank,
-      true_standing_pctl,
+      true_standing_season_pctl,
       small_cap = FALSE,
       palette = c(color_bg, color_bg),
       font_weight = c("normal", "normal")
     ) %>%
 
-    #gt_plt_bar_pct(column = elo_rank_pctl, scaled = TRUE) %>%
-    #gt_pctl_bar("elo_rank", "elo_rank_pctl") %>%
-    #gt_pctl_bar("pf_rank", "pf_total_pctl") %>%
-    #gt_pctl_bar("pp_rank", "pp_total_pctl") %>%
-    #gt_pctl_bar("record_rank", "wins_total_pctl") %>%
-    #gt_pctl_bar("all_play_rank", "all_play_wins_total_pctl") %>%
-    #gt_pctl_bar("eff_rank", "eff_total_pctl") %>%
-    #gt_pctl_bar("war_rank", "war_pctl") %>%
-    #gt_pctl_bar("power_rank", "true_standing_pctl") %>%
+    #gt_plt_bar_pct(column = elo_season_pctl, scaled = TRUE) %>%
+    #gt_pctl_bar("elo_season_rank", "elo_season_pctl") %>%
+    #gt_pctl_bar("pf_rank", "pf_season_pctl") %>%
+    #gt_pctl_bar("pp_rank", "pp_season_pctl") %>%
+    #gt_pctl_bar("record_rank", "wins_season_pctl") %>%
+    #gt_pctl_bar("all_play_rank", "all_play_wins_season_pctl") %>%
+    #gt_pctl_bar("eff_rank", "eff_season_pctl") %>%
+    #gt_pctl_bar("war_starter_season_rank", "war_starter_season_pctl") %>%
+    #gt_pctl_bar("power_rank", "true_standing_season_pctl") %>%
 
     gt::data_color(
-      c(pf_rank:elo_rank),
+      c(pf_rank:elo_season_rank),
       palette = c(color_blue, color_green, color_yellow, color_orange, color_red),
       domain = c(1,36)
     ) %>%
@@ -277,24 +277,24 @@ ranking_table_power_rank <- function(df) {
     gt::cols_hide(elo_shift) %>%
 
     gt::cols_width(
-      elo_rank ~ gt::px(50),
+      elo_season_rank ~ gt::px(50),
       pf_rank ~ gt::px(50),
       pp_rank ~ gt::px(50),
       eff_rank ~ gt::px(50),
-      war_rank ~ gt::px(70),
+      war_starter_season_rank ~ gt::px(70),
       record_rank ~ gt::px(70),
       all_play_rank ~ gt::px(70),
       power_rank ~ gt::px(70)
     ) %>%
 
     gt::cols_label(
-      elo_rank = "ELO",
+      elo_season_rank = "ELO",
       pf_rank = "PF",
       pp_rank = "PP",
       record_rank = "Record",
       all_play_rank = "All-Play",
       eff_rank = "Eff",
-      war_rank = "WAR",
+      war_starter_season_rank = "WAR",
       power_rank = "Ovrl",
     )
 
