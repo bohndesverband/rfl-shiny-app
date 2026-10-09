@@ -104,11 +104,11 @@ weekly_report_players <- shiny::reactive({
 # manager ----
 report_manager <- shiny::reactive({
   report_manager <- rfl_standing_data %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name, icon),
-      by = "franchise_id"
-    ) %>%
+    #dplyr::left_join(
+    #  rfl_franchise_data %>%
+    #    dplyr::select(franchise_id, franchise_name, icon),
+    #  by = "franchise_id"
+    #)
     dplyr::left_join(
       report_players() %>%
         dplyr::filter(starter_status == "starter") %>%

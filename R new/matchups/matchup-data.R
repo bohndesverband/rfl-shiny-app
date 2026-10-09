@@ -2,7 +2,7 @@ source("R new/base_data/player_data.R", local = TRUE)
 
 rfl_matchups_raw <- shiny::reactive({
   rfl_matchups_raw <-
-    ##jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", current_week - 1, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
+    #jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", current_week - 1, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
     jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", input$selectWeek, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
     dplyr::tibble()
 })
