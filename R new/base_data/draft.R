@@ -82,7 +82,7 @@ pal_voe <- scale_red_green(range(rfl_drafts_rookies$voe, na.rm = TRUE))
 pal_voe_class_sum_text <- scale_red_green(range(rfl_draft_classes_sum$voe, na.rm = TRUE))
 pal_voe_class_sum_bg <- scale_rainbow(range(rfl_draft_classes_sum$voe, na.rm = TRUE))
 
-coldef_voe <- function(palette_fun = pal_voe, footer_fun = NULL, ...) {
+coldef_voe <- function(palette_fun = pal_voe, footer = NULL, ...) {
   reactable_coldef_color(
     name = "VOE",
     palette_fun = palette_fun,
@@ -96,12 +96,12 @@ coldef_voe <- function(palette_fun = pal_voe, footer_fun = NULL, ...) {
       }
     },
     minWidth = 70,
-    footer_fun = footer_fun,
+    footer = footer,
     ...
   )
 }
 
-coldef_voe_bg <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
+coldef_voe_bg <- function(palette_fun = pal_pvar, footer = NULL, ...) {
   reactable_coldef_bg(
     name = "VOE",
     cell = function(value) {
@@ -114,37 +114,37 @@ coldef_voe_bg <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
       }
     },
     palette_fun = palette_fun,
-    footer_fun = footer_fun,
+    footer = footer,
     minWidth = 70,
     ...
   )
 }
 
-coldef_pvar <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
+coldef_pvar <- function(palette_fun = pal_pvar, footer = NULL, ...) {
   reactable_coldef_bg(
     name = "pVAR",
     palette_fun = palette_fun,
-    footer_fun = footer_fun,
+    footer = footer,
     minWidth = 70,
     ...
   )
 }
 
-coldef_pvar_text <- function(palette_fun = pal_pvar, footer_fun = NULL, ...) {
+coldef_pvar_text <- function(palette_fun = pal_pvar, footer = NULL, ...) {
   reactable_coldef_color(
     name = "pVAR",
     palette_fun = palette_fun,
-    footer_fun = footer_fun,
+    footer = footer,
     minWidth = 70,
     ...
   )
 }
 
-coldef_pvar_exp <- function(palette_fun = pal_pvar_exp, footer_fun = NULL, ...) {
+coldef_pvar_exp <- function(palette_fun = pal_pvar_exp, footer = NULL, ...) {
   reactable_coldef_bg(
     name = "pVARexp",
     palette_fun = palette_fun,
-    footer_fun = footer_fun,
+    footer = footer,
     minWidth = 100,
     ...
   )

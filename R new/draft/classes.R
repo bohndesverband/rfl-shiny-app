@@ -64,6 +64,7 @@ output$draft_classes_picks <- reactable::renderReactable({
     ),
     sortable = TRUE,
     filterable = TRUE,
+    defaultPageSize = 12,
     height = 775
   )
 })
@@ -324,7 +325,8 @@ output$draft_class_voe_exp <- reactable::renderReactable({
   render_draft_history_table(
     data_source = drafts_data,
     use_voe = input$draft_class_voe_exp_toggle,
-    use_mean = input$draft_class_voe_exp_toggle_per_pick
+    use_mean = input$draft_class_voe_exp_toggle_per_pick,
+    table_height = 520
   )
 })
 

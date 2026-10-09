@@ -57,7 +57,6 @@ output$draft_classes_team <- reactable::renderReactable({
       rank_season = reactable_coldef_color(
         name = "#",
         palette_fun = scale_green_red(c(1, 36)),
-        footer_fun = NULL,
         minWidth = 50
       )
     ),

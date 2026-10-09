@@ -93,8 +93,8 @@ render_draft_history_table <- function(
           ),
           minWidth = 350
         ),
-        pvar_exp = coldef_pvar_exp(footer_fun = sum),
-        voe = coldef_voe(footer = sum)
+        pvar_exp = coldef_pvar_exp(footer = function(values) { sum(values, na.rm = TRUE) }),
+        voe = coldef_voe(footer = function(values) { sum(values, na.rm = TRUE) })
       ),
       fullWidth = FALSE,
       defaultSorted = "pvar_exp",
@@ -112,7 +112,7 @@ render_draft_history_table <- function(
       reactable_coldef_bg(
         name = pos,
         palette_fun = pal_pvar_exp_sum,
-        details_fun = function(index) {
+        details= function(index) {
 
           row <- data[index, ]
           value <- row[[pos]]
@@ -123,7 +123,7 @@ render_draft_history_table <- function(
 
           position_details(index, pos)
         },
-        footer_fun = sum
+        footer = function(values) { sum(values, na.rm = TRUE) }
       )
     })
   }
@@ -349,6 +349,7 @@ draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = 
     sortable = TRUE,
     defaultSorted = "voe",
     defaultSortOrder = "desc",
+    defaultPageSize = 12,
     height = 775,
     ...
   )
