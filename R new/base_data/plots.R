@@ -1,4 +1,15 @@
 # ggplot defaults ----
+point_size_highlight_half <- 9
+point_size_half <- 7
+label_size_half <- 5
+point_color <- color_grey_mid
+point_alpha <- 0.5
+annotate_size_half <- 6
+
+point_defaults_half <- list(
+  size = point_size_half, alpha = point_alpha, color = point_color
+)
+
 plot_defaults <- list(
   ggplot2::labs(
     caption = paste("RFL Tools, Stand", format(Sys.Date(), "%d.%m.%Y"))
@@ -86,7 +97,25 @@ plot_geom_hline <- function(yintercept, ...) {
   ggplot2::geom_hline(yintercept = yintercept, color = color_grey_mid, linewidth = 0.5, linetype = "dashed", ...)
 }
 
-plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, lbl, ctl = color_green, ctr = color_blue, cbr = color_yellow, cbl = color_red) { # ltp = label top left etc, bottom right etc.
+plot_geom_outlier <- function(df, tooltip = "Tooltip", label = "Label", data_id = NULL, point_size = 6, label_size = 3) {
+  list(
+    ggiraph::geom_point_interactive(
+      data = subset(df, outlier == TRUE),
+      ggplot2::aes(
+        tooltip = {{ tooltip }},
+        data_id = {{ data_id }}
+      ),
+      size = point_size, shape = 21, fill = color_grey_light, color = color_grey_dark, stroke = 1
+    ),
+    ggrepel::geom_text_repel(
+      data = subset(df, outlier == TRUE),
+      ggplot2::aes(label = {{ label }}),
+      point.padding = 30, direction = "y", size = label_size, fontface = "bold", color = color_grey_dark
+    )
+  )
+}
+
+plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, lbl, ctl = color_green, ctr = color_blue, cbr = color_yellow, cbl = color_red, l_size = 4) { # ltp = label top left etc, bottom right etc.
   abs_x = (abs(xmax - xmin) / 100) * 3
   abs_y = (abs(ymax - ymin) / 100) * 5
 
@@ -110,7 +139,8 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 0,
       vjust = 1,
       lineheight = 0.9,
-      color = color_grey_mid
+      color = color_grey_mid,
+      size = l_size
     ),
     # oben rechts fläche
     ggplot2::annotate(
@@ -131,7 +161,8 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 1,
       vjust = 1,
       lineheight = 0.9,
-      color = color_grey_mid
+      color = color_grey_mid,
+      size = l_size
     ),
     # unten rechts fläche
     ggplot2::annotate(
@@ -152,7 +183,8 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 1,
       vjust = 0,
       lineheight = 0.9,
-      color = color_grey_mid
+      color = color_grey_mid,
+      size = l_size
     ),
     # unten links fläche
     ggplot2::annotate(
@@ -173,12 +205,13 @@ plot_quadrants <- function(xmin, xmean, xmax, ymin, ymean, ymax, ltl, ltr, lbr, 
       hjust = 0,
       vjust = 0,
       lineheight = 0.9,
-      color = color_grey_mid
+      color = color_grey_mid,
+      size = l_size
     ),
     plot_geom_vline(xmean),
     plot_geom_hline(ymean),
-    ggplot2::scale_x_continuous(expand = c(0, 0)),
-    ggplot2::scale_y_continuous(expand = c(0, 0))
+    ggplot2::scale_x_continuous(limits = c(xmin - abs_x, xmax + abs_x), expand = c(0, 0)),
+    ggplot2::scale_y_continuous(limits = c(ymin - abs_y, ymax + abs_y), expand = c(0, 0))
   )
 
   list

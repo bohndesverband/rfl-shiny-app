@@ -26,7 +26,7 @@ position_order <- c("QB", "RB", "WR", "TE", "FLX", "PK", "DL", "LB", "DB", "IDP"
 positions_grouped <- c("QB", "RB", "WR", "TE", "PK", "DL", "LB", "DB")
 positions_full <- c("QB", "RB", "WR", "TE", "PK", "DT", "DE", "DL", "LB", "CB", "S", "DB")
 
-# color ----
+## color ----
 # https://flatuicolors.com/palette/se
 color_grey_light <- "#d2dae2"
 color_grey_mid <- "#808e9b"
@@ -84,6 +84,18 @@ font <- "Poppins"
 rem_to_pt <- function(rem, base_px = 16) {
   rem * base_px * 0.75
 }
+
+# helper ----
+df_create_plot_outlier <- function(df, value_x, value_y, threshold = 0.8) {
+  df %>%
+    dplyr::mutate(
+      x_z = as.numeric(scale({{ value_x }})),
+      y_z = as.numeric(scale({{ value_y }})),
+      outlier_score = sqrt(x_z^2 + y_z^2),
+      outlier = outlier_score >= quantile(outlier_score, threshold, na.rm = TRUE)
+    )
+}
+
 
 # gt ----
 gtDefaults <- function(df) {

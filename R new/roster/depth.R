@@ -97,9 +97,9 @@ output$team_war_by_position <- reactable::renderReactable({
     ),
     defaultSorted = "total",
     defaultSortOrder = "desc",
-    defaultPageSize = 12,
-    selection = "multiple",
-    onClick = "select"
+    defaultPageSize = 12
+    #selection = "multiple",
+    #onClick = "select"
   )
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
@@ -141,86 +141,34 @@ roster_depth_season <- shiny::reactive({
       pf = round(sum(pf, 2)),
       points_back = round(mean(points_back, na.rm = TRUE), 2),
       .groups = "drop"
-    )
+    ) %>%
+    df_create_plot_outlier(points_back, pppg, 0.9)
 })
 
 roster_depth_plot <- function(df) {
+  x_min <- min({{df}}$points_back)
+  x_max <- max({{df}}$points_back)
+  y_min <- min({{df}}$pppg)
+  y_max <- max({{df}}$pppg)
+
   list(
-    ggplot2::annotate(
-      "rect",
-      xmin = min({{df}}$points_back) - 5,
-      xmax = mean({{df}}$points_back),
-      ymin = mean({{df}}$pppg),
-      ymax = max({{df}}$pppg) + 5,
-      fill = color_blue,
-      alpha = 0.2,
+    plot_quadrants(
+      xmin = x_min,
+      xmean = mean({{df}}$points_back),
+      xmax = x_max,
+      ymin = y_min,
+      ymean = mean({{df}}$pppg),
+      ymax = y_max,
+      ltl = "Besseres Roster,\nbessere Starter",
+      ltr = "Schlechteres Roster,\nbessere Starter",
+      lbr = "Schlechteres Roster,\nschlechtere Starter",
+      lbl = "Besseres Roster,\nschlechtere Starter",
+      ctl = color_blue,
+      ctr = color_green,
+      cbr = color_red,
+      cbl = color_yellow,
+      l_size = annotate_size_half
     ),
-
-    ggplot2::annotate(
-      "text",
-      label = "Besseres Roster,\nbessere Starter",
-      x = min({{df}}$points_back) + 3,
-      y = max({{df}}$pppg),
-      lineheight = 0.9,
-    ),
-
-    ggplot2::annotate(
-      "rect",
-      xmin = mean({{df}}$points_back),
-      xmax = max({{df}}$points_back) + 5,
-      ymin = mean({{df}}$pppg),
-      ymax = max({{df}}$pppg) + 5,
-      fill = color_green,
-      alpha = 0.15
-    ),
-
-    ggplot2::annotate(
-      "text",
-      label = "Schlechteres Roster,\nbessere Starter",
-      x = max({{df}}$points_back) - 5,
-      y = max({{df}}$pppg),
-      lineheight = 0.9,
-    ),
-
-    ggplot2::annotate(
-      "rect",
-      xmin = min({{df}}$points_back) - 5,
-      xmax = mean({{df}}$points_back),
-      ymin = min({{df}}$pppg) - 5,
-      ymax = mean({{df}}$pppg),
-      fill = color_yellow,
-      alpha = 0.15
-    ),
-
-    ggplot2::annotate(
-      "text",
-      label = "Besseres Roster,\nschlechtere Starter",
-      x = min({{df}}$points_back) + 5,
-      y = min({{df}}$pppg),
-      lineheight = 0.9,
-    ),
-
-    ggplot2::annotate(
-      "rect",
-      xmin = mean({{df}}$points_back),
-      xmax = max({{df}}$points_back) + 5,
-      ymin = min({{df}}$pppg) - 5,
-      ymax = mean({{df}}$pppg),
-      fill = color_red,
-      alpha = 0.15
-    ),
-
-    ggplot2::annotate(
-      "text",
-      label = "Schlechteres Roster,\nschlechtere Starter",
-      x = max({{df}}$points_back) - 5,
-      y = min({{df}}$pppg),
-      lineheight = 0.9
-    ),
-
-    ggplot2::geom_hline(yintercept = mean({{df}}$pppg), color = color_grey_mid, linetype = "dashed", linewidth = 0.5) ,
-    ggplot2::geom_vline(xintercept = mean({{df}}$points_back), color = color_grey_mid, linetype = "dashed", linewidth = 0.5),
-    ggplot2::scale_x_continuous(limits = c(min({{df}}$points_back) - 5, max({{df}}$points_back) + 5), expand = c(0, 0)),
     plot_defaults,
     plot_clean,
     ggplot2::theme(
@@ -235,26 +183,46 @@ roster_depth_plot <- function(df) {
 ## plot output ----
 ### season ----
 output$roster_depth_season <- ggiraph::renderGirafe({
-  plot <- ggplot2::ggplot(roster_depth_season(), ggplot2::aes(x = points_back, y = pppg)) +
-    roster_depth_plot(roster_depth_season()) +
+  plot_data <- roster_depth_season()
 
-    ggiraph::geom_point_interactive(
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back), data_id = franchise_id),
-      size = 7, alpha = 0.5, color = color_grey_mid
-    ) +
-    ggiraph::geom_point_interactive(
-      data = subset(roster_depth_season(), franchise_id %in% input$selectRflTeams),
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back), color = franchise_name, data_id = franchise_id),
-      size = 10
-    ) +
-    ggplot2::scale_color_discrete(type = colors) +
-
+  plot_default <- ggplot2::ggplot(plot_data, ggplot2::aes(x = points_back, y = pppg)) +
+    roster_depth_plot(plot_data) +
     ggplot2::labs(
       title = paste("RFL Rosterstärke Woche", max(roster_depth_weekly()$week), input$selectYear),
       x = "PF - PP pro Spiel",
       y = "PP pro Spiel",
       color = ""
     )
+
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back), data_id = franchise_id),
+        !!!point_defaults_half
+      ) +
+      # ausgewählte punkte
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, franchise_id %in% input$selectRflTeams),
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back), color = franchise_name, data_id = franchise_id),
+        size = point_size_highlight_half
+      ) +
+      ggplot2::scale_color_discrete(type = colors)
+  } else {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, outlier == FALSE),
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back), data_id = franchise_id),
+        !!!point_defaults_half
+      ) +
+      plot_geom_outlier(
+        plot_data,
+        paste0(franchise_name, "\nPP: ", pppg, "\nPF: ", pf, "\nDiff: ", points_back),
+        franchise_name,
+        franchise_id,
+        point_size = point_size_highlight_half,
+        label_size = label_size_half
+      )
+  }
 
   girafe_default_output(plot, height = 12)
 }) %>%
@@ -267,7 +235,7 @@ output$roster_depth_weekly <- ggiraph::renderGirafe({
 
     ggiraph::geom_point_interactive(
       data = subset(roster_depth_weekly(), !franchise_id %in% c(input$selectRflTeams)),
-      ggplot2::aes(tooltip = paste(franchise_name, "Woche", week), alpha = week, size = week, data_id = franchise_id), color = color_grey_mid
+      ggplot2::aes(tooltip = paste(franchise_name, "Woche", week), alpha = week, size = week, data_id = franchise_id), color = point_color
     ) +
     ggiraph::geom_point_interactive(
       data = subset(roster_depth_weekly(), franchise_id %in% c(input$selectRflTeams)),
@@ -290,54 +258,44 @@ output$roster_depth_weekly <- ggiraph::renderGirafe({
 
 # ELO vs WAR ----
 ## data ----
+
 elo_vs_war <- shiny::reactive({
-  elo_vs_war <- rfl_team_elo %>%
-    dplyr::filter(season == input$selectYear) %>%
-    #dplyr::filter(season == 2025) %>%
+  elo_vs_war <- rfl_standing_data %>%
+    #dplyr::filter(season == input$selectYear) %>%
+    dplyr::filter(season == 2026) %>%
     dplyr::filter(week == max(week)) %>%
     dplyr::select(franchise_id, franchise_name, elo_post) %>%
     dplyr::left_join(
       roster_war_sum() %>%
         dplyr::select(franchise_id, total),
       by = "franchise_id"
-    )
+    ) %>%
+    df_create_plot_outlier(elo_post, total, 0.8)
 })
 
 output$elo_vs_war <- ggiraph::renderGirafe({
-  plot <- ggplot2::ggplot(elo_vs_war(), ggplot2::aes(x = elo_post, y = total)) +
+  plot_data <- elo_vs_war()
+
+  plot_default <- ggplot2::ggplot(plot_data, ggplot2::aes(x = elo_post, y = total)) +
     plot_quadrants(
-      xmin = min(elo_vs_war()$elo_post, na.rm = TRUE),
-      xmean = mean(elo_vs_war()$elo_post, na.rm = TRUE),
-      xmax = max(elo_vs_war()$elo_post, na.rm = TRUE),
-      ymin = min(elo_vs_war()$total, na.rm = TRUE),
-      ymean = mean(elo_vs_war()$total, na.rm = TRUE),
-      ymax = max(elo_vs_war()$total, na.rm = TRUE),
+      xmin = min(plot_data$elo_post, na.rm = TRUE) - 25,
+      xmean = mean(plot_data$elo_post, na.rm = TRUE),
+      xmax = max(plot_data$elo_post, na.rm = TRUE) + 25,
+      ymin = min(plot_data$total, na.rm = TRUE) - 0.4,
+      ymean = mean(plot_data$total, na.rm = TRUE),
+      ymax = max(plot_data$total, na.rm = TRUE) + 0.4,
       ltl = "Auf dem Weg nach oben",
       ltr = "Sieht langfristig gut aus",
       lbr = "Auf dem Weg nach unten",
-      lbl = "Rebuild"
+      lbl = "Rebuild",
+      l_size = annotate_size_half
     ) +
 
     # trendline
     ggplot2::geom_smooth(method = "lm", formula = y ~ x, color = color_grey_dark, linetype = "dashed", se = FALSE, linewidth = 0.5) +
 
-    # alle punkte
-    ggiraph::geom_point_interactive(
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), data_id = franchise_id),
-      size = 7, alpha = 0.25, color = color_grey_mid
-    ) +
-
-    # ausgewählte punkte
-    ggiraph::geom_point_interactive(
-      data = subset(elo_vs_war(), franchise_id %in% input$selectRflTeams),
-      ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), color = franchise_name, data_id = franchise_id), size = 10
-    ) +
-    ggplot2::scale_color_discrete(type = colors) +
-
-    ggplot2::scale_x_continuous(limits = c(min(elo_vs_war()$elo_post, na.rm = TRUE) - 25, max(elo_vs_war()$elo_post, na.rm = TRUE) + 25), expand = c(0, 0)) +
-    ggplot2::scale_y_continuous(limits = c(min(elo_vs_war()$total, na.rm = TRUE) - 1, max(elo_vs_war()$total, na.rm = TRUE) + 1), expand = c(0, 0)) +
-
     plot_defaults +
+    plot_clean +
 
     ggplot2::labs(
       title = paste("RFL ELO vs WAR", input$selectYear),
@@ -346,6 +304,36 @@ output$elo_vs_war <- ggiraph::renderGirafe({
       y = "WAR",
       color = ""
     )
+
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), data_id = franchise_id),
+        !!!point_defaults_half
+      ) +
+      # ausgewählte punkte
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, franchise_id %in% input$selectRflTeams),
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), color = franchise_name, data_id = franchise_id),
+        size = point_size_highlight_half
+      ) +
+      ggplot2::scale_color_discrete(type = colors)
+  } else {
+    plot <- plot_default +
+      ggiraph::geom_point_interactive(
+        data = subset(plot_data, outlier == FALSE),
+        ggplot2::aes(tooltip = paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total), data_id = franchise_id),
+        !!!point_defaults_half
+      ) +
+      plot_geom_outlier(
+        plot_data,
+        paste0(franchise_name, "\nELO: ", elo_post, "\nWAR: ", total),
+        franchise_name,
+        franchise_id,
+        point_size = point_size_highlight_half,
+        label_size = label_size_half
+      )
+  }
 
   girafe_default_output(plot, height = 13)
 }) %>%
@@ -392,9 +380,9 @@ output$roster_by_age <- reactable::renderReactable({
       stats::setNames(lapply(positions_grouped, roster_by_age_position_coldef), positions_grouped)
     ),
     defaultSorted = "total",
-    defaultPageSize = 12,
-    selection = "multiple",
-    onClick = "select"
+    defaultPageSize = 12
+    #selection = "multiple",
+    #onClick = "select"
   )
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
@@ -435,8 +423,7 @@ output$roster_depth <- shiny::renderUI({
       )
     )
   )
-}) %>%
-  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+})
 
 
 
@@ -484,4 +471,3 @@ output$roster_depth <- shiny::renderUI({
 #    )
 #  )
 #)
-                                                                                    
