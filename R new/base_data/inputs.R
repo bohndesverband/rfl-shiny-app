@@ -169,6 +169,31 @@ shiny::observe({
   shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
 })
 
+shiny::observeEvent(input$selectYear, {
+  year <- input$selectYear
+
+  max_week <- dplyr::case_when(
+    year == 2016 | year >= 2020 ~ 13,
+    TRUE ~ 12
+  )
+
+  if (year < new_season_sept) {
+    shiny::updateSliderInput(
+      session,
+      "selectWeek",
+      max = max_week,
+      value = 13
+    )
+  } else {
+    shiny::updateSliderInput(
+      session,
+      "selectWeek",
+      max = current_week - 1,
+      value = current_week - 1
+    )
+  }
+})
+
 #shiny::observe({
 #  req(input$selectRflDivisions)
 

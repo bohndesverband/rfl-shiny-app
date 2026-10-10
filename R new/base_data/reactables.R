@@ -1,3 +1,67 @@
+# helper ----
+# bar chart  ----
+bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
+  bar <- htmltools::div(class="bar-chart--bar", style = list(background = fill, width = width, height = height))
+  chart <- htmltools::div(class="bar-chart--chart", style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
+  label <- htmltools::span(class="bar-chart--label", text, style = list(fontSize = "0.8em", width = "25%", textAlign = "right"))
+
+  htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
+}
+
+## pctl als bg ----
+reactable_coldef_bar_bg <- function(pctl_column, height = "3px", align = c("left", "right")) {
+  align <- match.arg(align)
+  palette <- grDevices::colorRampPalette(
+    c(color_red, color_orange, color_yellow, color_green, color_blue)
+  )(101)
+
+  reactable::JS(sprintf(
+    "function(rowInfo) {
+      const rawWidth = rowInfo.row[%s];
+      if (rawWidth == null || !Number.isFinite(Number(rawWidth))) return {};
+
+      const width = Math.max(0, Math.min(1, Number(rawWidth)));
+      const fill = %s[Math.round(width * 100)];
+      const position = (width * 100) + '%%';
+      const backgroundImage = %s === 'left'
+        ? `linear-gradient(90deg, ${fill} ${position}, transparent ${position})`
+        : `linear-gradient(90deg, transparent ${100 - width * 100}%%, ${fill} ${100 - width * 100}%%)`;
+
+      return {
+        backgroundImage: backgroundImage,
+        backgroundSize: `100%% ${%s}`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'center bottom',
+        fontSize: '0.85rem',
+        borderLeft: %s,
+        borderRight: %s
+      };
+    }",
+    jsonlite::toJSON(pctl_column, auto_unbox = TRUE),
+    jsonlite::toJSON(unname(palette)),
+    jsonlite::toJSON(align, auto_unbox = TRUE),
+    jsonlite::toJSON(height, auto_unbox = TRUE),
+    jsonlite::toJSON(paste("1px solid", color_grey_light), auto_unbox = TRUE),
+    jsonlite::toJSON(paste("1px solid", color_grey_light), auto_unbox = TRUE)
+  ))
+}
+
+## shift ----
+reactable_cell_shift <- function(value) {
+  if(is.na(value)) {
+    NULL
+  } else if (value > 0) {
+    paste0("+", value)
+  } else {
+    value
+  }
+}
+
+## tooltip im header ----
+reactable_header_with_tooltip <- function(value, tooltip) {
+  tags$abbr(style = "text-decoration: underline; text-decoration-style: dotted; cursor: help", title = tooltip, value)
+}
+
 # Wie viel haben die Teams in die verschiedenen Positionsgruppen investiert? ----
 render_draft_history_table <- function(
     data_source,
@@ -242,22 +306,7 @@ draft_class_players_reactable <- function(data, col_names = NULL, col_groups = N
   )
 }
 
-
-
-
-# bar chart helper ----
-
-
-bar_chart <- function(text, width = "100%", height = "1rem", fill = color_grey_mid, background = color_grey_light) {
-  bar <- htmltools::div(class="bar-chart--bar", style = list(background = fill, width = width, height = height))
-  chart <- htmltools::div(class="bar-chart--chart", style = list(flexGrow = 1, marginLeft = "0.5rem", background = background), bar)
-  label <- htmltools::span(class="bar-chart--label", text, style = list(fontSize = "0.8em"))
-
-  htmltools::div(style = list(display = "flex", alignItems = "center"), label, chart)
-}
-
 ## draft grades ----
-
 
 ## reusable reactable for draft class teams ----
 draft_classes_teams_reactable <- function(data, picks_reactive, column_groups = NULL, columns = NULL, ...) {

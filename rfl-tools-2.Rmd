@@ -259,19 +259,19 @@ shinyWidgets::prettySwitch("showOnlyRookies", "Nur Rookies anzeigen", value = TR
 shiny::actionButton("filterData", "Filtern", icon = icon("arrows-rotate"))
 
 htmltools::div(
-  htmltools::HTML("Das ELO Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating."),
+  htmltools::HTML("Das <strog>ELO</strong> Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jedes Team ein ELO Rating von 1500. Seit dem wird nach jedem Matchup die ELO eines jeden Teams angepasst. Faktoren hierbei sind die gegnerische ELO und die Punktedifferenz des Matchups. Vor jeder 1. Woche einer neuen Saison wird die ELO der vergangenen Saison um 1/3 in Richtung 1500 verschobenen. Das soll Roster Aktivitäten während der Offseason in der Berechnung berücksichtigen. In Woche 14 2016 fanden keine H2H Matchups statt, demzufolge hatte diese Woche keinen Einfluss auf das ELO Rating."),
   htmltools::HTML("<a href=\"https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf\" target=\"_blank\">Eine ausführliche Erklärung gibt's hier</a>"),
   class="alert alert-info elo-team"
 )
 
 htmltools::div(
-  htmltools::HTML("Das ELO Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst."),
+  htmltools::HTML("Das <strog>ELO</strong> Rating basiert auf einer Methode von <a href=\"https://fivethirtyeight.com/methodology/how-our-nfl-predictions-work\" target=\"_blank\">FiveThirtyEight</a>. Mit Ligastart bekam jeder Spieler ein ELO Rating von 1500. Seit dem wird nach jedem Spiel die ELO eines jeden Spielers angepasst."),
   htmltools::HTML("<a href=\"https://bohndesverband.de/wp-content/uploads/2024/05/rfl-elo.pdf\" target=\"_blank\">Eine ausführliche Erklärung gibt's hier</a>"),
   class="alert alert-info elo-player"
 )
 
 htmltools::div(
-  htmltools::HTML("WAR beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet."),
+  htmltools::HTML("<strong>WAR</strong> beschreibt, wie viele head-to-head Matchups mehr ein Owner erwarten kann zu gewinnen, wenn er einen bestimmten Spieler aufstellt. Als Vergleichswert wird ein Replacement-Level berechnet."),
   htmltools::HTML("<a href=\"https://www.fantasypoints.com/nfl/articles/season/2021/fantasy-war-part-1-theory\" target=\"_blank\">Mehr dazu gibts hier zu lesen</a>"),
   class="alert alert-info war"
 )
@@ -295,13 +295,17 @@ htmltools::div(
 )
 
 htmltools::div(
-  htmltools::HTML("<strong>Glück</strong> misst die Points Against des Teams gegen den Liga Durchschnitt. Je höher der Wert, desto mehr Glück war im Matchup involviert.<br>Die Formel lautet: League Avg Points For / Points Against"),
-  class="alert alert-info luck"
+  htmltools::HTML("<strong>Luck/Glück</strong> misst die Points Against des Teams gegen den Liga Durchschnitt. Je größer der Wert, desto mehr Glück hatte das Team.<br>Die Formel lautet: League Avg PF / PA"),
+  htmltools::hr(),
+  htmltools::HTML("<strong>Quality/Qualität</strong> misst die Points For des Teams gegen den Liga Durchschnitt. Je größer der Wert, desto mehr Qualität besitzt das Team.<br>Die Formel lautet: PF / League Avg PF"),
+  class = "alert alert-info luck-quality"
 )
 
 htmltools::div(
-  htmltools::HTML("<strong>Qualität</strong> misst die Points For des Teams gegen den Liga Durchschnitt. Je höher der Wert, desto mehr Qualität war im Matchup involviert.<br>Die Formel lautet: Points For / League Avg Points For"),
-  class="alert alert-info quality"
+  htmltools::HTML("<strong>Expected Wins (ExpW)</strong> basieren auf dem ausder NFL (und vorallem MLB) bekannten \"Pythagorean Theorem\". Hierbei werden die erwarteten Siege anhand der erzielten Punkte berechnet. So wird berechnet, wie viele Siege ein Team am Ende der Saison anhand der eigenen und der im Ligaschnitt kumulierten Punkte haben sollte.<br>Die Formel lautet: Wins + (Games Remaining * PF^2.37) / (PF^2.37 + League Avg PF^2.37)"),
+  htmltools::hr(),
+  htmltools::HTML("<strong>Wins over Expectation (WoExp)</strong> ist die Differenz der bereits erzielten und den am Saisonende erwarteten Siegen."),
+  class = "alert alert-info wexp"
 )
 
 selected_team_names <- shiny::reactive({
@@ -333,38 +337,32 @@ Miss = kein Top 24 Finish für QB, TE und PK, kein Top 48 Finish für RB, DL und
 
 # Conference Ranking {data-navmenu="Liga"}
 
-## 
-
 ```{r conference-standing, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_conference_stanging <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
   if (active_tab() == "#section-conference-ranking" & !loaded_data_conference_stanging()) {
-    source("R new/rankings/standing.R", local = TRUE)
-    source("R new/rankings/standing_output.R", local = TRUE)
+    #source("R new/rankings/standing.R", local = TRUE)
+    #source("R new/rankings/standing_output.R", local = TRUE)
     
-    #source("R new/rankings/rankings_reactable.R", local = TRUE)
+    source("R new/rankings/rankings_reactable.R", local = TRUE)
     
     loaded_data_conference_stanging(TRUE)
   }
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("conf_standing_table")),
-      #shinycssloaders::withSpinner(reactable::reactableOutput("current_standing")),
-      width = 12
-    )
-  )
+  shiny::uiOutput("league_ranking")
 )
+
+
 ```
 
 # Magic Number {data-navmenu="Liga"}
 
 ## 
 
-```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
+```{r magic-number, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 loaded_data_magic_number <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -396,7 +394,7 @@ if (rfl_current_standing$week[1] < 13) {
 
 ##
 
-```{r power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
+```{r power-ranking, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
 loaded_data_power_ranking <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {

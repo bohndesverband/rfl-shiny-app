@@ -1,6 +1,5 @@
 rfl_standing_data <- read_data_table("rfl_standing_data")
 
-rfl_current_standing <- read_data_table("rfl_current_standing") %>%
-  dplyr::mutate(
-    across(c(winloss, pf_sparkline, elo_sparkline), ~ map(str_split(.x, ","), ~ as.numeric(.x)))
-  )
+rfl_current_standing <- rfl_standing_data %>%
+  dplyr::filter(season == max(season)) %>%
+  dplyr::filter(week == max(week))

@@ -30,7 +30,8 @@
 .sidebar:has(~ #dashboard-container #section-draftklassen.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-transaktionen.active) .action-button#filterData {
+.sidebar:has(~ #dashboard-container #section-transaktionen.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active) .action-button#filterData {
   display: inline-block;
 }
 
@@ -108,12 +109,23 @@
   }
 }
 
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active) {
+  .alert.war,
+  .alert.elo-team,
+  .alert.luck,
+  .alert.quality,
+  .alert.luck-quality,
+  .alert.wexp{
+    display: block;
+  }
+}
+
 
 /* Conference Ranking */
 /* Power Ranking */
 /* ELO */
 /* Draft Reihenfolge */
-.sidebar:has(~ #dashboard-container #section-conference-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectWeek-label)),
 .sidebar:has(~ #dashboard-container #section-power-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)),
 .sidebar:has(~ #dashboard-container #section-elo-ranking.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectYear-label)),
 .sidebar:has(~ #dashboard-container #section-draft-reihenfolge.active) .form-group:not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)):not(:has(#showHistoricTeamNames)) {
@@ -465,6 +477,10 @@
   }
 }
 
+.rt-td-inner {
+  line-height: 1;
+}
+
 [style*="pre-wrap"] > * {
   white-space: pre-wrap !important;
 }
@@ -482,8 +498,16 @@
   border-right: 1px solid var(--color__bg) !important;
 }
 
+.rt-td[style*="background"] .rt-text-content div:last-child small {
+   color: inherit !important;
+}
+
+.rt-sticky[style*="right"]:nth-last-child(3) {
+  border-left: 2px solid var(--color__bg);
+}
+
 /* reactable spalten mit balken */
-.rt-td[style*="background-image: linear-gradient"] .rt-td-inner {
+.rt-tbody .rt-td[style*="background-image: linear-gradient"] .rt-td-inner {
   padding-top: 9px;
 }
 
