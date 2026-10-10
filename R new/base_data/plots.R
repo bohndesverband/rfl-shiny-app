@@ -290,6 +290,7 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
   } else {
     p <- p +
       ggiraph::geom_point_interactive(
+        data = subset(df, outlier == FALSE),
         ggplot2::aes(
           tooltip = paste(
             franchise_name, season,
@@ -301,6 +302,12 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
           color = voe
         ),
         alpha = 0.5
+      ) +
+      plot_geom_outlier(
+        df,
+        tooltip = paste(franchise_name, season, "\n", picks, "Picks", "\npVAR:", pvar, "\nVOE:", voe),
+        label = franchise_name,
+        data_id = franchise_id
       )
   }
 

@@ -29,8 +29,9 @@ rfl_draft_classes_filtered <- shiny::reactive({
 ## filtere summierte daten für klasse ----
 rfl_draft_classes_sum_filtered <- shiny::reactive({
   rfl_draft_classes_sum_filtered <- rfl_draft_classes_sum %>%
-    #dplyr::filter(season == 2021)
-    dplyr::filter(season == input$selectYear)
+    #dplyr::filter(season == 2021) %>%
+    dplyr::filter(season == input$selectYear) %>%
+    df_create_plot_outlier(pvar_exp, voe, 0.85)
 
   rfl_draft_classes_sum_filtered
 })
