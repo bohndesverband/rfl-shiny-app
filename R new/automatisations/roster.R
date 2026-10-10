@@ -4,10 +4,10 @@ library(nflreadr)
 rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/roster_data/rfl_roster_{x}.csv"),
-    col_types = "dicccccc"
+    col_types = "diccccccc"
   )
 }) %>%
-  #filter(franchise_id == "0017" & season == 2026) %>%
+  #filter(franchise_id == "0007" & season == 2016 & week == 1) %>%
   # add birthday
   dplyr::left_join(
     nflreadr::load_ff_playerids() %>%
@@ -28,15 +28,15 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
     display_name = nflreadr::clean_player_names(player_name),
     age = round(as.numeric(as.Date(gameday) - as.Date(birthdate)) / 365.25, 1)
   ) %>%
-  dplyr::select(-birthdate, -gameday) %>%
+  dplyr::select(-birthdate, -gameday, -franchise_name_old) %>%
 
   # add player data
-  dplyr::mutate(week_join = ifelse(week > 17, 17, week)) %>% # um weekly stats zu mergen
+  dplyr::mutate(week_join = ifelse(week > 17, 17, week)) %>%   # um weekly stats zu mergen
 
   dplyr::left_join(
     rfl_player_data %>%
-      dplyr::select(player_id, season, week, pos_grouped, fpts, war, war_pctl = war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
-    by = c("player_id", "season", "week_join" = "week"),
+      dplyr::select(player_id, season, week, status, pos_grouped, fpts, war, war_pctl = war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
+    by = c("season", "week_join" = "week", "player_id"),
     relationship = "many-to-many"
   ) %>%
 
@@ -124,7 +124,7 @@ DBI::dbWriteTable(con, "rfl_roster_data", rfl_roster_data, overwrite = TRUE)
 
 # IR ----
 rfl_ir_data <- rfl_roster_data %>%
-  dplyr::filter(roster_status == "INJURED_RESERVE") %>%
+  dplyr::filter(status == "RES" | roster_status == "INJURED_RESERVE") %>%
   # filter nur reg season
   dplyr::filter(
     ((season > 2020 | season == 2016) & week <= 13) |

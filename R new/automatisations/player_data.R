@@ -2,7 +2,7 @@
 rfl_player_data <- rfl_player_scores %>%
   dplyr::distinct() %>%
   dplyr::select(-team) %>%
-  #filter(player_id == "10143") %>%
+  #filter(player_id == "11192") %>%
   group_by(player_id, season) %>%
   tidyr::complete(week = 1:17) %>%
   dplyr::ungroup() %>%
@@ -17,8 +17,10 @@ rfl_player_data <- rfl_player_scores %>%
     by = c("season", "week", "gsis_id"),
     multiple = "last"
   ) %>%
+  dplyr::group_by(season, player_id) %>%
   dplyr::arrange(week) %>%
-  tidyr::fill(team) %>%
+  tidyr::fill(team, status) %>%
+  dplyr::ungroup() %>%
 
   ## end of season war
   dplyr::left_join(

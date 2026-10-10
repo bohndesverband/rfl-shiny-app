@@ -9,7 +9,7 @@ war_data <- rfl_war_data %>%
 
 draft_data <- rfl_drafts_data %>%
   #dplyr::select(-pvar, -pvar_exp, -voe) %>%
-  dplyr::filter(season >= 2017 & season < new_season_march & !is.na(player_name)) %>%
+  dplyr::filter(season >= 2017 & season < new_season_march - 1 & !is.na(player_name)) %>%
   dplyr::left_join(
     war_data,
     by = c("mfl_id" = "player_id"),
