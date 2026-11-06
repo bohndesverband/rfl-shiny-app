@@ -17,8 +17,9 @@ if (nflreadr::get_current_week(TRUE) < 2) {
 }
 
 # mfl api ----
-mfl_api_base_sept <- paste0("https://www45.myfantasyleague.com/", new_season_sept)
-mfl_api_base_march <- paste0("https://www45.myfantasyleague.com/", new_season_march)
+mfl_api_base <- "https://www45.myfantasyleague.com/"
+mfl_api_base_sept <- paste0(mfl_api_base, new_season_sept)
+mfl_api_base_march <- paste0(mfl_api_base, new_season_march)
 mfl_connection <- ffscrapr::mfl_connect(season = new_season_march, league_id = league_id)
 
 # base data----
@@ -167,12 +168,12 @@ gt_player <- function(df) {
 }
 
 # gt_pct_bar
-gt_pctl_bar <- function(df, value, pctl) {
+gt_pctl_bar <- function(df, value, pctl, scale = 100) {
   df %>%
     nflplotR::gt_pct_bar(
       value,
       pctl,
-      value_scale = 100,
+      value_scale = {{ scale }},
       hide_col_pct = TRUE,
       value_position = "above",
       background_fill.height = "8px",
@@ -401,24 +402,28 @@ scale_red_blue <- function(domain_values, reverse = FALSE) {
 }
 
 
-scale_colors <- function(domain_values, palette_value = colors_rainbow, reverse = FALSE) {
+scale_colors <- function(domain_values, palette_value = colors_rainbow, reverse = FALSE, na_color = "transparent") {
 
+  domain_values <- suppressWarnings(as.numeric(domain_values))
   domain <- range(domain_values, na.rm = TRUE)
 
   pal <- scales::col_numeric(
     palette = palette_value,
     domain = domain,
-    na.color = "transparent",
+    na.color = na_color,
     reverse = reverse
   )
 
   function(x) {
-    result <- rep("transparent", length(x))
-    valid <- !is.na(x)
+    result <- rep(na_color, length(x))
+    x_numeric <- suppressWarnings(as.numeric(x))
+    valid <- !is.na(x_numeric)
+
+    if (!any(valid)) return(result)
 
     x_clamped <- pmax(
       domain[1],
-      pmin(x[valid], domain[2])
+      pmin(x_numeric[valid], domain[2])
     )
 
     result[valid] <- pal(x_clamped)

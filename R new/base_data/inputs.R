@@ -35,6 +35,8 @@ shiny::observeEvent(active_tab(), {
     shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2026, value = c(2026, 2026))
   } else if (active_tab() == "#section-wochenbericht") {
     shiny::updateSliderInput(session, "selectWeek", value = current_week - 1)
+  } else if(active_tab() == "#section-übersicht" | active_tab() == "#section-projections") {
+    #shiny::updateSliderInput(session, "selectYear", max = new_season_sept)
   } else {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
   }
@@ -152,7 +154,7 @@ mfl_players_preselection <- shiny::reactive({
       all(input$selectRflTeams != "")) {
 
     mfl_players_preselection <- mfl_players_preselection %>%
-      dplyr::filter(grepl(paste0("\\b", input$selectRflTeams, "\\b"), franchise_ids)) %>%
+      #dplyr::filter(grepl(paste0("\\b", input$selectRflTeams, "\\b"), franchise_ids)) %>%
       dplyr::arrange(dplyr::desc(player_elo_post))
   }
 
@@ -169,7 +171,7 @@ shiny::observe({
   shinyWidgets::updatePickerInput(session, "selectPlayers", choices = setNames(mfl_players_preselection()$player_id, mfl_players_preselection()$player_name), selected = top_player_id)
 })
 
-shiny::observeEvent(input$selectYear, {
+shiny::observeEvent(c(input$selectYear, active_tab()), {
   year <- input$selectYear
 
   max_week <- dplyr::case_when(
@@ -183,6 +185,13 @@ shiny::observeEvent(input$selectYear, {
       "selectWeek",
       max = max_week,
       value = 13
+    )
+  } else if(identical(active_tab(), "#section-übersicht")) {
+    shiny::updateSliderInput(
+      session,
+      "selectWeek",
+      max = current_week_thu,
+      value = current_week
     )
   } else {
     shiny::updateSliderInput(
