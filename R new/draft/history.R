@@ -340,7 +340,7 @@ output$draft_history_voe <- ggiraph::renderGirafe({
 ### classes ----
 output$draft_history_voe_classes <- ggiraph::renderGirafe({
   plot <- rfl_draft_classes_sum %>%
-    plot_pVARexp_voe(selectedTeamNames = input$selectRflTeams)
+    plot_pVARexp_voe(selectedTeamNames = input$selectRflTeams, outlier = FALSE)
 
   girafe_default_output(plot)
 })

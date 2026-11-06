@@ -237,7 +237,7 @@ plot_voe_defaults <- function(title, subtitle, x, y = "VOE") {
 }
 
 ## pvar exp & voe ----
-plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
+plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE, outlier = TRUE) {
   p <- df %>%
     ggplot2::ggplot(ggplot2::aes(x = pvar_exp, y = voe)) +
     plot_quadrants(
@@ -288,7 +288,8 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
         color = "RFL Team"
       )
   } else {
-    p <- p +
+    if (outlier == TRUE) {
+      p <- p +
       ggiraph::geom_point_interactive(
         data = subset(df, outlier == FALSE),
         ggplot2::aes(
@@ -309,6 +310,22 @@ plot_pVARexp_voe <- function(df, selectedTeamNames = FALSE) {
         label = franchise_name,
         data_id = franchise_id
       )
+    } else {
+      p <- p +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(
+          tooltip = paste(
+            franchise_name, season,
+            "\n", picks, "Picks",
+            "\npVAR:", pvar,
+            "\nVOE:", voe),
+          size = season,
+          data_id = franchise_id,
+          color = voe
+        ),
+        alpha = 0.5
+      )
+    }
   }
 
   p +
