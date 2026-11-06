@@ -3,16 +3,12 @@ source("R new/rankings/ranking_tables.R", local = TRUE)
 # conference standing ----
 output$conf_standing_table <- gt::render_gt({
   rfl_current_standing %>%
-    #dplyr::select(-dplyr::ends_with("_pctl")) %>%
-    dplyr::mutate(
-      franchise_name = franchise_name_status,
-      dplyr::across(dplyr::ends_with("pctl"), ~ scales::percent(.x))
-    ) %>%
+    dplyr::select(season:elo_shift, -franchise_name, franchise_name = franchise_name_status, woe, woe_pct, seed, bowl, dplyr::ends_with("season_rank"), power_rank, dplyr::ends_with("season_pctl"), dplyr::ends_with("emoji"), divider) %>%
     dplyr::group_by(conference_name) %>%
     gt::gt() %>%
     gt::tab_header(
       title = paste("RFL Standing"),
-      subtitle = paste("Woche", rfl_current_standing$week[1], rfl_current_standing$season[1])
+      #subtitle = paste("Woche", rfl_current_standing$week[1], rfl_current_standing$season[1])
     ) %>%
 
     ranking_table_base() %>%
@@ -25,16 +21,16 @@ output$conf_standing_table <- gt::render_gt({
       columns = franchise_name
     ) %>%
 
-    gt::cols_move(elo_season_rank, elo_post) %>%
+    #gt::cols_move(elo_season_rank, elo_post) %>%
 
-    gt::cols_hide(elo_shift) %>%
+    #gt::cols_hide(elo_shift) %>%
 
     gt::tab_style(
       style = gt::cell_borders(sides = c("bottom"), weight = px(1), color = color_grey_dark),
       locations = cells_body(rows = divider == 1)
     ) %>%
 
-    gtExtras::gt_add_divider(c(franchise_name, pp_season, elo_post), color = color_grey_light, include_labels = FALSE) %>%
+    #gtExtras::gt_add_divider(c(franchise_name, pp_season, elo_post), color = color_grey_light, include_labels = FALSE) %>%
     gtExtras::gt_add_divider(c(war_starter_season_rank, power_rank), color = color_bg, weight = "1px", include_labels = FALSE) %>%
     gtDefaults()
 })
@@ -83,7 +79,7 @@ output$elo_ranking_table <- gt::render_gt({
     ranking_table_base() %>%
     ranking_table_elo() %>%
 
-    gt::cols_hide(c(conference_name:pf_sparkline, pp_season:pf_season, pf_rank:seed_emoji)) %>%
+    gt::cols_hide(c(conference_name:pf_sparkline, pf_rank:seed_emoji)) %>%
 
     gtDefaults()
 }) %>%
