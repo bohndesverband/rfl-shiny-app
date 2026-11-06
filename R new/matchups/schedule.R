@@ -331,32 +331,6 @@ output$rfl_schedule_delta <- gt::render_gt({
       #season == input$selectYear
       season == new_season_sept
     ) %>%
-    dplyr::mutate(
-      type = ifelse(week <= latest_week, "bisher", "kommend")
-    ) %>%
-    # carry last known pregame elo forward for teams and opponents within each season
-    dplyr::group_by(season, franchise_id) %>%
-    dplyr::arrange(week) %>%
-    tidyr::fill(franchise_elo_pregame, .direction = "down") %>%
-    dplyr::ungroup() %>%
-    dplyr::group_by(season, opponent_id) %>%
-    dplyr::arrange(week) %>%
-    tidyr::fill(opponent_elo_pregame, .direction = "down") %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(
-      p_win = 1 / (1 + 10^((opponent_elo_pregame - franchise_elo_pregame) / 400)),
-      difficulty_raw = 1 - p_win,
-      win_difficulty = (difficulty_raw - min(difficulty_raw, na.rm = TRUE)) / (max(difficulty_raw, na.rm = TRUE) - min(difficulty_raw, na.rm = TRUE))
-    ) %>%
-    #filter(franchise_id == "0007") %>%
-    dplyr::group_by(franchise_id, type) %>%
-    dplyr::mutate(
-      win_difficulty_avg = round(mean(win_difficulty, na.rm = TRUE), 3)
-    ) %>%
-    dplyr::group_by(franchise_id) %>%
-    dplyr::mutate(
-      win_difficulty_delta = (dplyr::last(win_difficulty_avg) - dplyr::first(win_difficulty_avg)) * 100,
-    ) %>%
     dplyr::group_by(franchise_id, week) %>%
     dplyr::mutate(
       matchup = paste(type, paste0("WK", week), paste0("m_", dplyr::row_number()), sep = ".")
@@ -464,6 +438,8 @@ output$rfl_schedule_delta <- gt::render_gt({
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
+#T TODO: toggle für war statt ELO
+
 # matchup over/underachievments ----
 output$fpts_abv_avg <- ggiraph::renderGirafe({
   #shiny::validate(
@@ -493,8 +469,8 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
 
   plot_default <- ggplot2::ggplot(plot_data, aes(x = avg_franchise_fpts_diff, y = avg_opponent_fpts_diff)) +
     plot_quadrants(
-      xmin = min(plot_data$avg_franchise_fpts_diff) - 15,
-      xmax = max(plot_data$avg_franchise_fpts_diff) + 15,
+      xmin = min(plot_data$avg_franchise_fpts_diff),
+      xmax = max(plot_data$avg_franchise_fpts_diff),
       xmean = mean(plot_data$avg_franchise_fpts_diff),
       ymin = min(plot_data$avg_opponent_fpts_diff),
       ymax = max(plot_data$avg_opponent_fpts_diff),
@@ -516,8 +492,7 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
       x = "Team FPts - PPG",
       y = "Gegner FPts - PPG",
       color = ""
-    ) +
-    ggplot2::scale_x_continuous(limits = c(min(plot_data$avg_franchise_fpts_diff) - 20, max(plot_data$avg_franchise_fpts_diff) + 20), expand = c(0, 0))
+    )
 
   if (length(input$selectRflTeams) > 0) {
     plot <- plot_default +

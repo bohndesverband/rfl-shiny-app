@@ -1,37 +1,19 @@
 source("R new/base_data/player_data.R", local = TRUE)
 
-rfl_matchups_raw <- shiny::reactive({
-  rfl_matchups_raw <-
-    #jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", current_week - 1, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
-    jsonlite::read_json(paste0(mfl_api_base_sept, "/export?TYPE=schedule&L=", league_id, "&W=", input$selectWeek, "&JSON=1"))$schedule$weeklySchedule$matchup %>%
-    dplyr::tibble()
-})
-
 rfl_matchups <- shiny::reactive({
-  req(rfl_matchups_raw())
-  req(nrow(rfl_matchups_raw()) > 0)
-
-  rfl_matchups <- rfl_matchups_raw() %>%
-    tidyr::unnest(1) %>%
-    tidyr::unnest_wider(1, names_sep = "_") %>%
-    tidyr::unnest_wider("._1") %>%
-    dplyr::rename(home = id) %>%
-    tidyr::unnest_wider("._2", names_sep = "_") %>%
-    dplyr::rename(away = "._2_id") %>%
-    dplyr::select(home, away) %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name) %>%
-        dplyr::rename(home_name = franchise_name),
-      by = c("home" = "franchise_id")
+  rfl_matchups <- rfl_schedule_data %>%
+    dplyr::filter(season == input$selectYear & week == input$selectWeek) %>%
+    #dplyr::filter(season == 2026 & week == 9) %>%
+    #filter(franchise_id == "0007" | franchise_id == "0011") %>%
+    dplyr::mutate(
+      matchup = purrr::map2_chr(
+        franchise_name,
+        opponent_name,
+        ~ paste(sort(c(.x, .y)), collapse = " vs ")
+      )
     ) %>%
-    dplyr::left_join(
-      rfl_franchise_data %>%
-        dplyr::select(franchise_id, franchise_name) %>%
-        dplyr::rename(away_name = franchise_name),
-      by = c("away" = "franchise_id")
-    ) %>%
-    dplyr::mutate(matchup = paste(home_name, "vs", away_name))
+    dplyr::ungroup() %>%
+    dplyr::select(matchup, franchise_id, franchise_name, franchise_abbrev = abbrev, opponent_id, opponent_name, opponent_abbrev)
 })
 
 starter_data <- shiny::reactive({
@@ -113,8 +95,8 @@ matchup_projection_table_data <- shiny::reactive({
   req(starter())
 
   matchup_projection_table_data <- data.frame(
-    franchise_id = c(rfl_matchups()$home, rfl_matchups()$away),
-    franchise_name = c(rfl_matchups()$home_name, rfl_matchups()$away_name),
+    franchise_id = c(rfl_matchups()$franchise_id, rfl_matchups()$opponent_id),
+    franchise_name = c(rfl_matchups()$franchise_name, rfl_matchups()$opponent_name),
     matchup = rfl_matchups()$matchup
   ) %>%
     dplyr::left_join(

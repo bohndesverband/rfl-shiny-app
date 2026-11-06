@@ -8,7 +8,7 @@ shiny::observe({
   shinyWidgets::updatePickerInput(
     session,
     "selectRflMatchup",
-    choices = rfl_matchups()$matchup,
+    choices = unique(rfl_matchups()$matchup),
     selected = NULL,
     options = list("max-options" = 36)
   )
@@ -20,14 +20,6 @@ rfl_matchup_overview <- shiny::reactive({
 
   rfl_matchup_overview <- rfl_matchups() %>%
     #dplyr::select(-matchup) %>%
-    dplyr::rename(franchise_id = home, franchise_name = home_name, opponent_id = away, opponent_name = away_name) %>%
-
-    # dupliziere jede zeile und tausche team und opponent
-    dplyr::bind_rows(
-      rfl_matchups() %>%
-        dplyr::select(-matchup) %>%
-        dplyr::rename(franchise_id = away, franchise_name = away_name, opponent_id = home, opponent_name = home_name)
-    ) %>%
 
     # füge team infos hinzu
     dplyr::left_join(
@@ -199,160 +191,201 @@ output$matchupOverview <- shiny::renderPlot({
     )
 }, height = 2600)
 
-
-
 # preview ----
-output$matchupTable <- gt::render_gt({
-  data <- dplyr::bind_rows(
-    rfl_matchups(),
-    rfl_matchups() %>%
-      dplyr::rename(
-        home = away,
-        home_name = away_name,
-        away = home,
-        away_name = home_name
-      )
-  ) %>%
+output$matchupTable <- reactable::renderReactable({
+  data_raw <- rfl_matchups() %>%
     dplyr::filter(
       if (isTruthy(input$selectRflMatchup))
         matchup %in% input$selectRflMatchup
       else
         TRUE
     ) %>%
-    dplyr::rename(franchise_id = home, franchise_name = home_name, opponent_id = away) %>%
-    dplyr::select(-away_name)
+    dplyr::left_join(
+      rfl_current_standing %>%
+        dplyr::select(-franchise_name),
+      by = "franchise_id"
+    ) %>%
+    dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
+    dplyr::select(-conference_name)
 
   if (input$selectWeek == current_week) {
-    data %>%
-      dplyr::select(-opponent_id) %>%
-      dplyr::left_join(
-        rfl_current_standing %>%
-          dplyr::select(-week, -franchise_name),
-        by = "franchise_id"
-      ) %>%
-      dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
-      dplyr::select(-conference_name) %>%
+    data <- data_raw %>%
       dplyr::group_by(matchup) %>%
       dplyr::mutate(
-        elo_sum = paste("Total ELO:", sum(elo_post))
+        elo_sum = paste("Total ELO:", sum(elo_post)),
+        matchup = paste(matchup, elo_sum, sep = " - ")
       ) %>%
       dplyr::ungroup() %>%
       dplyr::arrange(dplyr::desc(elo_sum)) %>%
-      dplyr::group_by(matchup, elo_sum) %>%
-      gt::gt() %>%
-      gt::tab_header(
-        title = paste("RFL Matchups Woche", input$selectWeek)
-      ) %>%
-      ranking_table_base() %>%
-      ranking_table_standing() %>%
-      ranking_table_elo() %>%
-      ranking_table_power_rank() %>%
-      ranking_table_bowl() %>%
-      gtDefaults()
+      dplyr::select(matchup, franchise_name, division_name, dplyr::ends_with("_season"), wins_over_exp, wins_over_exp_pct, dplyr::ends_with("season_rank"), dplyr::ends_with("season_pctl"), elo_post, true_standing_pctl, power_rank, power_rank_emoji, bowl_emoji, seed_emoji)
+
+    reactable_standing(
+      data,
+      hide_cols = names(data)[
+        stringr::str_detect(names(data), "(_season|_rank)$") |
+          names(data) %in% c("division_name", "wins_over_exp", "luck_season_pctl", "quality_season_pctl", "seed_emoji", "elo_post")
+      ],
+      groupBy = "matchup",
+      height = 1000,
+      virtual = TRUE,
+      pagination = FALSE
+    )
   } else {
-    data %>%
+    data <- data_raw %>%
+      dplyr::select(matchup, franchise_id, opponent_id, division_name) %>%
       dplyr::left_join(
         rfl_matchups_history %>%
-          dplyr::select(-franchise_name) %>%
-          dplyr::filter(season == max(season)) %>%
-          dplyr::filter(week == input$selectWeek),
+          dplyr::filter(season == input$selectYear & week == input$selectWeek),
         by = c("franchise_id", "opponent_id")
       ) %>%
-      dplyr::left_join(
-        rfl_franchise_data %>%
-          dplyr::mutate(subline = paste(conference_name, division_name, sep = " - ")) %>%
-          dplyr::select(franchise_id, subline),
-        by = "franchise_id"
-      ) %>%
-      dplyr::select(matchup, subline, franchise_name, franchise_score, pp, eff, all_play_wins, franchise_ppg_score, franchise_points_ppg_diff, franchise_elo_pregame, elo_shift, total_points, score_diff, score_diff_pct, total_elo, dplyr::ends_with("_pctl")) %>%
+      dplyr::select(matchup, franchise_name, division_name, franchise_score, pp, eff, all_play_wins, franchise_ppg_score, franchise_points_ppg_diff, franchise_elo_pregame, elo_shift, total_points, score_diff, score_diff_pct, total_elo, quality, luck, dplyr::ends_with("_pctl")) %>%
       dplyr::arrange(abs(score_diff)) %>%
-      dplyr::group_by(matchup) %>%
-      gt::gt() %>%
-      gt::tab_header(
-        title = paste("RFL Matchups Woche", input$selectWeek),
-        subtitle = "Die farbigen Balken zeigen das Perzentil in allen gespielten RFL Regular Season Matchups an"
-      ) %>%
-      gtExtras::gt_merge_stack(
-        franchise_name,
-        subline,
-        small_cap = FALSE,
-        palette = c(color_text, color_grey_mid),
-        font_weight = c("normal", "normal")
-      ) %>%
-      gt::tab_spanner(
-        "Punkte",
-        c(franchise_score, pp, eff, franchise_ppg_score, franchise_points_ppg_diff)
-      ) %>%
-      gt::tab_spanner(
-        "ELO",
-        c(franchise_elo_pregame, elo_shift)
-      ) %>%
-      gt::tab_spanner(
-        "Matchup Totals",
-        c(total_points, total_elo, score_diff, score_diff_pct)
-      ) %>%
-      gtDefaults() %>%
-      gt_pctl_bar("franchise_score", "franchise_score_pctl") %>%
-      gt_pctl_bar("pp", "pp_pctl") %>%
-      gt_pctl_bar("eff", "eff_pctl") %>%
-      gt_pctl_bar("franchise_ppg_score", "franchise_ppg_score_pctl") %>%
-      gt_pctl_bar("franchise_points_ppg_diff", "franchise_points_ppg_diff_pctl") %>%
-      gt_pctl_bar("all_play_wins", "all_play_wins_pctl") %>%
-      gt_pctl_bar("franchise_elo_pregame", "franchise_elo_pregame_pctl") %>%
-      gt_pctl_bar("elo_shift", "elo_shift_pctl") %>%
-      gt_pctl_bar("total_points", "total_points_pctl") %>%
-      gt_pctl_bar("score_diff", "score_diff_pctl") %>%
-      gt_pctl_bar("score_diff_pct", "score_diff_pct_pctl") %>%
-      gt_pctl_bar("total_elo", "total_elo_pctl") %>%
+      dplyr::group_by(matchup)
 
-      gtExtras::gt_add_divider(c(franchise_name, all_play_wins, elo_shift), color = color_grey_light, include_labels = FALSE) %>%
+    hide_cols <- names(data)[
+        names(data) %in% c("franchise_id", "division_name", "franchise_score", "pp", "eff", "franchise_ppg_score", "franchise_points_ppg_diff", "all_play_wins", "franchise_elo_pregame", "elo_shift", "total_points", "total_elo", "score_diff", "score_diff_pct", "quality", "luck")
+    ]
 
-      gt::fmt_percent(
-        c(eff)
-        # TODO: score_diff_pct auch als pct formatieren
-      ) %>%
-      gt::cols_align(
-        align = "center",
-        columns = gt::everything()
-      ) %>%
-
-      gt::cols_align(
-        align = "left",
-        columns = c(franchise_name)
-      ) %>%
-      gt::cols_width(
-        c(franchise_score, pp, eff, franchise_ppg_score, elo_shift, total_points, total_elo) ~ gt::px(80),
-        c(franchise_points_ppg_diff, franchise_elo_pregame, score_diff, score_diff_pct) ~ gt::px(100)
-      ) %>%
-      gt::cols_label(
-        franchise_name = "Team",
-        franchise_score = "FPts",
-        pp = "PP",
-        eff = "Eff",
-        all_play_wins = "All-Play Wins",
-        franchise_ppg_score = "PPG",
-        franchise_points_ppg_diff = "FPtsOAvg",
-        franchise_elo_pregame = "Pregame",
-        elo_shift = "+/-",
-        total_points = "FPts",
-        total_elo = "ELO",
-        score_diff = "Score Diff",
-        score_diff_pct = "Score Diff %",
-      ) %>%
-      gt::tab_footnote(
-        "Summe aller PPG der gesatarten Spieler im jeweiligen Matchup",
-        locations = gt::cells_column_labels(
-          columns = c(franchise_ppg_score)
+    reactable_default(
+      data,
+        columns = c(
+          list(
+          matchup = reactable::colDef(name = "Matchup"),
+          franchise_name = reactable_col_franchise_name(
+            data = data,
+            sticky = "left",
+            style = list(borderRight = paste("2px solid", color_grey_light)),
+            width = 250
+          ),
+          franchise_score_pctl = reactable_coldef_bg_pctl(
+            name = "FPts",
+            value_col = "franchise_score",
+            rank = "pctl",
+            data = data
+          ),
+          pp_pctl = reactable_coldef_bg_pctl(
+            name = "PP",
+            value_col = "pp",
+            rank = "pctl",
+            data = data
+          ),
+          eff_pctl = reactable_coldef_bg_pctl(
+            name = "Eff",
+            value_col = "eff",
+            rank = "pctl",
+            data = data
+          ),
+          franchise_ppg_score_pctl = reactable_coldef_bg_pctl(
+            header = reactable_header_with_tooltip("PPG", "Summe aller PPG der gesatarten Spieler im jeweiligen Matchup"),
+            value_col = "franchise_ppg_score",
+            rank = "pctl",
+            data = data
+          ),
+          franchise_points_ppg_diff_pctl = reactable_coldef_bg_pctl(
+            header = reactable_header_with_tooltip("FPtsOAvg", "PPG - FPts, zeigt, ob das Team im Matchup Over- (positiv) oder Unterachieved (negativ) hat im Vergleich zu den PPG der gestarteten Spieler"),
+            value_col = "franchise_points_ppg_diff",
+            rank = "pctl",
+            data = data
+          ),
+          all_play_wins_pctl = reactable_coldef_bg_pctl(
+            name = "All-Play Wins",
+            value_col = "all_play_wins",
+            rank = "pctl",
+            data = data,
+          ),
+          franchise_elo_pregame_pctl = reactable_coldef_bg_pctl(
+            name = "Pregame",
+            value_col = "franchise_elo_pregame",
+            rank = "pctl",
+            data = data
+          ),
+          elo_shift_pctl = reactable_coldef_bg_pctl(
+            name = "+/-",
+            value_col = "elo_shift",
+            rank = "pctl",
+            data = data
+          ),
+          total_points_pctl = reactable_coldef_bg_pctl(
+            name = "FPts",
+            value_col = "total_points",
+            rank = "pctl",
+            data = data
+          ),
+          total_elo_pctl = reactable_coldef_bg_pctl(
+            name = "ELO",
+            value_col = "total_elo",
+            rank = "pctl",
+            data = data
+          ),
+          score_diff_pct_pctl = reactable_coldef_bg_pctl(
+            name = "Diff",
+            value_col = "score_diff",
+            rank = "pctl",
+            data = data
+          ),
+          score_diff_pctl = reactable_coldef_bg_pctl(
+            name = "Diff %",
+            value_col = "score_diff_pct",
+            rank = "pctl",
+            data = data
+          ),
+          quality_pctl = reactable_coldef_bg_pctl(
+            name = "Qualität",
+            value_col = "quality",
+            rank = "pctl",
+            data = data
+          ),
+          luck_pctl = reactable_coldef_bg_pctl(
+            name = "Glück",
+            value_col = "luck",
+            rank = "pctl",
+            data = data
+          )
+        ),
+        purrr::set_names(
+          purrr::map(
+            hide_cols,
+            ~ reactable::colDef(show = FALSE)
+          ),
+          hide_cols
         )
-      ) %>%
-      gt::tab_footnote(
-        "PPG - FPts, zeigt, ob das Team im Matchup Over- (positiv) oder Unterachieved (negativ) hat im Vergleich zu den PPG der gestarteten Spieler",
-        locations = gt::cells_column_labels(
-          columns = c(franchise_points_ppg_diff)
-        )
-      ) %>%
-      gtDefaults()
+      ),
+      columnGroups = list(
+        colGroup(name = "Punkte", columns = c("franchise_score_pctl", "pp_pctl", "eff_pctl", "franchise_ppg_score_pctl", "franchise_points_ppg_diff_pctl")),
+        colGroup(name = "ELO", columns = c("franchise_elo_pregame_pctl", "elo_shift_pctl")),
+        colGroup(name = "Matchup Totals", columns = c("total_points_pctl", "total_elo_pctl", "score_diff_pctl", "score_diff_pct_pctl", "quality_pctl", "luck_pctl"))
+      ),
+      defaultSorted = c("score_diff"),
+      groupBy = "matchup",
+      defaultExpanded = TRUE,
+      borderless = TRUE,
+      height = 1000,
+      virtual = TRUE,
+      pagination = FALSE
+    )
   }
-})
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-
+# ui output ----
+output$matchup_overview <- shiny::renderUI({
+  shiny::fluidPage(
+    htmltools::h1(paste("RFL Matchups Woche", input$selectWeek, input$selectYear)),
+    shiny::fluidPage(
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(reactable::reactableOutput("matchupTable")),
+          width = 12
+        )
+      ),
+      shiny::fluidRow(
+        shiny::column(
+          shinycssloaders::withSpinner(shiny::plotOutput("matchupOverview")),
+          width = 12
+        ),
+        style = "height: 2600px"
+      )
+    )
+  )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
