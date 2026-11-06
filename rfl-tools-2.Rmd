@@ -96,6 +96,7 @@ shiny::sliderInput(
   max = new_season_sept,
   value = c(new_season_sept, new_season_sept),
   step = 1,
+  ticks = FALSE,
   sep = ""
 )
 
@@ -106,6 +107,7 @@ shiny::sliderInput(
   max = new_season_sept,
   value = new_season_sept,
   step = 1,
+  ticks = FALSE,
   sep = ""
 )
 
@@ -172,7 +174,7 @@ shiny::selectizeInput(
 )
 
 shinyWidgets::pickerInput(
-  "selectRflDivisionsdd",
+  "selectRflDivisions",
   "RFL Divisions",
   choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)])),
   options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "Division wählen"),
@@ -360,9 +362,7 @@ shiny::fluidPage(
 
 # Magic Number {data-navmenu="Liga"}
 
-## 
-
-```{r magic-number, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r magic-number, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_magic_number <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -373,28 +373,14 @@ observeEvent(active_tab(), {
   }
 })
 
-if (rfl_current_standing$week[1] < 13) {
-  shiny::fluidPage(
-    shiny::fluidRow(
-      shiny::column(
-        shinycssloaders::withSpinner(gt::gt_output("magic_number_table")),
-        width = 12
-        )
-      )
-    )
-} else {
-  div(
-    style = "text-align: center; font-size: 18px; color: #f53b57; margin-top: 20px; padding-left: 30px;",
-    "Die Saison ist vorbei, hier gibt es nichts mehr zu sehen. Schau dir stattdessen das Conference Standing an."
-  )
-}
+shiny::fluidPage(
+  shiny::uiOutput("magic_number")
+)
 ```
 
 # Power Ranking {data-navmenu="Liga"}
 
-##
-
-```{r power-ranking, eval=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+```{r power-ranking, echo=FALSE, message=FALSE, warning=FALSE}
 loaded_data_power_ranking <- shiny::reactiveVal(FALSE)
 
 observeEvent(active_tab(), {
@@ -412,13 +398,13 @@ shiny::fluidPage(
       width = 12
     ),
     style = "height: 1030px"
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("power_ranking_table")),
-      width = 12
-    )
   )
+  #shiny::fluidRow(
+  #  shiny::column(
+  #    shinycssloaders::withSpinner(gt::gt_output("power_ranking_table")),
+  #    width = 12
+  #  )
+  #)
 )
 ```
 
@@ -850,19 +836,7 @@ observeEvent(active_tab(), {
 })
 
 shiny::fluidPage(
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(gt::gt_output("matchupTable")),
-      width = 12
-    )
-  ),
-  shiny::fluidRow(
-    shiny::column(
-      shinycssloaders::withSpinner(shiny::plotOutput("matchupOverview")),
-      width = 12
-    ),
-    style = "height: 2600px"
-  )
+  shiny::uiOutput("matchup_overview")
 )
 ```
 

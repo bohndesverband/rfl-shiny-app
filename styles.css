@@ -31,7 +31,8 @@
 .sidebar:has(~ #dashboard-container #section-ir-analyse.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-roster-tiefe.active) .action-button#filterData,
 .sidebar:has(~ #dashboard-container #section-transaktionen.active) .action-button#filterData,
-.sidebar:has(~ #dashboard-container #section-conference-ranking.active) .action-button#filterData {
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active) .action-button#filterData,
+.sidebar:has(~ #dashboard-container #section-übersicht.active) .action-button#filterData{
   display: inline-block;
 }
 
@@ -197,7 +198,7 @@
 }
 
 /* Matchup Übersicht */
-.sidebar:has(~ #dashboard-container #section-übersicht.active) .form-group:not(:has(#selectWeek-label)):not(:has(#selectRflMatchup-label)) {
+.sidebar:has(~ #dashboard-container #section-übersicht.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectWeek-label)):not(:has(#selectRflMatchup-label)) {
   display: none;
 }
 
@@ -524,6 +525,22 @@
     .rt-th-inner > * {
         justify-content: left !important;
 
+    }
+  }
+}
+
+.rt-tr-group {
+  & > .rt-tr[aria-rowindex="NaN"] {
+    & > .rt-td {
+      &:first-child {
+        width: unset !important;
+        font-weight: bold;
+        text-align: left;
+      }
+
+      &:not(:first-child) {
+        display: none !important;
+      }
     }
   }
 }
