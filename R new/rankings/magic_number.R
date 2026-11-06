@@ -4,11 +4,11 @@ source("R new/rankings/ranking_tables.R", local = TRUE)
 total_games <- 26
 pf_per_game <- 20
 
-magic_number_data <- expand.grid(
+magic_number_data <- expand.grid( # jede id mit jeder anderen verlnüpfen
     franchise_id = rfl_current_standing$franchise_id,
     franchise_id_b = rfl_current_standing$franchise_id
   ) %>%
-  dplyr::filter(franchise_id != franchise_id_b) %>%  # Ausschließen von Paaren mit derselben Franchise
+  dplyr::filter(franchise_id != franchise_id_b) %>%   # Ausschließen von Paaren mit derselben Franchise
   dplyr::left_join(
     rfl_current_standing,
     by = "franchise_id"
@@ -57,12 +57,32 @@ magic_number_conf <- shiny::reactive({
     dplyr::select(team_abbrev, franchise_id = franchise_id_b, franchise_name = franchise_name_b, magic_number) %>%
     tidyr::pivot_wider(names_from = team_abbrev, values_from = magic_number)
 
+  last_sb_teams <- magic_number_data %>%
+    dplyr::filter(seed_total == 6) %>%
+    dplyr::pull(team_abbrev) %>%
+    unique()
+
+  last_pb_teams <- magic_number_data %>%
+    dplyr::filter(seed_total == 12) %>%
+    dplyr::pull(team_abbrev) %>%
+    unique()
+
   magic_number_conf <- magic_number_table %>%
     dplyr::left_join(
       magic_number_data %>%
-        dplyr::select(franchise_id, team_abbrev, division_name, wins_season, losses_season, seed_total, bowl_emoji, seed_emoji) %>%
+        dplyr::select(franchise_id, team_abbrev, division_name, wins_season, losses_season, seed_total, seed, bowl_emoji, seed_emoji) %>%
         dplyr::distinct(),
       by = "franchise_id"
+    ) %>%
+    dplyr::mutate(
+      dplyr::across(
+        dplyr::any_of(last_sb_teams),
+        ~ tidyr::replace_na(as.character(.x), "SB")
+      ),
+      dplyr::across(
+        dplyr::any_of(last_pb_teams),
+        ~ tidyr::replace_na(as.character(.x), "PB")
+      )
     ) %>%
     dplyr::select(franchise_id, franchise_name, team_abbrev:seed_emoji, everything())
 
