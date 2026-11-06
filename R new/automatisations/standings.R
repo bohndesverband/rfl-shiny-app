@@ -45,7 +45,7 @@ rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
   dplyr::mutate(
     elo_shift = franchise_elo_postgame - franchise_elo_pregame,
     elo_season_rank = dplyr::min_rank(dplyr::desc(franchise_elo_postgame)),
-    true_standing = ((pf_season_rank + elo_season_rank + (wins_expected_end_of_season_rank * pp_season_rank * war_starter_season_rank)) * 2) + wins_season_rank + all_play_wins_season_rank + quality_season_rank + eff_season_rank + ((luck_season_rank + pa_season_rank) / 4),
+    true_standing = ((pf_season_rank + elo_season_rank + (wins_expected_end_of_season_rank * pp_season_rank * war_starter_season_rank)) * 2) + wins_season_rank + all_play_wins_season_rank + eff_season_rank + ((pa_season_rank) / 4),
   ) %>%
   dplyr::arrange(true_standing, dplyr::desc(wins_season), dplyr::desc(pf_season)) %>%
   dplyr::mutate(
@@ -97,6 +97,7 @@ rfl_standing_data <- purrr::map_df(2016:season_before_wk_2, function(x) {
   dplyr::group_by(season, franchise_id) %>%
   dplyr::arrange(week) %>%
   dplyr::mutate(
+    elo_start_of_season = first(franchise_elo_pregame),
     winloss_season = purrr::accumulate(winloss, ~ paste(.x, .y, sep = ",")),
   ) %>%
   dplyr::ungroup() %>%

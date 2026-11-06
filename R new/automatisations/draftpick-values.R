@@ -90,10 +90,8 @@ ggplot(curve_clean, aes(pick, final_ev)) +
   theme_minimal()
 
 # zusammenführen ----
-rfl_drafts_data <- dbGetQuery(
-  con,
-  "SELECT * FROM rfl_drafts_data"
-) %>%
+rfl_drafts_data <- rfl_drafts_data %>%
+  dplyr::ungroup() %>%
   #dplyr::select(-pvar, -pvar_exp, -voe) %>%
   #dplyr::select(-first_pick:-side) %>%
 
@@ -140,7 +138,8 @@ rfl_drafts_data <- dbGetQuery(
     player_name_with_subline = paste0("<div>", player_name_with_badge, "</div>", "<div>", "<small>", draft_range_subline, "</small>", "</div>"),
     asset_name_with_subline = paste0("<div>", asset_name_with_badge, "</div>", "<div>", "<small>", draft_range_subline, "</small>", "</div>")
   ) %>%
-  #filter(season == 2024 & franchise_id == "0007")
+  #filter(season == 2023) %>%
+  #select(season:player_name, pvar_exp, pvar, voe, dplyr::starts_with("threshold"), pick_cat)
   dplyr::select(-dplyr::starts_with("threshold"))
 
 DBI::dbWriteTable(con, "rfl_drafts_data", rfl_drafts_data, overwrite = TRUE)
