@@ -1,6 +1,3 @@
-source("R new/rankings/standing_output.R", local = TRUE)
-source("R new/rankings/ranking_tables.R", local = TRUE)
-
 # running elo----
 ## data ----
 running_elo <- shiny::reactive({
@@ -57,7 +54,7 @@ output$running_elo <- ggiraph::renderGirafe({
 
     ggiraph::geom_line_interactive(
       ggplot2::aes(group = franchise_id, tooltip = franchise_name, data_id = franchise_id),
-      alpha = 0.5, color = color_grey_mid, linewidth = 0.5
+      alpha = 0.2, color = color_grey_mid, linewidth = 0.5
     ) +
 
     geom_hline(ggplot2::aes(yintercept = mean(franchise_elo_postgame)), color = color_grey_mid, linetype = "dashed", linewidth = 0.5, alpha = 0.75) +
@@ -140,6 +137,70 @@ output$elo_change <- shiny::renderPlot({
 }, height = 1200) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
+## weekly ----
+elo_sparkline <- function(season, selected_team) {
+  data <- rfl_standing_data %>%
+    dplyr::filter(season == {{season}})
+
+  chart <- data %>%
+    dplyr::filter(franchise_id == selected_team) %>%
+    echarts4r::e_charts(x = week, height = "35px") %>%
+    echarts4r::e_line(serie = elo_post, itemStyle = list(color = color_green), showSymbol = FALSE) %>%
+    echarts4r::e_y_axis(min = min(data$elo_post), max = max(data$elo_post) + 20, show = FALSE) %>%
+    echarts4r::e_x_axis(min = 1, max = 13, interval = 1, show = FALSE) %>%
+    echarts4r::e_legend(FALSE)
+
+  chart
+}
+
+output$elo_change_weekly <- reactable::renderReactable({
+  data <- rfl_latest_standings %>%
+    dplyr::filter(season == input$selectYear) %>%
+    dplyr::select(season, franchise_id, franchise_name, division_name, elo_start_of_season, elo_season_pctl, elo_post, elo_shift, elo_pre_pctl)
+
+  reactable_default(
+    data,
+    columns = list(
+      franchise_name = reactable_col_franchise_name(
+        data = data,
+        initWidth = 200
+      ),
+      elo_start_of_season = reactable_coldef_bg_bar(
+        name = "WK 1",
+        pctl = "elo_pre_pctl",
+        data = data,
+        width = 50
+      ),
+      elo_season_pctl = reactable::colDef(
+        paste("WK 1-WK", current_week),
+        cell = function(value, index) {
+          elo_sparkline(data$season[1], data$franchise_id[index])
+        }
+      ),
+      elo_post = reactable_coldef_bg_bar(
+        name = paste("WK", current_week),
+        pctl = "elo_season_pctl",
+        data = data,
+        width = 50
+      ),
+      elo_shift = reactable_coldef_bg(
+        header = reactable_header_with_tooltip("+/-", "ELO-Veränderung zur Vorwoche"),
+        width = 50,
+        palette_fun = scale_colors(range(data$elo_shift, na.rm = TRUE), c(color_red, color_blue)),
+        cell = reactable_cell_shift
+      ),
+      franchise_id = reactable::colDef(show = FALSE),
+      season = reactable::colDef(show = FALSE),
+      division_name = reactable::colDef(show = FALSE),
+      elo_pre_pctl = reactable::colDef(show = FALSE)
+    ),
+    height = 1900,
+    defaultSorted = list(elo_post = "desc"),
+    pagination = FALSE
+  )
+}) %>%
+  shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
+
 # ui output ----
 output$team_elo <- shiny::renderUI({
   shiny::fluidPage(
@@ -161,7 +222,7 @@ output$team_elo <- shiny::renderUI({
         width = 8
       ),
       shiny::column(
-        shinycssloaders::withSpinner(gt::gt_output("elo_ranking_table")),
+        shinycssloaders::withSpinner(reactable::reactableOutput("elo_change_weekly")),
         width = 4
       )
     )
