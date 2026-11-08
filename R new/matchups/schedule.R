@@ -352,7 +352,7 @@ output$rfl_schedule_delta <- gt::render_gt({
     gt::gt() %>%
     gt::tab_header(
       title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYear, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
-      subtitle = "Anhand der Pregame-ELO wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Hier wird die Stärke des eigenen Teams und die relative Stärke des Gegners zum eigenen Team berücksichtigt. Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
+      subtitle = "Anhand der WAR der besten zur Verfügung stehenden Spieler wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
     ) %>%
 
     gt::tab_spanner_delim(delim = ".") %>%
@@ -438,7 +438,83 @@ output$rfl_schedule_delta <- gt::render_gt({
 }) %>%
   shiny::bindEvent(input$filterData, ignoreNULL = FALSE)
 
-#T TODO: toggle für war statt ELO
+# bye week impact ----
+nfl_bye_weeks <- shiny::reactive({
+  nfl_bye_weeks <- rfl_roster_data %>%
+    dplyr::filter(season == input$selectYears[2] & week > 3 & week < 15) %>%
+    dplyr::filter(opponent == "BYE") %>%
+    dplyr::pull(week) %>%
+    unique()
+})
+
+output$schedule_bye_weeks <- ggiraph::renderGirafe({
+  plot_data <- rfl_schedule_data %>%
+    dplyr::filter(season == 2026) %>%
+    dplyr::filter(week %in% nfl_bye_weeks()) %>%
+    dplyr::select(season, week, franchise_id, franchise_name, war_lost_bye) %>%
+    dplyr::distinct() %>%
+    df_create_plot_outlier(week, war_lost_bye, 0.95)
+
+  plot_deafult <- ggplot2::ggplot(plot_data, ggplot2::aes(x = week, y = war_lost_bye, color = franchise_name)) +
+    ggplot2::geom_boxplot(ggplot2::aes(group = week), fill = color_grey_light, color = color_grey_mid, linewidth = 0.15, outliers = FALSE) +
+    ggplot2::aes(lwd = 1.2) +
+    ggplot2::scale_linewidth_identity() +
+
+    ggplot2::scale_color_discrete(type = colors) +
+    ggplot2::scale_alpha(guide = "none") +
+
+    plot_defaults +
+    plot_clean +
+    ggplot2::scale_x_continuous(
+      limits = c(dplyr::first(nfl_bye_weeks()) - 0.5, dplyr::last(nfl_bye_weeks()) + 0.5),
+      breaks = nfl_bye_weeks()
+    ) +
+    ggplot2::labs(
+      title = paste0("RFL Bye Week Impact ", input$selectYears[2]),
+      subtitle = paste0("Wie sehr waren die Teams von den Bye Weeks der Spieler betroffen?"),
+      x = "Woche",
+      y = "verlorene WAR",
+      color = "RFL Team"
+    )
+
+  if (length(input$selectRflTeams) > 0) {
+    plot <- plot_deafult +
+      ggiraph::geom_jitter_interactive(
+        data = subset(plot_data, !franchise_id %in% input$selectRflTeams),
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\n", war_lost_bye, " WAR verloren"),
+          data_id = franchise_id
+        ),
+        color = color_grey_mid, alpha = 0.8, size = 4, width = 0.25
+      ) +
+      ggiraph::geom_jitter_interactive(
+        data = subset(plot_data, franchise_id %in% input$selectRflTeams),
+        ggplot2::aes(tooltip = paste0(franchise_name, "\n", war_lost_bye, " WAR verloren"), data_id = franchise_id, color = franchise_name),
+        size = 6
+      )
+  } else {
+    plot <- plot_deafult +
+      ggiraph::geom_jitter_interactive(
+        data = subset(plot_data, outlier == FALSE),
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\n", war_lost_bye, " WAR verloren"),
+          data_id = franchise_id
+        ),
+        color = color_grey_mid, alpha = 0.8, size = 4, width = 0.25
+      ) +
+      ggiraph::geom_jitter_interactive(
+        data = subset(plot_data, outlier == TRUE),
+        ggplot2::aes(
+          tooltip = paste0(franchise_name, "\n", war_lost_bye, " WAR verloren"),
+          data_id = franchise_id
+        ),
+        size = 6, shape = 21, fill = color_grey_light, color = color_grey_dark, stroke = 1, width = 0.25
+      ) +
+      ggrepel::geom_text_repel(data = subset(plot_data, outlier == TRUE), ggplot2::aes(label = franchise_name), point.padding = 30, direction = "y", size = 3, fontface = "bold", color = color_grey_dark)
+  }
+
+  girafe_default_output(plot, height = 6)
+})
 
 # matchup over/underachievments ----
 output$fpts_abv_avg <- ggiraph::renderGirafe({
@@ -615,6 +691,12 @@ output$schedule <- shiny::renderUI({
       shiny::column(
         shinycssloaders::withSpinner(shinycssloaders::withSpinner(gt::gt_output("rfl_schedule_delta"))),
         width = 12
+      )
+    ),
+    shiny::fluidRow(
+      shiny::column(
+        shinycssloaders::withSpinner(shinycssloaders::withSpinner(ggiraph::girafeOutput("schedule_bye_weeks"))),
+        width = 12,
       )
     ),
     htmltools::hr(style = "margin-block: 2rem"),

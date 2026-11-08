@@ -1,6 +1,47 @@
 library(tidyverse)
 library(nflreadr)
 
+# helper ----
+create_depth_chart <- function(df) {
+  df %>%
+    dplyr::mutate(war_rank_team = dplyr::dense_rank(dplyr::desc(war))) %>%
+    dplyr::group_by(season, week, franchise_id, pos_grouped) %>%
+    dplyr::arrange(dplyr::desc(war)) %>%
+    dplyr::mutate(
+      depth_chart_rank_pos = dplyr::row_number(),
+      depth_chart = dplyr::case_when(
+        pos_grouped %in% c("QB", "TE", "PK") & depth_chart_rank_pos == 1 ~ paste0(pos_grouped, depth_chart_rank_pos),
+        pos_grouped %in% c("RB", "WR", "DL", "LB", "DB") & depth_chart_rank_pos <= 2 ~ paste0(pos_grouped, depth_chart_rank_pos),
+        pos_grouped %in% c("RB", "WR", "TE") ~ "FLEX",
+        pos_grouped %in% c("DL", "LB", "DB") ~ "IDP"
+      )
+    ) %>%
+    # flex spieler berechnen
+    dplyr::group_by(season, week, franchise_id, depth_chart) %>%
+    dplyr::mutate(
+      depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
+      depth_chart = dplyr::case_when(
+        is.na(depth_chart_rank_pos) | depth_chart == "FLEX" & depth_chart_rank > 2 | depth_chart == "IDP" & depth_chart_rank > 3 ~ NA,
+        TRUE ~ depth_chart
+      )
+    ) %>%
+    dplyr::group_by(season, week, franchise_id, depth_chart) %>%
+    dplyr::arrange(dplyr::desc(war)) %>%
+    dplyr::mutate(
+      depth_chart_new = ifelse(depth_chart %in% c("FLEX", "IDP"), paste0(depth_chart, dplyr::row_number()), depth_chart),
+    ) %>%
+    dplyr::group_by(season, week, franchise_id, depth_chart, pos_grouped) %>%
+    dplyr::mutate(
+      depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
+      depth_chart_pos = dplyr::case_when(
+        depth_chart_new %in% c("FLEX1", "FLEX2", "IDP1", "IDP2", "IDP3") ~ paste0(depth_chart, pos_grouped, depth_chart_rank),
+        TRUE ~ depth_chart
+      )
+    ) %>%
+    dplyr::ungroup()
+}
+
+# roster data ----
 rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
   vroom::vroom(
     glue::glue("https://github.com/bohndesverband/rfl-data/releases/download/roster_data/rfl_roster_{x}.csv"),
@@ -35,7 +76,7 @@ rfl_roster_data <- purrr::map_df(2016:season_before_wk_1, function(x) {
 
   dplyr::left_join(
     rfl_player_data %>%
-      dplyr::select(player_id, season, week, status, pos_grouped, fpts, war, war_pctl = war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
+      dplyr::select(player_id, season, week, status, pos_grouped, opponent, fpts, war, war_pctl = war_pctl, player_elo = player_elo_post, player_elo_pctl = player_elo_post_pctl),
     by = c("season", "week_join" = "week", "player_id"),
     relationship = "many-to-many"
   ) %>%
@@ -145,22 +186,25 @@ rfl_ir_data <- rfl_roster_data %>%
 DBI::dbWriteTable(con, "rfl_ir_data", rfl_ir_data, overwrite = TRUE)
 
 # depth charts ----
+rfl_depth_chart_data_weekly <- rfl_roster_data %>%
+  dplyr::filter(roster_status == "ROSTER") %>%
+  dplyr::group_by(season, week, franchise_id) %>%
+  create_depth_chart()
+
+rfl_depth_chart_data_weekly_bye <- rfl_roster_data %>%
+  dplyr::filter(opponent != "BYE" & roster_status == "ROSTER") %>%
+  dplyr::group_by(season, week, franchise_id) %>%
+  create_depth_chart()
+
 rfl_depth_chart_data <- rfl_roster_data %>%
   #filter(franchise_id == "0017" & season == "2026") %>%
-  dplyr::group_by(season) %>%
+  dplyr::filter(season == new_season_sept) %>%
   dplyr::filter(week == max(week)) %>%
-  dplyr::group_by(season, franchise_id) %>%
-  dplyr::mutate(war_rank_team = dplyr::dense_rank(dplyr::desc(war))) %>%
-  dplyr::group_by(season, franchise_id, pos_grouped) %>%
-  dplyr::arrange(dplyr::desc(war)) %>%
+  dplyr::filter(roster_status == "ROSTER") %>%
+  dplyr::group_by(season, week, franchise_id) %>%
+  create_depth_chart() %>%
+  dplyr::filter(!is.na(depth_chart)) %>%
   dplyr::mutate(
-    depth_chart_rank_pos = dplyr::row_number(),
-    depth_chart = dplyr::case_when(
-      pos_grouped %in% c("QB", "TE", "PK") & depth_chart_rank_pos == 1 ~ paste0(pos_grouped, depth_chart_rank_pos),
-      pos_grouped %in% c("RB", "WR", "DL", "LB", "DB") & depth_chart_rank_pos <= 2 ~ paste0(pos_grouped, depth_chart_rank_pos),
-      pos_grouped %in% c("RB", "WR", "TE") ~ "FLEX",
-      pos_grouped %in% c("DL", "LB", "DB") ~ "IDP"
-    ),
     coord_h = dplyr::case_when(
       depth_chart == "QB1" ~ 8,
       depth_chart == "RB1" ~ 6.5,
@@ -184,28 +228,6 @@ rfl_depth_chart_data <- rfl_roster_data %>%
       depth_chart %in% c("DL1", "DL2") ~ 1,
       depth_chart %in% c("LB1", "LB2") ~ 3,
       depth_chart %in% c("DB1", "DB2") ~ 5
-    )
-  ) %>%
-  # flex spieler berechnen
-  dplyr::group_by(season, franchise_id, depth_chart) %>%
-  dplyr::mutate(
-    depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
-    depth_chart = dplyr::case_when(
-      is.na(depth_chart_rank_pos) | depth_chart == "FLEX" & depth_chart_rank > 2 | depth_chart == "IDP" & depth_chart_rank > 3 ~ NA,
-      TRUE ~ depth_chart
-    )
-  ) %>%
-  dplyr::group_by(season, franchise_id, depth_chart) %>%
-  dplyr::arrange(dplyr::desc(war)) %>%
-  dplyr::mutate(
-    depth_chart_new = ifelse(depth_chart %in% c("FLEX", "IDP"), paste0(depth_chart, dplyr::row_number()), depth_chart),
-  ) %>%
-  dplyr::group_by(season, franchise_id, depth_chart, pos_grouped) %>%
-  dplyr::mutate(
-    depth_chart_rank = dplyr::dense_rank(dplyr::desc(war)),
-    depth_chart_pos = dplyr::case_when(
-      depth_chart_new %in% c("FLEX1", "FLEX2", "IDP1", "IDP2", "IDP3") ~ paste0(depth_chart, pos_grouped, depth_chart_rank),
-      TRUE ~ depth_chart
     ),
     coord_h = dplyr::case_when(
       depth_chart_pos %in% c("FLEXRB1") ~ 5.5,
@@ -225,13 +247,13 @@ rfl_depth_chart_data <- rfl_roster_data %>%
       TRUE ~ coord_v
     )
   ) %>%
-  dplyr::group_by(season, franchise_id, pos_grouped) %>%
+  dplyr::group_by(season, week, franchise_id, pos_grouped) %>%
   dplyr::arrange(dplyr::desc(war)) %>%
   dplyr::mutate(
     player = ifelse(!is.na(war), paste0(display_name, " (", war, " WAR)"), display_name),
     pos_players = paste0(player, collapse = "\n")
   ) %>%
-  dplyr::group_by(season, depth_chart) %>%
+  dplyr::group_by(season, week, depth_chart) %>%
   dplyr::mutate(
     war_rank_league = dplyr::dense_rank(dplyr::desc(war))
   ) %>%
@@ -239,4 +261,75 @@ rfl_depth_chart_data <- rfl_roster_data %>%
   dplyr::filter(!is.na(depth_chart)) %>%
   dplyr::select(-war_rank_team, -depth_chart_rank_pos, -depth_chart_rank, -depth_chart_pos, -player, -depth_chart, depth_chart = depth_chart_new)
 
-DBI::dbWriteTable(con, "rfl_depth_chart_data", rfl_depth_chart_data, overwrite = TRUE)
+rfl_depth_chart_data_latest <- rfl_depth_chart_data %>%
+  dplyr::group_by(season) %>%
+  dplyr::filter(week == max(week))
+
+DBI::dbWriteTable(con, "rfl_depth_chart_data", rfl_depth_chart_data_latest, overwrite = TRUE)
+
+# weekly war ----
+calculate_war <- function(df) {
+  df %>%
+    dplyr::filter(!is.na(depth_chart)) %>%
+    dplyr::group_by(season, week, franchise_id) %>%
+    dplyr::summarise(war = round(sum(war, na.rm = TRUE), 2), .groups = "drop")
+}
+
+rfl_roster_war_past <- rfl_depth_chart_data_weekly %>%
+  calculate_war()
+
+rfl_roster_war_future <- nflreadr::load_schedules(new_season_sept) %>%
+  dplyr::filter(week > current_week) %>%
+  dplyr::select(season, week, game_id, away_team, home_team) %>%
+  tidyr::uncount(2) %>%
+  dplyr::group_by(game_id) %>%
+  dplyr::mutate(
+    team = ifelse(dplyr::row_number() == 1, home_team, away_team),
+    opponent = ifelse(dplyr::row_number() == 1, away_team, home_team)
+  ) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(season, week, team) %>%
+  dplyr::left_join(
+    rfl_roster_data %>%
+      dplyr::filter(season == new_season_sept & roster_status == "ROSTER") %>%
+      dplyr::filter(week == max(week)) %>%
+      dplyr::mutate(team = nflreadr::clean_team_abbrs(team)) %>%
+      dplyr::select(-week),
+    by = c("season", "team"),
+    relationship = "many-to-many"
+  ) %>%
+  dplyr::distinct() %>%
+  #filter(franchise_id == "0007") %>%
+  dplyr::group_by(season, week, franchise_id) %>%
+  create_depth_chart() %>%
+  calculate_war()
+
+rfl_roster_war <- rbind(rfl_roster_war_past, rfl_roster_war_future) %>%
+  dplyr::mutate(
+    prediction = ifelse(season == new_season_sept & week > current_week, 1, 0),
+    #week = ifelse(prediction == 1, week + 1, week), # war data der letzten woche soll als wert für die neue woche genutzt werden
+  ) %>%
+
+  # data ohne bye und IR
+  dplyr::left_join(
+    rfl_depth_chart_data_latest %>%
+      calculate_war() %>%
+      dplyr::rename(war_latest = war) %>%
+      dplyr::select(-week),
+    by = c("season", "franchise_id"),
+    relationship = "many-to-many"
+  ) %>%
+  dplyr::left_join(
+    rfl_depth_chart_data_weekly_bye %>%
+      calculate_war() %>%
+      dplyr::rename(war_bye = war),
+    by = c("season", "week", "franchise_id")
+  ) %>%
+  dplyr::mutate(
+    war_lost_bye = ifelse(
+      prediction == 0,
+      round(war_bye - war, 2),
+      round(war - war_latest, 2)
+    )
+  ) %>%
+  dplyr::select(-war_latest)

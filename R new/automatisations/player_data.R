@@ -71,7 +71,7 @@ rfl_player_data <- rfl_player_scores %>%
     relationship = "many-to-many"
   ) %>%
   dplyr::mutate(
-    dplyr::across(c(opponent, opponent_side), ~ ifelse(is.na(.x), "BYE", .x))
+    dplyr::across(c(opponent, opponent_side), ~ ifelse(is.na(.x) & !is.na(team), "BYE", .x))
   ) %>%
 
   # add running ppg
