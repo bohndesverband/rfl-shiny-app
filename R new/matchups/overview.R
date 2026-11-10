@@ -194,33 +194,67 @@ output$matchupOverview <- shiny::renderPlot({
 # preview ----
 output$matchupTable <- reactable::renderReactable({
   data_raw <- rfl_matchups() %>%
-    dplyr::filter(
-      if (isTruthy(input$selectRflMatchup))
-        matchup %in% input$selectRflMatchup
-      else
-        TRUE
-    ) %>%
     dplyr::left_join(
       rfl_current_standing %>%
         dplyr::select(-franchise_name),
       by = "franchise_id"
     ) %>%
     dplyr::mutate(division_name = paste(conference_name, division_name, sep = " - ")) %>%
-    dplyr::select(-conference_name)
+    dplyr::select(-conference_name) %>%
+    dplyr::left_join(
+      rfl_schedule_data %>%
+        dplyr::filter(season == input$selectYear) %>%
+        dplyr::filter(week == input$selectWeek) %>%
+        dplyr::select(franchise_id, opponent_id, win_prob, war_lost = war_lost_injuries),
+      by = c("franchise_id", "opponent_id")
+    )
+
+  data_filtered <- data_raw %>%
+    dplyr::filter(
+      if (isTruthy(input$selectRflMatchup))
+        matchup %in% input$selectRflMatchup
+      else
+        TRUE
+    )
 
   if (input$selectWeek == current_week) {
-    data <- data_raw %>%
+    data <- data_filtered %>%
       dplyr::group_by(matchup) %>%
       dplyr::mutate(
         elo_sum = paste("Total ELO:", sum(elo_post)),
         matchup = paste(matchup, elo_sum, sep = " - ")
       ) %>%
+      dplyr::left_join(
+        latest_sim_data <- qs2::qs_read(paste0("rfl_key_matchups_", new_season_sept, "_", current_week, ".qs2")) %>%
+          dplyr::select(franchise_id, opponent_id, key = leverage_sb_key),
+        by = c("franchise_id", "opponent_id")
+      ) %>%
+      dplyr::mutate(
+        key = ifelse(key == TRUE, emoji::emoji("key"), NA),
+        franchise_name = ifelse(!is.na(key), paste(franchise_name, key), franchise_name)
+      ) %>%
       dplyr::ungroup() %>%
       dplyr::arrange(dplyr::desc(elo_sum)) %>%
-      dplyr::select(matchup, franchise_name, division_name, dplyr::ends_with("_season"), wins_over_exp, wins_over_exp_pct, dplyr::ends_with("season_rank"), dplyr::ends_with("season_pctl"), elo_post, true_standing_pctl, power_rank, power_rank_emoji, bowl_emoji, seed_emoji)
+      dplyr::select(matchup, franchise_name, division_name, win_prob, war_lost, dplyr::ends_with("_season"), wins_over_exp, wins_over_exp_pct, dplyr::ends_with("season_rank"), dplyr::ends_with("season_pctl"), elo_post, true_standing_pctl, power_rank, power_rank_emoji, bowl_emoji, seed_emoji)
 
     reactable_standing(
       data,
+      columns = list(
+        win_prob = reactable_coldef_color(
+          header = reactable_header_with_tooltip("Win %", "WAR basierte Wahrscheinlichkeit das Matchup zu gewinnen"),
+          cell = function(value) {
+            scales::percent(value, accuracy = 1)
+          },
+          palette_fun = scale_colors(0:1, c(color_red, color_blue)),
+          minWidth = 75
+        ),
+        war_lost = reactable_coldef_color(
+          header = reactable_header_with_tooltip("-WAR", "Verlorene WAR durch Bye Weeks und Verletzungen"),
+          palette_fun = scale_colors(range(data$war_lost), c(color_red, color_blue)),
+          width = 75,
+          style = list(borderRight = paste("2px solid", color_grey_light))
+        )
+      ),
       hide_cols = names(data)[
         stringr::str_detect(names(data), "(_season|_rank)$") |
           names(data) %in% c("division_name", "wins_over_exp", "luck_season_pctl", "quality_season_pctl", "seed_emoji", "elo_post")
@@ -231,7 +265,7 @@ output$matchupTable <- reactable::renderReactable({
       pagination = FALSE
     )
   } else {
-    data <- data_raw %>%
+    data <- data_filtered %>%
       dplyr::select(matchup, franchise_id, opponent_id, division_name) %>%
       dplyr::left_join(
         rfl_matchups_history %>%

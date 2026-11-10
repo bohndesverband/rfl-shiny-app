@@ -2,7 +2,8 @@ league_id <- 63018
 #new_season_sept <- nflreadr::get_current_season()
 new_season_sept <- 2026
 new_season_march <- nflreadr::get_current_season(TRUE)
-current_week <- nflreadr::get_current_week()
+#current_week <- nflreadr::get_current_week()
+current_week <- 9
 current_week_thu <- nflreadr::get_current_week(TRUE)
 
 season_before_wk_1 <- new_season_sept
@@ -246,16 +247,24 @@ reactable_coldef_bg <- function(
 
 reactable_coldef_color <- function(
     palette_fun,
+    style = NULL,
     ...
 ) {
+
   reactable::colDef(
     ...,
     style = function(value) {
-      list(
+      style_def <- list(
         color = palette_fun(value),
         textAlign = "center",
         fontWeight = "bold"
       )
+
+      if (!is.null(style)) {
+        style_def <- c(style_def, style)
+      }
+
+      style_def
     }
   )
 }

@@ -1,7 +1,6 @@
 # nach elo
 
 library(tidyverse)
-library(feather)
 
 new_season_sept <- nflreadr::get_current_season()
 

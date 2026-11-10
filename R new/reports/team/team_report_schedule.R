@@ -104,9 +104,6 @@ output$team_pctl <- ggiraph::renderGirafe({
   )
 })
 
-
-
-
 output$team_schedule <- ggiraph::renderGirafe({
   data <- rfl_schedule_data %>%
     dplyr::group_by(season, week, franchise_id) %>%
@@ -168,3 +165,14 @@ output$team_schedule <- ggiraph::renderGirafe({
 })
 
 # TODO: Postseason Matchups ergänzen
+
+output$team_po_odds <- ggiraph::renderGirafe({
+  data <- rfl_schedule_sim_summary %>%
+    dplyr::filter(franchise_id == "0007")
+
+  ggplot2::ggplot(data, ggplot2::aes(x = week)) +
+    ggalt::geom_xspline(ggplot2::aes(y = p_sb), spline_shape = -0.5) +
+    ggplot2::aes(lwd = 1.2) +
+    ggplot2::scale_linewidth_identity()
+
+})

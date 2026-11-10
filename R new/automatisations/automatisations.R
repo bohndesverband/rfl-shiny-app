@@ -15,6 +15,7 @@ source("R new/automatisations/transactions.R", local = TRUE) # nach draft, war, 
 source("R new/automatisations/roster.R", local = TRUE) # nach war, starter
 source("R new/automatisations/standings.R", local = TRUE) # nach roster
 source("R new/automatisations/schedule.R", local = TRUE) # nach standings, nach ELO, nach League, nach Starter, nach roster
+source("R new/automatisations/simulation.R", local = TRUE) # nach schedule, standings
 source("R new/automatisations/postseason.R", local = TRUE)
 source("R new/automatisations/fpts_zusammensetzung.R", local = TRUE)
 source("R new/automatisations/draft-grades.R", local = TRUE) # nach transactions

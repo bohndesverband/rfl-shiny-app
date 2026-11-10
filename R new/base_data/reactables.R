@@ -139,11 +139,15 @@ pctl_value <- NULL
   }
 }
 
-reactable_coldef_bg_bar <- function(pctl, data, width = 75, ...) {
+reactable_coldef_bg_bar <- function(pctl, data, width = 75, format = "pctl", ...) {
   reactable::colDef(
     ...,
     cell = function(value, index) {
-      reactable_cell_pctl(value, index, value_col = NULL, data = data, rank = NULL)
+      if (format == "pct") {
+        scales::percent(value, accuracy = 1)
+      } else {
+        reactable_cell_pctl(value, index, value_col = NULL, data = data, rank = NULL)
+      }
     },
     html = TRUE,
     width = width,
@@ -576,123 +580,153 @@ draft_grades_reactable <- function(
 }
 
 # standing Tabelle ----
-reactable_standing <- function(data, hide_cols = NULL, ...) {
+reactable_standing <- function(data, columns = NULL, hide_cols = NULL, columnGroups = NULL, ...) {
+  default_columns <- list(
+    conference_name = reactable::colDef(name = "Conf"),
+    matchup = reactable::colDef(name = "Matchup"),
+    franchise_name = reactable_col_franchise_name(
+      data = data,
+      sticky = "left",
+      style = list(borderRight = paste("2px solid", color_grey_light)),
+      width = 250
+    ),
+    wins_season = reactable::colDef(
+      name = "W",
+      width = 50
+    ),
+    losses_season = reactable::colDef(
+      name = "L",
+      width = 50
+    ),
+    wins_over_exp_pct = reactable::colDef(
+      header = reactable_header_with_tooltip("WoExp", "Wins over Expectation. Der Balken zeigt an, wie viel % von den erwarteten Siegen bereits erreicht wurden."),
+      align = "left",
+      cell = function(value, index) {
+        woe <- round(data$wins_over_exp[index], 1)
+
+        if (woe > 0) {
+          woe <- paste0("+", woe)
+        }
+
+        width <- paste0(value * 100, "%")
+        bar_chart(woe, width = width, height = "0.5rem")
+      },
+      minWidth = 100
+    ),
+    elo_season_pctl = reactable_coldef_bg_pctl(
+      name = "ELO",
+      "elo_post",
+      "elo_season_rank",
+      data
+    ),
+    pf_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("PF", "Points For bis zur ausgewählten Woche"),
+      "pf_season",
+      data = data
+    ),
+    pp_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("PP", "Potential Points bis zur ausgewählten Woche"),
+      "pp_season",
+      data = data
+    ),
+    pa_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("PA", "Points Against bis zur ausgewählten Woche"),
+      "pa_season",
+      data = data
+    ),
+    war_starter_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("WAR", "Wins above Replacement der gestarteten Spieler"),
+      "war_starter_season",
+      data = data
+    ),
+    wins_season_pctl = reactable_coldef_bg_pctl(
+      name = "Wins",
+      "wins_season",
+      data = data
+    ),
+    all_play_wins_season_pctl = reactable_coldef_bg_pctl(
+      name = "All-Play",
+      "all_play_wins_season",
+      data = data
+    ),
+    eff_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("Eff", "Effizienz (PF / PP)"),
+      "eff_season",
+      data = data
+    ),
+    #luck_season_pctl = reactable_coldef_bg_pctl(
+    #  name = "Glück",
+    #  "luck_season",
+    #  data = data
+    #),
+    #quality_season_pctl = reactable_coldef_bg_pctl(
+    #  name = "Qualität",
+    #  "quality_season",
+    #  data = data
+    #),
+    wins_expected_end_of_season_pctl = reactable_coldef_bg_pctl(
+      header = reactable_header_with_tooltip("ExpW", "Expected Wins (Erwartete Siege)"),
+      "wins_expected_end_of_season",
+      data = data
+    ),
+    power_rank_emoji = reactable::colDef(
+      "",
+      width = 50
+    ),
+    true_standing_pctl = reactable_coldef_bg_pctl(
+      name = "Ovrl",
+      "power_rank",
+      "power_rank",
+      data
+    ),
+    bowl_emoji = reactable::colDef(
+      name = "Bowl",
+      html = TRUE,
+      cell = function(value, index) {
+        content <- shiny::tagList(
+          htmltools::div(value),
+          htmltools::div(htmltools::HTML(data$seed_emoji[index]))
+        )
+        as.character(content)
+      },
+      align = "center",
+      width = 75,
+      sticky = "right"
+    )
+  )
+
+  # allow overriding/merging of columns
+  if (!is.null(columns)) {
+    default_columns <- utils::modifyList(default_columns, columns)
+  }
+
+  column_groups <- list(
+    reactable::colGroup(
+      name = "Standing",
+      columns = c("wins_season", "losses_season", "wins_over_exp_pct")
+    ),
+    reactable::colGroup(
+      name = "Power Ranking",
+      columns = c(
+        "elo_season_pctl", "pf_season_pctl", "pp_season_pctl",
+        "pa_season_pctl", "war_starter_season_pctl",
+        "wins_season_pctl", "all_play_wins_season_pctl",
+        "eff_season_pctl", "wins_expected_end_of_season_pctl"
+      )
+    )
+  )
+
+  if (!is.null(columnGroups)) {
+    column_groups <- append(
+      column_groups,
+      columnGroups
+    )
+  }
+
   reactable_default(
     data,
     columns = c(
-      list(
-        conference_name = reactable::colDef(name = "Conf"),
-        matchup = reactable::colDef(name = "Matchup"),
-        franchise_name = reactable_col_franchise_name(
-          data = data,
-          sticky = "left",
-          style = list(borderRight = paste("2px solid", color_grey_light)),
-          width = 250
-        ),
-        wins_season = reactable::colDef(
-          name = "W",
-          width = 50
-        ),
-        losses_season = reactable::colDef(
-          name = "L",
-          width = 50
-        ),
-        wins_over_exp_pct = reactable::colDef(
-          header = reactable_header_with_tooltip("WoExp", "Wins over Expectation. Der Balken zeigt an, wie viel % von den erwarteten Siegen bereits erreicht wurden."),
-          align = "left",
-          cell = function(value, index) {
-            woe <- round(data$wins_over_exp[index], 1)
-
-            if (woe > 0) {
-              woe <- paste0("+", woe)
-            }
-
-            width <- paste0(value * 100, "%")
-            bar_chart(woe, width = width, height = "0.5rem")
-          },
-          minWidth = 100
-        ),
-        elo_season_pctl = reactable_coldef_bg_pctl(
-          name = "ELO",
-          "elo_post",
-          "elo_season_rank",
-          data
-        ),
-        pf_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("PF", "Points For bis zur ausgewählten Woche"),
-          "pf_season",
-          data = data
-        ),
-        pp_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("PP", "Potential Points bis zur ausgewählten Woche"),
-          "pp_season",
-          data = data
-        ),
-        pa_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("PA", "Points Against bis zur ausgewählten Woche"),
-          "pa_season",
-          data = data
-        ),
-        war_starter_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("WAR", "Wins above Replacement der gestarteten Spieler"),
-          "war_starter_season",
-          data = data
-        ),
-        wins_season_pctl = reactable_coldef_bg_pctl(
-          name = "Wins",
-          "wins_season",
-          data = data
-        ),
-        all_play_wins_season_pctl = reactable_coldef_bg_pctl(
-          name = "All-Play",
-          "all_play_wins_season",
-          data = data
-        ),
-        eff_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("Eff", "Effizienz (PF / PP)"),
-          "eff_season",
-          data = data
-        ),
-        #luck_season_pctl = reactable_coldef_bg_pctl(
-        #  name = "Glück",
-        #  "luck_season",
-        #  data = data
-        #),
-        #quality_season_pctl = reactable_coldef_bg_pctl(
-        #  name = "Qualität",
-        #  "quality_season",
-        #  data = data
-        #),
-        wins_expected_end_of_season_pctl = reactable_coldef_bg_pctl(
-          header = reactable_header_with_tooltip("ExpW", "Expected Wins (Erwartete Siege)"),
-          "wins_expected_end_of_season",
-          data = data
-        ),
-        power_rank_emoji = reactable::colDef(
-          "",
-          width = 50
-        ),
-        true_standing_pctl = reactable_coldef_bg_pctl(
-          name = "Ovrl",
-          "power_rank",
-          "power_rank",
-          data
-        ),
-        bowl_emoji = reactable::colDef(
-          name = "Bowl",
-          html = TRUE,
-          cell = function(value, index) {
-            content <- shiny::tagList(
-              htmltools::div(value),
-              htmltools::div(htmltools::HTML(data$seed_emoji[index]))
-            )
-            as.character(content)
-          },
-          align = "center",
-          width = 75,
-          sticky = "right"
-        )
-      ),
+      default_columns,
       purrr::set_names(
         purrr::map(
           hide_cols,
@@ -701,16 +735,7 @@ reactable_standing <- function(data, hide_cols = NULL, ...) {
         hide_cols
       )
     ),
-    columnGroups = list(
-      colGroup(
-        name = "Standing",
-        columns = c("wins_season", "losses_season", "wins_over_exp_pct")
-      ),
-      colGroup(
-        name = "Power Ranking",
-        columns = c("elo_season_pctl", "pf_season_pctl", "pp_season_pctl", "pa_season_pctl", "war_starter_season_pctl", "wins_season_pctl", "all_play_wins_season_pctl", "eff_season_pctl", "wins_expected_end_of_season_pctl")
-      )
-    ),
+    columnGroups = column_groups,
     defaultExpanded = TRUE,
     borderless = TRUE,
     ...

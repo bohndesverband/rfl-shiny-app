@@ -54,10 +54,10 @@ library(ggiraph)
 library(ggraph)
 library(ggalt)
 library(shinyWidgets)
-library(waffle)
+#library(waffle)
 library(shinycssloaders)
 library(ggforce)
-library(ggchicklet) # runde Ecken bei Balken
+#library(ggchicklet) # runde Ecken bei Balken
 library(hexbin)
 library(ggimage)
 library(reactable)
@@ -66,6 +66,7 @@ library(gdtools)
 library(gfonts)
 library(ggnewscale)
 library(echarts4r)
+library(qs2)
 #library(shinyjs)
 ```
 
@@ -162,15 +163,15 @@ shinyWidgets::pickerInput(
   options = list("actions-box" = TRUE, "max-options" = 1, "none-selected-text" = "RFL Team wählen"),
 )
 
-shiny::selectizeInput(
+shinyWidgets::pickerInput(
   "selectRflConference",
   "RFL Conferences",
   choices = unique(rfl_franchise_data$conference_name[order(rfl_franchise_data$conference_name)]),
-  selected = "BFC",
   options = list(
-    placeholder = "Conference wählen"
+    "none-selected-text" = "Conference wählen",
+    "max-options" = 1
   ),
-  multiple = FALSE,
+  multiple = TRUE
 )
 
 shinyWidgets::pickerInput(
@@ -308,6 +309,11 @@ htmltools::div(
   htmltools::hr(),
   htmltools::HTML("<strong>Wins over Expectation (WoExp)</strong> ist die Differenz der bereits erzielten und den am Saisonende erwarteten Siegen."),
   class = "alert alert-info wexp"
+)
+
+htmltools::div(
+  htmltools::HTML(paste0("<strong>Key Matchups (", emoji::emoji("key"), ")</stronG> sind Begegnungen, die einen besonders großen Einfluss auf die Playoff-Chancen der beiden beteiligten Teams haben. Grundlage für die Berechnung sind die WAR der in den Wochen verfügbaren besten Spieler je Team.")),
+  class = "alert alert-info key-matchup"
 )
 
 selected_team_names <- shiny::reactive({

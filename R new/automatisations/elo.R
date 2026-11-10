@@ -1,6 +1,5 @@
 library(tidyverse)
 library(nflreadr)
-library(feather)
 
 new_season_sept <- nflreadr::get_current_season()
 current_week <- nflreadr::get_current_week()

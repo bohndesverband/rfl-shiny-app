@@ -1,10 +1,10 @@
 rfl_sos_filtered <- shiny::reactive({
-  req(input$selectYears[1] >= 2024)
+  req(input$selectYear >= 2024)
   # TODO: ältere jahre
 
   rfl_sos_filtered <- read_data_table("sos") %>%
     dplyr::filter(
-      season >= input$selectYears[1] & season <= input$selectYears[2]
+      season <= input$selectYear
       #season == 2025
     ) %>%
     #dplyr::filter(
@@ -25,7 +25,7 @@ rfl_sos_filtered <- shiny::reactive({
 # Sos abv. avg ----
 output$rfl_sos_total <- shiny::renderPlot({
   shiny::validate(
-    shiny::need(input$selectYears[1] >= 2024, "Die Daten gibt es erst seit 2024")
+    shiny::need(input$selectYear >= 2024, "Die Daten gibt es erst seit 2024")
   )
 
   ggplot2::ggplot(rfl_sos_filtered(), ggplot2::aes(x = above_avg, y = reorder(franchise_name, above_avg))) +
@@ -34,7 +34,7 @@ output$rfl_sos_total <- shiny::renderPlot({
     ggplot2::geom_col(data = subset(rfl_sos_filtered(), div_id %in% input$selectRflDivisions | franchise_id %in% input$selectRflTeams), ggplot2::aes(fill = franchise_name)) +
     ggplot2::scale_fill_discrete(type = colors) +
     ggplot2::labs(
-      title = paste(paste0("RFL Preseason Strength of Schedule (SoS) im Vergleich zum Durchschnitt (", input$selectYears[1], "-", input$selectYears[2], ")")),
+      title = paste(paste0("RFL Preseason Strength of Schedule (SoS) im Vergleich zum Durchschnitt")),
       subtitle = paste("Je niedriger der Wert, desto leichter ist der SoS im Vergleich zum Rest der Liga."),
       y = "",
       x = "Abweichung des SoS vom Durchschnitt",
@@ -47,7 +47,7 @@ output$rfl_sos_total <- shiny::renderPlot({
 
 # SoS nach matchups ----
 chartSosByMatchupData <- shiny::reactive({
-  req(input$selectYears[1] >= 2024)
+  req(input$selectYear >= 2024)
 
   chartSosByMatchupData <- rfl_sos_filtered() %>%
     gather(matchup, sos, c(Total, Division, Conference, Random))
@@ -55,7 +55,7 @@ chartSosByMatchupData <- shiny::reactive({
 
 output$rfl_sos_matchups <- shiny::renderPlot({
   shiny::validate(
-    shiny::need(input$selectYears[1] >= 2024, "Die Daten gibt es erst seit 2024")
+    shiny::need(input$selectYear >= 2024, "Die Daten gibt es erst seit 2024")
   )
 
   ggplot2::ggplot(chartSosByMatchupData(), aes(x = matchup, y = sos, group = franchise_name, color = franchise_name)) +
@@ -82,7 +82,7 @@ output$rfl_sos_matchups <- shiny::renderPlot({
 rfl_sos_data_filtered <- shiny::reactive({
   rfl_sos_data_filtered <- rfl_sos_data %>%
     dplyr::filter(
-      season >= input$selectYears[1] & season <= input$selectYears[2]
+      season <= input$selectYear
       #season == 2025
     ) %>%
     dplyr::filter(
@@ -313,6 +313,12 @@ add_data_color <- function(df, color, data) {
 }
 
 ## output ----
+
+latest_sim_data <- shiny::reactive({
+  latest_sim_data <- qs2::qs_read(paste0("rfl_key_matchups_", new_season_sept, "_", current_week, ".qs2")) %>%
+    dplyr::select(week = matchup_week, franchise_id, opponent_id, key = leverage_sb_key)
+})
+
 output$rfl_schedule_delta <- gt::render_gt({
   #req(new_season_march != new_season_sept)
 
@@ -324,41 +330,75 @@ output$rfl_schedule_delta <- gt::render_gt({
 
   # TODO: vergangene jahre auswählen
 
-  #latest_week <- 1
+  #latest_week <- 2
 
   data <- rfl_schedule_data %>%
     dplyr::filter(
-      #season == input$selectYear
-      season == new_season_sept
+      season == input$selectYear
+      #season == new_season_sept
     ) %>%
     dplyr::group_by(franchise_id, week) %>%
     dplyr::mutate(
-      matchup = paste(type, paste0("WK", week), paste0("m_", dplyr::row_number()), sep = ".")
+      matchup_id = paste(type, paste0("WK", week), paste0("m_", dplyr::row_number()), sep = ".")
+    ) %>%
+    dplyr::left_join(
+      qs2::qs_read(paste0("rfl_key_matchups_", new_season_sept, "_", latest_week + 1, ".qs2")) %>%
+        dplyr::select(week = matchup_week, franchise_id, opponent_id, key = leverage_sb_key),
+      by = c("week", "franchise_id", "opponent_id")
+    ) %>%
+    dplyr::left_join(
+      rfl_franchise_data %>%
+        dplyr::select(franchise_id, conf = conference_name, div_id = division),
+      by = "franchise_id"
+    ) %>%
+    dplyr::mutate(
+      #matchup_emoji = dplyr::case_when(
+      #  matchup == "Div" ~ emoji::emoji("large blue diamond"),
+      #  matchup == "Conf" ~ emoji::emoji("blue circle"),
+      #  matchup == "Zufällig" ~ emoji::emoji("blue square"),
+      #),
+      #key_emoji = ifelse(key == TRUE, emoji::emoji("key"), NULL),
+      opponent_abbrev = dplyr::case_when(
+        key == TRUE ~ paste0(opponent_abbrev, "\n", paste(emoji::emoji("key"))),
+        TRUE ~ opponent_abbrev
+      )
     ) %>%
     dplyr::ungroup() %>%
     dplyr::arrange(win_difficulty_delta, dplyr::desc(win_difficulty_avg)) %>%
-    dplyr::select(season, franchise_id, franchise_name, abbrev, opponent_abbrev, matchup, win_difficulty, win_difficulty_delta) %>%
+    dplyr::select(season, franchise_id, franchise_name, abbrev, conf, div_id, opponent_abbrev, matchup = matchup_id, win_difficulty, win_difficulty_delta) %>%
     tidyr::pivot_wider(names_from = matchup, values_from = c(opponent_abbrev, win_difficulty), names_glue = "{matchup}_{.value}")
 
   #latest_week <- 7
 
   data %>%
-    #dplyr::filter(
-    #  if(isTruthy(input$selectRflTeams))
-    #    franchise_id %in% input$selectRflTeams
-    #  else
-    #    TRUE
-    #) %>%
-    gt::gt() %>%
-    gt::tab_header(
-      title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYear, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
-      subtitle = "Anhand der WAR der besten zur Verfügung stehenden Spieler wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
+    dplyr::filter(
+      if(isTruthy(input$selectRflTeams))
+        franchise_id %in% input$selectRflTeams
+      else
+        TRUE
     ) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectRflDivisions))
+        div_id %in% input$selectRflDivisions
+      else
+        TRUE
+    ) %>%
+    dplyr::filter(
+      if(isTruthy(input$selectRflConference))
+        conf %in% input$selectRflConference
+      else
+        TRUE
+    ) %>%
+    gt::gt() %>%
+    #gt::tab_header(
+    #  title = gt::html(paste0("RFL Schedule Difficulty ", input$selectYear, ": Welche Teams treffen auf <span style=\"background-color: ", color_blue, "; color: white;\">schwächere</span> oder <span style=\"background-color: ", color_red, "; color: white;\">stärkere</span> Gegner in den verbleibendenen Wochen?")),
+    #  subtitle = "Anhand der WAR der besten zur Verfügung stehenden Spieler wird von jedem Matchup die Sieg-Wahrscheinlichkeit berechnet.\nDie Differenz aus dem Durchschnitt der kommenden und dem Durchschnitt der bisherigen Matchups ergibt das Schedule Delta (Δ). Je kleiner der Wert, desto einfacher ist der kommende Schedule gemessen am bisherigen."
+    #) %>%
 
     gt::tab_spanner_delim(delim = ".") %>%
     gt::cols_move(franchise_name, paste0("bisher.WK", latest_week, ".m_2_opponent_abbrev")) %>%
     gt::cols_move(win_difficulty_delta, franchise_name) %>%
-    gt::cols_hide(c(season, franchise_id, dplyr::ends_with("_win_difficulty"))) %>%
+    gt::cols_hide(c(season, franchise_id, conf, div_id, dplyr::ends_with("_win_difficulty"))) %>%
 
     gt::cols_label(
       dplyr::ends_with("1_opponent_abbrev") ~ "M1",
@@ -402,11 +442,7 @@ output$rfl_schedule_delta <- gt::render_gt({
     add_data_color(dplyr::contains("WK13.m_1_win_difficulty"), dplyr::contains("WK13.m_1_opponent_abbrev")) %>%
     add_data_color(dplyr::contains("WK13.m_2_win_difficulty"), dplyr::contains("WK13.m_2_opponent_abbrev")) %>%
 
-    gtExtras::gt_highlight_rows(
-      rows = franchise_id %in% input$selectRflTeams,
-      columns = c(franchise_name),
-      fill = color_grey_light
-    ) %>%
+    # TODO: color scaling bei filterung haut nicht hin
 
     gt::data_color(
       columns = win_difficulty_delta,
@@ -441,7 +477,7 @@ output$rfl_schedule_delta <- gt::render_gt({
 # bye week impact ----
 nfl_bye_weeks <- shiny::reactive({
   nfl_bye_weeks <- rfl_roster_data %>%
-    dplyr::filter(season == input$selectYears[2] & week > 3 & week < 15) %>%
+    dplyr::filter(season == input$selectYear & week > 3 & week < 15) %>%
     dplyr::filter(opponent == "BYE") %>%
     dplyr::pull(week) %>%
     unique()
@@ -470,7 +506,7 @@ output$schedule_bye_weeks <- ggiraph::renderGirafe({
       breaks = nfl_bye_weeks()
     ) +
     ggplot2::labs(
-      title = paste0("RFL Bye Week Impact ", input$selectYears[2]),
+      title = paste0("RFL Bye Week Impact ", input$selectYear),
       subtitle = paste0("Wie sehr waren die Teams von den Bye Weeks der Spieler betroffen?"),
       x = "Woche",
       y = "verlorene WAR",
@@ -523,7 +559,7 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
   #)
 
   plot_data <- rfl_matchups_history %>%
-    dplyr::filter(season >= input$selectYears[1] & season <= input$selectYears[2]) %>%
+    dplyr::filter(season <= input$selectYear) %>%
     #dplyr::filter(season == 2026) %>%
     dplyr::group_by(franchise_id) %>%
     dplyr::summarise(
@@ -599,8 +635,8 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
 output$matchups_skill_quality <- ggiraph::renderGirafe({
   plot_data <- rfl_standing_data %>%
     dplyr::filter(
-      season >= input$selectYears[1] & season <= input$selectYears[2]
-      #season > 2024
+      season <= input$selectYear
+      #season == 2026
     ) %>%
     dplyr::group_by(season) %>%
     dplyr::filter(week == max(week)) %>%

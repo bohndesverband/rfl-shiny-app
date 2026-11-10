@@ -103,20 +103,19 @@
   }
 }
 
-.sidebar:has(~ #dashboard-container #section-schedule.active) {
-  .alert.luck,
-  .alert.quality{
+.sidebar:has(~ #dashboard-container #section-conference-ranking.active) {
+  .alert.war,
+  .alert.elo-team,
+  .alert.luck-quality,
+  .alert.wexp{
     display: block;
   }
 }
 
-.sidebar:has(~ #dashboard-container #section-conference-ranking.active) {
+.sidebar:has(~ #dashboard-container #section-schedule.active) {
   .alert.war,
-  .alert.elo-team,
-  .alert.luck,
-  .alert.quality,
   .alert.luck-quality,
-  .alert.wexp{
+  .alert.key-matchup {
     display: block;
   }
 }
@@ -298,8 +297,8 @@
   display: block;
 }
 
-/* SoS*/
-.sidebar:has(~ #dashboard-container #section-schedule.active) .form-group:not(:has(#selectYears-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)) {
+/* Schedule */
+.sidebar:has(~ #dashboard-container #section-schedule.active) .form-group:not(:has(#selectYear-label)):not(:has(#selectRflTeams-label)):not(:has(#selectRflDivisions-label)):not(:has(#selectRflConference-label)) {
     display: none;
 }
 

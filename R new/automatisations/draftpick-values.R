@@ -1,6 +1,5 @@
 library(tidyverse)
 library(isotone)
-library(feather)
 
 # data ----
 war_data <- rfl_war_data %>%

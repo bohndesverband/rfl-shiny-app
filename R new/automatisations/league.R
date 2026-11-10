@@ -1,6 +1,5 @@
 library(tidyverse)
 library(nflreadr)
-library(feather)
 
 # einmal im april und einmal im september ausführen
 

@@ -186,13 +186,20 @@ rfl_ir_data <- rfl_roster_data %>%
 DBI::dbWriteTable(con, "rfl_ir_data", rfl_ir_data, overwrite = TRUE)
 
 # depth charts ----
+# alle spieler im roster
 rfl_depth_chart_data_weekly <- rfl_roster_data %>%
-  dplyr::filter(roster_status == "ROSTER") %>%
+  #dplyr::filter(roster_status == "ROSTER") %>%
   dplyr::group_by(season, week, franchise_id) %>%
   create_depth_chart()
 
+rfl_depth_chart_data_weekly_injuries <- rfl_roster_data %>%
+  dplyr::filter(status == "ACT" | is.na(status)) %>%
+  dplyr::group_by(season, week, franchise_id) %>%
+  create_depth_chart()
+
+# alle spieler, die im roster sind und keine BYE haben
 rfl_depth_chart_data_weekly_bye <- rfl_roster_data %>%
-  dplyr::filter(opponent != "BYE" & roster_status == "ROSTER") %>%
+  dplyr::filter(opponent != "BYE" & (status == "ACT" | is.na(status))) %>%
   dplyr::group_by(season, week, franchise_id) %>%
   create_depth_chart()
 
@@ -320,16 +327,23 @@ rfl_roster_war <- rbind(rfl_roster_war_past, rfl_roster_war_future) %>%
     relationship = "many-to-many"
   ) %>%
   dplyr::left_join(
+    rfl_depth_chart_data_weekly_injuries %>%
+      calculate_war() %>%
+      dplyr::rename(war_injuries = war),
+    by = c("season", "week", "franchise_id")
+  ) %>%
+  dplyr::left_join(
     rfl_depth_chart_data_weekly_bye %>%
       calculate_war() %>%
       dplyr::rename(war_bye = war),
     by = c("season", "week", "franchise_id")
   ) %>%
   dplyr::mutate(
+    war_lost_injuries = ifelse(war_latest == war_injuries, 0, round(war_latest - war_injuries, 2)),
     war_lost_bye = ifelse(
       prediction == 0,
-      round(war_bye - war, 2),
-      round(war - war_latest, 2)
+      round(war_bye - war_injuries, 2),
+      war_lost_injuries
     )
   ) %>%
   dplyr::select(-war_latest)

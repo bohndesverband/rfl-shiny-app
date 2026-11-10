@@ -1,6 +1,5 @@
 # after franchises, player elo, war & fantasy finishes
 library(tidyverse)
-library(feather)
 
 var_season <- 2026
 

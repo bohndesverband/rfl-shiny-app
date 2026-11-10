@@ -6,6 +6,22 @@ find_top_elo_player <- function(df) {
     dplyr::pull(player_id)
 }
 
+reset_select_teams <- function() {
+  shinyWidgets::updatePickerInput(
+    session,
+    inputId = "selectRflTeams",
+    choices = setNames(rfl_franchise_data$franchise_id[order(rfl_franchise_data$franchise_name)], rfl_franchise_data$franchise_name[order(rfl_franchise_data$franchise_name)])
+  )
+}
+
+reset_select_divisions <- function() {
+  shinyWidgets::updatePickerInput(
+    session,
+    inputId = "selectRflDivisions",
+    choices = setNames(unique(rfl_franchise_data$division[order(rfl_franchise_data$division_name)]), unique(rfl_franchise_data$division_name[order(rfl_franchise_data$division_name)]))
+  )
+}
+
 # set reactive to active tab ----
 active_tab <- shiny::reactive({
   input$active_tab
@@ -30,9 +46,9 @@ shiny::observeEvent(active_tab(), {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = 2026, value = c(2026, 2026))
   } else if(active_tab() == "#section-fantasy-finishes") {
     shiny::updateSliderInput(session, "selectYears", min = 2016, max = new_season_sept, value = c(new_season_sept, new_season_sept))
-  } else if (active_tab() == "#section-strength-of-schedule") {
+  #} else if (active_tab() == "#section-schedule") {
     # sos
-    shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2026, value = c(2026, 2026))
+  #  shiny::updateSliderInput(session, "selectYears", min = 2024, max = 2026, value = c(2026, 2026))
   } else if (active_tab() == "#section-wochenbericht") {
     shiny::updateSliderInput(session, "selectWeek", value = current_week - 1)
   } else if(active_tab() == "#section-übersicht" | active_tab() == "#section-projections") {
@@ -88,8 +104,11 @@ shiny::observeEvent(active_tab(), {
 
   # rfl teams
   if (active_tab() == "#section-magic-number") {
-    #conf_teams <- rfl_franchise_data %>%
-    #  dplyr::filter(conference_name == input$selectRflConference)
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "selectRflConference",
+      selected = "BFC"
+    )
 
     #shinyWidgets::updatePickerInput(
     #  session,
@@ -98,6 +117,12 @@ shiny::observeEvent(active_tab(), {
     #  selected = NULL
     #)
   } else {
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "selectRflConference",
+      selected = NULL
+    )
+
     shinyWidgets::updatePickerInput(
       session,
       "selectRflTeams",
@@ -136,6 +161,76 @@ shiny::observeEvent(
       )
     }
   }
+)
+
+# teams und div auswahl anpassen wenn conference ausgewählt ist
+shiny::observeEvent(input$selectRflConference,
+  {
+    conf <- input$selectRflConference
+
+    if (length(conf) == 0 || is.null(conf) || all(is.na(conf))) {
+      reset_select_teams()
+      reset_select_divisions()
+
+      return()
+    }
+
+    conf_data <- rfl_franchise_data %>%
+      dplyr::select(franchise_id, franchise_name, conf = conference_name, div_id = division, div = division_name) %>%
+      dplyr::filter(conf == input$selectRflConference)
+
+    conf_divs <- conf_data %>%
+      dplyr::select(-franchise_id, -franchise_name) %>%
+      dplyr::distinct()
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "selectRflDivisions",
+      choices = setNames(conf_divs$div_id[order(conf_divs$div)], conf_divs$div[order(conf_divs$div)]),
+      selected = NULL,
+      options = list("max-options" = 3)
+    )
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "selectRflTeams",
+      choices = split(
+        setNames(conf_data$franchise_id[order(conf_data$franchise_name)], conf_data$franchise_name[order(conf_data$franchise_name)]),
+        conf_data$div[order(conf_data$franchise_name)]),
+      selected = NULL
+    )
+  },
+  ignoreNULL = FALSE,
+  ignoreInit = TRUE
+)
+
+# teams auswahl anpassen wenn div ausgewählt ist
+shiny::observeEvent(input$selectRflDivisions,
+  {
+    div <- input$selectRflDivisions
+
+    if (length(div) == 0 || is.null(div) || all(is.na(div))) {
+      reset_select_teams()
+
+      return()
+    }
+
+    div_data <- rfl_franchise_data %>%
+      dplyr::select(franchise_id, franchise_name, div_id = division, div = division_name) %>%
+      dplyr::filter(div_id %in% input$selectRflDivisions)
+
+    shinyWidgets::updatePickerInput(
+      session,
+      inputId = "selectRflTeams",
+      choices = split(
+        setNames(div_data$franchise_id[order(div_data$franchise_name)], div_data$franchise_name[order(div_data$franchise_name)]),
+        div_data$div[order(div_data$franchise_name)]),
+      selected = NULL,
+      options = list("max-options" = 6)
+    )
+  },
+  ignoreNULL = FALSE,
+  ignoreInit = TRUE
 )
 
 # create preselection of mfl players ----
@@ -202,19 +297,6 @@ shiny::observeEvent(c(input$selectYear, active_tab()), {
     )
   }
 })
-
-#shiny::observe({
-#  req(input$selectRflDivisions)
-
-#  div_teams <- rfl_franchise_data %>%
-#    dplyr::filter(division %in% input$selectRflDivisions)
-
-#  shinyWidgets::updatePickerInput(
-#    session,
-#    "selectRflTeams",
-#    selected = setNames(div_teams$franchise_id, div_teams$franchise_name)
-#  )
-#})
 
 # zeige alte teamnamen in auswahl an, wenn checkbox ausgewählt
 observeEvent(input$showHistoricTeamNames, {

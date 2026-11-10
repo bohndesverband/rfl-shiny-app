@@ -194,33 +194,7 @@ shiny::observeEvent(input$selectRflConference, {
   )
 })
 
-shiny::observeEvent(input$selectRflConference, {
-  req(input$selectRflConference)
 
-  conf_teams <- rfl_franchise_data %>%
-    dplyr::left_join(
-      rfl_current_standing %>%
-        dplyr::select(franchise_id, conf_rank, bowl),
-      by = "franchise_id"
-    ) %>%
-    dplyr::filter(conference_name == input$selectRflConference)
-
-  selected_teams <- conf_teams %>%
-    dplyr::filter(conference_name %in% input$selectRflConference) %>%
-    dplyr::pull(franchise_id)
-
-  shinyWidgets::updatePickerInput(
-    session,
-    inputId = "selectRflTeams",
-    choices = split(
-      setNames(conf_teams$franchise_id[order(conf_teams$franchise_name)], conf_teams$franchise_name[order(conf_teams$franchise_name)]),
-      factor(conf_teams$bowl[order(conf_teams$franchise_name)],
-             levels = c("SB", "PB", "TB"))
-    ),
-    selected = selected_teams,
-    options = list("max-options" = 18),
-  )
-})
 
 # ui output ----
 output$magic_number <- shiny::renderUI({
