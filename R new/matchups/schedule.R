@@ -485,7 +485,7 @@ nfl_bye_weeks <- shiny::reactive({
 
 output$schedule_bye_weeks <- ggiraph::renderGirafe({
   plot_data <- rfl_schedule_data %>%
-    dplyr::filter(season == 2026) %>%
+    dplyr::filter(season == 2026 & war_lost_bye < 0) %>%
     dplyr::filter(week %in% nfl_bye_weeks()) %>%
     dplyr::select(season, week, franchise_id, franchise_name, war_lost_bye) %>%
     dplyr::distinct() %>%
@@ -635,7 +635,7 @@ output$fpts_abv_avg <- ggiraph::renderGirafe({
 output$matchups_skill_quality <- ggiraph::renderGirafe({
   plot_data <- rfl_standing_data %>%
     dplyr::filter(
-      season <= input$selectYear
+      season == input$selectYear
       #season == 2026
     ) %>%
     dplyr::group_by(season) %>%
